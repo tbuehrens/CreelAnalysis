@@ -1,0 +1,88 @@
+---
+title: Kalama Creel Analysis
+author: Kale Bentley & Thomas Buehrens
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+  html_document:
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+
+***
+
+This document was generated on `r format(Sys.time(), '%m/%d/%Y')`.
+
+***
+
+
+```{r set_options, echo = FALSE, message = FALSE}
+options(width = 100)
+knitr::opts_chunk$set(message = FALSE)
+set.seed(123)
+```
+# Purpose
+The purpose of this document is to record the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis for 2021.
+
+# Requirements
+All analyses require R software [**(link)**](https://cran.r-project.org/) (v3.4.3) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. For Stan to work, rtools must also be installed: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
+
+
+# Functions
+We also need a couple of helper functions which we will load from the functions folder, which we will load using the walk() function from the purrr package (which we will install if it is not already installed).
+```{r load_funcs, results = "hide"}
+#==========================================
+# Source function files in functions folder
+#==========================================
+if(!require("purrr")) {
+  install.packages("purrr")
+  library("purrr")
+}else(library(purrr))
+path <- "functions/"
+files <- paste0(path, list.files(path))
+purrr::walk(files, source)
+```
+
+# Packages
+In addition to purr, We also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them.
+```{r load_pkgs, message = FALSE, warning = FALSE}
+#===============================================
+# Load packages, install and load if not already
+#===============================================
+using("tidyverse",
+      "rstan",
+      "RColorBrewer",
+      "readxl",
+      "readr",
+      "ggplot2",
+      "tinytex"
+      )
+```
+
+# User Inputs
+We need to specify data source file names, list some manual  data filter conditions, and specify which ESUs and DPSs we would like to analyze to estimate trends and smoothed abundances for:
+```{r user_inputs,message=FALSE, warning=FALSE}
+```
+
+# Data Preparation
+```{r data_prep,message=FALSE, warning=FALSE,results = "hide"}
+```
+
+# Run Analysis
+```{r run_analysis,message=FALSE, warning=FALSE,results = "hide"}
+```
+
+# Summarize Results
+```{r summarize_results,message=FALSE, warning=FALSE,results = "hide"}
+```
+
+# Reproducing this pdf or html page
+In order to reproduce this pdf or html page you need to have a LaTex application installed. Running this snippet of code will automatically install tinytex on your machine so you can render pdfs and html:
+```{r install_tinytex,message=FALSE, warning=FALSE}
+#tinytex::install_tinytex()
+```
+
