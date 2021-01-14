@@ -1,0 +1,6 @@
+Model_number,Model_Name,Model_file_name,Effort,CPUE,b,R_V,R_T,Comment
+1,Skagit_K5,Creel_Model_SKAGIT_K5_2018-01-23.stan,separate by section and gear,"pooled by section, separate by gear","pooled by section, separate by gear","pooled by section, separate by gear","pooled by section, separate by gear",
+2,Skagit_K6,Creel_Model_SKAGIT_K6_2018-01-23.stan,separate by section and gear,separate by section and gear,"pooled by section, separate by gear","pooled by section, separate by gear","pooled by section, separate by gear",
+3,Skagit_K7,Creel_Model_SKAGIT_K7_2018-01-23.stan,separate by section and gear,separate by section and gear,separate by section and gear,separate by section and gear,separate by section and gear,
+4,Skagit_K8,Creel_Model_SKAGIT_K8_2018-02-13.stan,separate by section and gear,separate by section and gear,"pooled by section, separate by gear","pooled by section, separate by gear","pooled by section, separate by gear","Same as Skagit_K6, but model parameterized slighlty different"
+5,Skagit_K9,Creel_Model_SKAGIT_K9_2018-02-15.stan,separate by section and gear,separate by section and gear,"pooled by section, separate by gear","pooled by section, separate by gear","pooled by section, separate by gear","Same as Skagit_K6, but model parameterized slighlty different; effort and cpue errors are multivariate"
