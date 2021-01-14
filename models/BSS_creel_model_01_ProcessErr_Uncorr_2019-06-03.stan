@@ -35,16 +35,23 @@ data{
 	int<lower=0> section_E[E_n]; //index denoting the "section" for an individual angler census effort count  
 	int<lower=0> countnum_E[E_n]; //index denoting the "count number" for an individual angler census effort count
 	int<lower=0> E_s[E_n]; //number of anglers enumerated during an individual census effort survey
-	//Angler interviews
-	int<lower=0> IntViews; //total number of angler interviews conducted across all surveys dates                                        	
-	int<lower=0> day_IntViews[IntViews]; //index denoting the "day" for an individual angler interview                       	
-	int<lower=0> gear_IntViews[IntViews]; //index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
-	int<lower=0> section_IntViews[IntViews]; //index denoting the "section" for an individual angler interview    						
-	int<lower=0> c[IntViews]; // total number of fish caught by an angler (group) collected from an individual angler interview           						
-	vector<lower=0>[IntViews] h; // total number of hours fish by an angler (group) collected from an individual angler interview        						
-	int<lower=0> V_A[IntViews]; // total number of vehicles by an individual angler/group brought to the fishery on a given survey date		
-	int<lower=0> T_A[IntViews]; // total number of boat trailers by an individual angler/group brought to the fishery on a given survey date			
-	int<lower=0> A_A[IntViews]; // total number of anglers in the group interviewed 		
+	//Proportion tie-in expansion
+	matrix<lower=0,upper=1>[G,S]p_TI; //proportion of section covered by tie in counts (serves as an expansion if p_TI != 1)
+	//interview data - CPUE
+	int<lower=0> IntC; //total number of angler interviews conducted across all surveys dates where CPUE data (c & h) were collected                                       	
+	int<lower=0> day_IntC[IntC]; //index denoting the "day" for an individual angler interview                       	
+	int<lower=0> gear_IntC[IntC]; //index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
+	int<lower=0> section_IntC[IntC]; //index denoting the "section" for an individual angler interview    						
+	int<lower=0> c[IntC]; // total number of fish caught by an angler (group) collected from an individual angler interview           						
+	vector<lower=0>[IntC] h; // total number of hours fish by an angler (group) collected from an individual angler interview        						
+	//interview data - angler expansion
+	int<lower=0> IntA; //total number of angler interviews conducted across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected                                         	
+	int<lower=0> day_IntA[IntA]; //index denoting the "day" for an individual angler interview                       	
+	int<lower=0> gear_IntA[IntA]; //index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
+	int<lower=0> section_IntA[IntA]; //index denoting the "section" for an individual angler interview    
+	int<lower=0> V_A[IntA]; // total number of vehicles by an individual angler/group brought to the fishery on a given survey date		
+	int<lower=0> T_A[IntA]; // total number of boat trailers by an individual angler/group brought to the fishery on a given survey date			
+	int<lower=0> A_A[IntA]; // total number of anglers in the group interviewed 		
 	//hyper and hyperhyper parameters
 	real value_cauchyDF_sigma_eps_C; //the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C 
 	real value_cauchyDF_sigma_eps_E; //the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E
@@ -56,19 +63,21 @@ data{
 	real value_normal_sigma_omega_C_0; // the SD hyperparameter in the prior distribution omega_C_0
 	real value_normal_sigma_omega_E_0; // the SD hyperparameter in the prior distribution omega_E_0
 	real value_lognormal_sigma_b; //the SD hyperparameter in the prior distribution b
-	real value_normal_mu_mu_C; //the mean hyperparameter in the prior distribution mu_C
-	real value_normal_sigma_mu_C; //the SD hyperparameter in the prior distribution mu_C
-	real value_normal_mu_mu_E; //the mean hyperparameter in the prior distribution mu_E
-	real value_normal_sigma_mu_E; //the SD hyperparameter in the prior distribution mu_E
+	real value_normal_mu_mu_C; //the hyperhyper mean parameter in the hyperprior distribution mu_mu_C
+	real value_normal_sigma_mu_C; //the hyperhyper SD parameter in the hyperprior distribution mu_mu_C
+	real value_normal_mu_mu_E; //the hyperhyper mean parameter in the hyperprior distribution mu_mu_E
+	real value_normal_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution mu_mu_E
+	real value_cauchyDF_sigma_mu_C; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+	real value_cauchyDF_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 }
-transformed data{
-	matrix<lower=0,upper=1>[G,S]p_TE; //proportion of section covered by tie in counts (serves as an expansion if p_TE != 1)
-	for(g in 1:G){
-		for(s in 1:S){
-			p_TE[g,s] = 1; 
-		}
-	}
-}
+// transformed data{
+// 	matrix<lower=0,upper=1>[G,S]p_TI; //proportion of section covered by tie in counts (serves as an expansion if p_TI != 1)
+// 	for(g in 1:G){
+// 		for(s in 1:S){
+// 			p_TI[g,s] = 1; 
+// 		}
+// 	}
+// }
 parameters{
 	//Effort
 	matrix[G,S] mu_E; //season-long effort intercept  
@@ -80,7 +89,7 @@ parameters{
 	matrix[G,S] omega_E_0; //effort residual for initial time step (p=1)
 	vector<lower=0,upper=1>[G] R_V; //true angler vehicles per angler
 	vector<lower=0,upper=1>[G] R_T; //true angler trailers per angler
-	vector<lower=0>[G] b; //bias in angler vehicles per angler from road counts of cars
+	vector<lower=0>[G] b; //bias in counts of vehicles and trailers per angler group from road counts
 	matrix<lower=0>[D,G] eps_E_H[S,H]; //gamma random variate accounting for overdispersion in the census effort counts due to within-day variability in angler pressure
 	matrix<lower=0,upper=1>[G,S] p_I; //fixed proportion of angler effort observed in an index area
 	//Catch rates
@@ -89,7 +98,11 @@ parameters{
 	real<lower=0,upper=1> phi_C_scaled; //Prior on a transformation of phi_C									    			
 	real<lower=0> sigma_r_C; //Prior on r_C
 	matrix[P_n-1,G] eps_C[S]; //CPUE process errors 
-	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p=1)                             							
+	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p=1)
+	real mu_mu_C[G] ; //hyper-prior on mean of mu_C //TB 5/3/2019
+	real<lower=0>sigma_mu_C; //hyper-prior on SD of mu_C
+	real mu_mu_E[G]; //hyper-prior on mean of mu_E //TB 5/3/2019
+	real<lower=0>sigma_mu_E; //hyper-prior on SD of mu_E //TB 5/3/2019                     							
 }
 transformed parameters{
 	//Effort
@@ -133,15 +146,20 @@ transformed parameters{
 model{
 	//Hyperpriors (effort hyperparameters)
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E);                                						
-  phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
+  	phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
 	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E);
 	B1 ~ normal(0,value_normal_sigma_B1);
 	//Hyperpriors (CPUE hyperparameters)
 	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C);                     						
-  phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
+  	phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
 	sigma_r_C ~ cauchy(0, value_cauchyDF_sigma_r_C);
+
+	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
+	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);//TB 5/3/2019
 	//Priors 
 	for(g in 1:G){
+		mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); //TB 5/3/2019
+		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
 		for(p in 2:P_n){ 
 			for(s in 1:S){
 				eps_C[s][p-1,g] ~ normal(0,sigma_eps_C);
@@ -158,8 +176,8 @@ model{
 		for(s in 1:S){
 			omega_C_0[g,s] ~ normal(0,value_normal_sigma_omega_C_0); 
 			omega_E_0[g,s] ~ normal(0,value_normal_sigma_omega_E_0); 
-			mu_C[g,s] ~ normal(value_normal_mu_mu_C, value_normal_sigma_mu_C);
-			mu_E[g,s] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E);
+			mu_C[g,s] ~ normal(mu_mu_C[g],sigma_mu_C);//TB 5/3/2019
+			mu_E[g,s] ~ normal(mu_mu_E[g],sigma_mu_E);//TB 5/3/2019
 			p_I[g,s] ~ beta(0.5,0.5);
 		}
 		R_V[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
@@ -169,81 +187,84 @@ model{
 	//Likelihoods
 	//Index effort counts - vehicles
 	for(i in 1:V_n){
-		V_I[i] ~ poisson((lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TE[1,section_V[i]] * R_V[1] +
-						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TE[2,section_V[i]] * R_V[2]) * b[1]);
+		V_I[i] ~ poisson((lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
+						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);
 	}
 	//Index effort counts - trailers
 	for(i in 1:T_n){
-		T_I[i] ~ poisson((lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TE[1,section_T[i]] * R_T[1] +
-						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TE[2,section_T[i]] * R_T[2]) * b[2]); 
+		T_I[i] ~ poisson((lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TI[1,section_T[i]] * R_T[1] +
+						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TI[2,section_T[i]] * R_T[2]) * b[2]); 
 	}
 	//Index effort counts - anglers
 	for(i in 1:A_n){
-		A_I[i] ~ poisson(lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TE[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]]);
+		A_I[i] ~ poisson(lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TI[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]]);
 	}
 	//Census (tie-in) effort counts - anglers
 	for(e in 1:E_n){
-		E_s[e] ~ poisson(lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TE[gear_E[e],section_E[e]]);				
+		E_s[e] ~ poisson(lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TI[gear_E[e],section_E[e]]);				
 	}
-	//Angler interviews 
-	for(a in 1:IntViews){
-		//catch
-		c[a] ~ neg_binomial_2(lambda_C_S[section_IntViews[a]][day_IntViews[a], gear_IntViews[a]] * h[a] , r_C);
+	//Angler interviews - CPUE
+	for(a in 1:IntC){
+		c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * h[a] , r_C);
+	}
+	//Angler interviews - Angler expansions
+	for(a in 1:IntA){
 		//vehicles
-		V_A[a] ~ binomial(A_A[a], R_V[gear_IntViews[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
+		V_A[a] ~ binomial(A_A[a], R_V[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 		//trailers
-		T_A[a] ~ binomial(A_A[a], R_T[gear_IntViews[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
+		T_A[a] ~ binomial(A_A[a], R_T[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 	}												
 }
 generated quantities{ 
-	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //total daily catch
+ 	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //total daily catch
 	matrix<lower=0>[D,G] C[S]; //realized total daily catch
 	matrix<lower=0>[D,G] E[S]; //realized total daily effort
 	real<lower=0> C_sum; //season-total catch
-	real<lower=0> E_sum; //season-total effort
-	vector[V_n + T_n + A_n + E_n + IntViews + IntViews + IntViews] log_lik;
+ 	real<lower=0> E_sum; //season-total effort
+	vector[V_n + T_n + A_n + E_n + IntC + IntA + IntA] log_lik;
 	C_sum = 0;
-	E_sum = 0;
+ 	E_sum = 0;
 	for(g in 1:G){
 		for(d in 1:D){
 			for(s in 1:S){
 				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g]; 
 				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]); 
-				C_sum = C_sum + C[s][d,g];
-				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; 
-				E_sum = E_sum + E[s][d,g];
+ 				C_sum = C_sum + C[s][d,g];
+ 				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; 
+ 				E_sum = E_sum + E[s][d,g];
 			}                                                                                                              
 		}
 	}
-	//point-wise log likelihood for LOO-IC
-	//Index effort counts - vehicles
+// 	//point-wise log likelihood for LOO-IC
+// 	//Index effort counts - vehicles
 	for (i in 1:V_n){
-		log_lik[i] = poisson_lpmf(V_I[i]|(lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TE[1,section_V[i]] * R_V[1] +
-						 				  lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TE[2,section_V[i]] * R_V[2]) * b[1]);
+		log_lik[i] = poisson_lpmf(V_I[i]|(lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
+						 				  lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);
 	}
 	//Index effort counts - trailers
 	for(i in 1:T_n){
-		log_lik[V_n +i] = poisson_lpmf(T_I[i]|(lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TE[1,section_T[i]] * R_T[1] +
-						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TE[2,section_T[i]] * R_T[2]) * b[2]); 
+		log_lik[V_n +i] = poisson_lpmf(T_I[i]|(lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TI[1,section_T[i]] * R_T[1] +
+						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TI[2,section_T[i]] * R_T[2]) * b[2]); 
 	}
 	//Index effort counts - anglers
 	for(i in 1:A_n){ 
-		log_lik[V_n + T_n + i] = poisson_lpmf(A_I[i]|lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TE[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]]);
+		log_lik[V_n + T_n + i] = poisson_lpmf(A_I[i]|lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TI[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]]);
 	}
 	//Census (tie-in) effort counts - anglers
 	for(e in 1:E_n){
-		log_lik[V_n + T_n + A_n + e] = poisson_lpmf(E_s[e]|lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TE[gear_E[e],section_E[e]]);				
+		log_lik[V_n + T_n + A_n + e] = poisson_lpmf(E_s[e]|lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TI[gear_E[e],section_E[e]]);				
 	}
 	//Angler interviews - catch (number of fish)
-	for(a in 1:IntViews){
-		log_lik[V_n + T_n + A_n + E_n + a] = neg_binomial_2_lpmf(c[a]|lambda_C_S[section_IntViews[a]][day_IntViews[a],gear_IntViews[a]] * h[a] , r_C);
+	for(a in 1:IntC){
+		log_lik[V_n + T_n + A_n + E_n + a] = neg_binomial_2_lpmf(c[a]|lambda_C_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * h[a] , r_C);
 	}
 	//Angler interviews - number of vehicles
-	for(a in 1:IntViews){
-		log_lik[V_n + T_n + A_n + E_n + IntViews + a] = binomial_lpmf(V_A[a]|A_A[a], R_V[gear_IntViews[a]]);
+	for(a in 1:IntA){
+		log_lik[V_n + T_n + A_n + E_n + IntC + a] = binomial_lpmf(V_A[a]|A_A[a], R_V[gear_IntA[a]]);
 	}
 	//Angler interviews - number of trailers
-	for(a in 1:IntViews){
-		log_lik[V_n + T_n + A_n + E_n + IntViews + IntViews + a] = binomial_lpmf(T_A[a]|A_A[a], R_T[gear_IntViews[a]]);
+	for(a in 1:IntA){
+		log_lik[V_n + T_n + A_n + E_n + IntC + IntA + a] = binomial_lpmf(T_A[a]|A_A[a], R_T[gear_IntA[a]]);
 	}												
 }
+
