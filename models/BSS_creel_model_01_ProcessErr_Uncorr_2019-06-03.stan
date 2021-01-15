@@ -128,8 +128,8 @@ transformed parameters{
 		}
 		for(p in 2:P_n){ 
 			for(s in 1:S){
-				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g]; 
-				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g]; 
+				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g] * sigma_eps_C; 
+				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g] * sigma_eps_E; 
 			}													
 		}
 		for(d in 1:D){       
@@ -146,12 +146,12 @@ transformed parameters{
 model{
 	//Hyperpriors (effort hyperparameters)
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E);                                						
-  	phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
+  phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
 	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E);
 	B1 ~ normal(0,value_normal_sigma_B1);
 	//Hyperpriors (CPUE hyperparameters)
 	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C);                     						
-  	phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
+  phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
 	sigma_r_C ~ cauchy(0, value_cauchyDF_sigma_r_C);
 
 	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
@@ -162,8 +162,8 @@ model{
 		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
 		for(p in 2:P_n){ 
 			for(s in 1:S){
-				eps_C[s][p-1,g] ~ normal(0,sigma_eps_C);
-				eps_E[s][p-1,g] ~ normal(0,sigma_eps_E);
+				eps_C[s][p-1,g] ~ std_normal();
+				eps_E[s][p-1,g] ~ std_normal();
 			}
 		}
 		for(d in 1:D){

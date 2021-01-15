@@ -51,7 +51,17 @@
     #Run model in using NUTS/HMC
       start.time<-Sys.time()
       print(start.time)
-      res_Stan<-sampling(object=model,data=standat, chains = n.chain, cores=n.cores,iter=n.iter,thin=n.thin, warmup=n.warmup,include=T,control=list(adapt_delta=set.adapt_delta, max_treedepth=12))
+      res_Stan<-sampling(object=model,
+                         data=standat,
+                         chains = n.chain,
+                         cores=n.cores,
+                         iter=n.iter,
+                         thin=n.thin,
+                         warmup=n.warmup,
+                         include=T,
+                         control=list(adapt_delta=set.adapt_delta, max_treedepth = max.tree),
+                         init="0"
+                         )
       end.time<-Sys.time()
       model.run.time<-print(paste("Elapsed Time = ",end.time-start.time,sep=""))
       print(elasped_time_by_chain<-get_elapsed_time(res_Stan))
