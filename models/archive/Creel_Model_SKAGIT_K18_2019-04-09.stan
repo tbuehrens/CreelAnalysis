@@ -5,7 +5,7 @@ data{
 	int<lower=0> S; //number of river sections
 	int<lower=0> H; //max number of angler effort counts within a sample day across entire sampling frame (max countnum)
 	int<lower=0> P_n; //number of periods (number of states for our state variable); P_n can equal D or some other interval (e.g., weekly)
-	vector<lower=0,upper=1>[D] w; //index denoting daytype, where 0=weekday, 1= weekend/holiday.  
+	vector<lower=0,upper=1>[D] w; //index denoting daytype, where 1=weekday, 2= weekend/holiday.  
 	int<lower=0> period[D]; //index denoting period    
 	vector<lower=0>[D] L; // total amount of available fishing hours per day (e.g., day length - sunrise to sunset)
 	matrix<lower=0>[D,S] O; //index denoting fishery status, where 1=open, 0 = closed 
@@ -45,21 +45,21 @@ data{
 	int<lower=0> V_A[IntViews]; // total number of vehicles by an individual angler/group brought to the fishery on a given survey date		
 	int<lower=0> T_A[IntViews]; // total number of boat trailers by an individual angler/group brought to the fishery on a given survey date			
 	int<lower=0> A_A[IntViews]; // total number of anglers in the group interviewed 		
-	//hyper and hyperhyper parameters
-	real value_cauchyDF_sigma_eps_C; //the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C 
-	real value_cauchyDF_sigma_eps_E; //the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E
-	real value_cauchyDF_sigma_r_E; //the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E
-	real value_normal_sigma_B1; //the SD hyperparameter in the prior distribution B1
-	real value_cauchyDF_sigma_r_C; //the hyper scale (degrees of freedom) parameter in the prior distribution sigma_r_C
-	real value_betashape_phi_C_scaled; //the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled 
-	real value_betashape_phi_E_scaled; //the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled 
-	real value_normal_sigma_omega_C_0; // the SD hyperparameter in the prior distribution omega_C_0
-	real value_normal_sigma_omega_E_0; // the SD hyperparameter in the prior distribution omega_E_0
-	real value_lognormal_sigma_b; //the SD hyperparameter in the prior distribution b
-	real value_normal_mu_mu_C; //the mean hyperparameter in the prior distribution mu_C
-	real value_normal_sigma_mu_C; //the SD hyperparameter in the prior distribution mu_C
-	real value_normal_mu_mu_E; //the mean hyperparameter in the prior distribution mu_E
-	real value_normal_sigma_mu_E; //the SD hyperparameter in the prior distribution mu_E
+	//priors
+	real prior_sigma_C;
+	real prior_sigma_E;
+	real prior_r_E_sigma;
+	real prior_B1;
+	real prior_r_C_sigma;
+	real prior_phi_C_prior;
+	real prior_phi_E_prior;
+	real prior_omega_C_0;
+	real prior_omega_E_0;
+	real prior_b;
+	real prior_mu_C_mu;
+	real prior_mu_C_sd;
+	real prior_mu_E_mu;
+	real prior_mu_E_sd;
 }
 transformed data{
 	matrix<lower=0,upper=1>[G,S]p_TE; //proportion of section covered by tie in counts (serves as an expansion if p_TE != 1)
@@ -73,9 +73,9 @@ parameters{
 	//Effort
 	matrix[G,S] mu_E; //season-long effort intercept  
 	real B1; //fixed effect accounting for the effect of day type on effort   
-	real<lower=0> sigma_eps_E; //effort process error standard deviation 
-	real<lower=0> sigma_r_E; //prior on r_E
-	real<lower=0,upper=1> phi_E_scaled; //prior on a transformation of phi_E								    			
+	real<lower=0> sigma_E; //effort process error standard deviation 
+	real<lower=0> prior_r_E; //prior on r_E
+	real<lower=0,upper=1> phi_E_prior; //prior on a transformation of phi_E								    			
 	matrix[P_n-1,G] eps_E[S]; //effort process errors  
 	matrix[G,S] omega_E_0; //effort residual for initial time step (p=1)
 	vector<lower=0,upper=1>[G] R_V; //true angler vehicles per angler
@@ -85,9 +85,9 @@ parameters{
 	matrix<lower=0,upper=1>[G,S] p_I; //fixed proportion of angler effort observed in an index area
 	//Catch rates
 	matrix[G,S] mu_C; //season-long catch rate intercept                            							
-	real<lower=0> sigma_eps_C; //catch rate (CPUE) process error standard deviation 
-	real<lower=0,upper=1> phi_C_scaled; //Prior on a transformation of phi_C									    			
-	real<lower=0> sigma_r_C; //Prior on r_C
+	real<lower=0> sigma_C; //catch rate (CPUE) process error standard deviation 
+	real<lower=0,upper=1> phi_C_prior; //Prior on a transformation of phi_C									    			
+	real<lower=0> prior_r_C; //Prior on r_C
 	matrix[P_n-1,G] eps_C[S]; //CPUE process errors 
 	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p=1)                             							
 }
@@ -104,10 +104,10 @@ transformed parameters{
 	matrix[P_n,G] omega_C[S]; //Residual in CPUE
 	matrix<lower=0>[D,G] lambda_C_S[S]; //mean daily CPUE
 
-	r_E = 1 / square(sigma_r_E);
-	r_C = 1 / square(sigma_r_C);
-	phi_C = (phi_C_scaled * 2)-1;
-	phi_E = (phi_E_scaled * 2)-1;
+	r_E = 1 / square(prior_r_E);
+	r_C = 1 / square(prior_r_C);
+	phi_C = (phi_C_prior * 2)-1;
+	phi_E = (phi_E_prior * 2)-1;
 	for(g in 1:G){
 		for(s in 1:S){
 			omega_C[s][1,g] = omega_C_0[g,s];
@@ -115,8 +115,8 @@ transformed parameters{
 		}
 		for(p in 2:P_n){ 
 			for(s in 1:S){
-				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g] * sigma_eps_C; 
-				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g] * sigma_eps_E; 
+				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g]; 
+				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g]; 
 			}													
 		}
 		for(d in 1:D){       
@@ -131,21 +131,20 @@ transformed parameters{
 	}	
 }
 model{
-	//Hyperpriors (effort hyperparameters)
-	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E);                                						
-  phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
-	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E);
-	B1 ~ normal(0,value_normal_sigma_B1);
-	//Hyperpriors (CPUE hyperparameters)
-	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C);                     						
-  phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
-	sigma_r_C ~ cauchy(0, value_cauchyDF_sigma_r_C);
-	//Priors 
+	//Effort
+	sigma_E ~ cauchy(0,prior_sigma_E);                                						
+  	phi_E_prior ~ beta(prior_phi_E_prior,prior_phi_E_prior);
+	prior_r_E ~ cauchy(0,prior_r_E_sigma);
+	B1 ~ normal(0,prior_B1);
+	//Catch rates
+	sigma_C ~ cauchy(0,prior_sigma_C);                     						
+  	phi_C_prior ~ beta(prior_phi_C_prior,prior_phi_C_prior);
+	prior_r_C ~ cauchy(0, prior_r_C_sigma); 
 	for(g in 1:G){
 		for(p in 2:P_n){ 
 			for(s in 1:S){
-				eps_C[s][p-1,g] ~ std_normal();
-				eps_E[s][p-1,g] ~ std_normal();
+				eps_C[s][p-1,g] ~ normal(0,sigma_C);
+				eps_E[s][p-1,g] ~ normal(0,sigma_E);
 			}
 		}
 		for(d in 1:D){
@@ -156,15 +155,15 @@ model{
 			}
 		}
 		for(s in 1:S){
-			omega_C_0[g,s] ~ normal(0,value_normal_sigma_omega_C_0); 
-			omega_E_0[g,s] ~ normal(0,value_normal_sigma_omega_E_0); 
-			mu_C[g,s] ~ normal(value_normal_mu_mu_C, value_normal_sigma_mu_C);
-			mu_E[g,s] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E);
+			omega_C_0[g,s] ~ normal(0,prior_omega_C_0); 
+			omega_E_0[g,s] ~ normal(0,prior_omega_E_0); 
+			mu_C[g,s] ~ normal(prior_mu_C_mu, prior_mu_C_sd);
+			mu_E[g,s] ~ normal(prior_mu_E_mu,prior_mu_E_sd);
 			p_I[g,s] ~ beta(0.5,0.5);
 		}
 		R_V[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
 		R_T[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
-		b[g] ~ lognormal(0,value_lognormal_sigma_b); //Note: leaving constant among days AND sections...may need to tweak could go as low as 0.25 for sigma
+		b[g] ~ lognormal(0,prior_b); //Note: leaving constant among days AND sections...may need to tweak could go as low as 0.25 for sigma
 	}
 	//Likelihoods
 	//Index effort counts - vehicles
