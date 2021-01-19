@@ -90,7 +90,7 @@ We need to specify data source file names and sub-folders, list some manual data
       wd_data_files   <-"data"        # Location where data files are stored
       wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
       wd_model_files  <-"models"      # Location of model files 
-      wd_output_files<-"output" # Location of saved output (summary figures/tables and model results)
+      wd_output_files<-"outputs" # Location of saved output (summary figures/tables and model results)
 ```
 
 # Data Preparation
