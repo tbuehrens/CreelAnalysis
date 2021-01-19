@@ -6,11 +6,14 @@
 
 # Import saved model results or run new model (based on answers above)
   if(model_source== "saved"){
-      #Load RDS (stan model output) 
-          res_Stan <- readRDS(paste(model_output_wd, catch.group.of.interest, model.name, saved_model_date,"/results_r_file.rds", sep="/"))
+    
+#KB - this section might need updating (2021-01-19)
+    
+      #Load RDS (stan model output)
+          res_Stan <- readRDS(paste(wd_output_files, catch.group.of.interest, model.name, saved_model_date,"/results_r_file.rds", sep="/"))
 
-      #Extract posterior draws 
-          res<-extract(res_Stan) 
+      #Extract posterior draws
+          res<-extract(res_Stan)
     
 }else{
   
