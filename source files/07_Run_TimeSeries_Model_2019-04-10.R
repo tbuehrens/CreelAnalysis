@@ -6,11 +6,14 @@
 
 # Import saved model results or run new model (based on answers above)
   if(model_source== "saved"){
-      #Load RDS (stan model output) 
+    
+#KB - this section might need updating (2021-01-19)
+    
+      #Load RDS (stan model output)
           res_Stan <- readRDS(paste(wd_output_files, catch.group.of.interest, model.name, saved_model_date,"/results_r_file.rds", sep="/"))
 
-      #Extract posterior draws 
-          res<-extract(res_Stan) 
+      #Extract posterior draws
+          res<-extract(res_Stan)
     
 }else{
   
@@ -51,17 +54,7 @@
     #Run model in using NUTS/HMC
       start.time<-Sys.time()
       print(start.time)
-      res_Stan<-sampling(object=model,
-                         data=standat,
-                         chains = n.chain,
-                         cores=n.cores,
-                         iter=n.iter,
-                         thin=n.thin,
-                         warmup=n.warmup,
-                         include=T,
-                         control=list(adapt_delta=set.adapt_delta, max_treedepth = max.tree),
-                         init="0"
-                         )
+      res_Stan<-sampling(object=model,data=standat, chains = n.chain, cores=n.cores,iter=n.iter,thin=n.thin, warmup=n.warmup,include=T,control=list(adapt_delta=set.adapt_delta, max_treedepth=12))
       end.time<-Sys.time()
       model.run.time<-print(paste("Elapsed Time = ",end.time-start.time,sep=""))
       print(elasped_time_by_chain<-get_elapsed_time(res_Stan))

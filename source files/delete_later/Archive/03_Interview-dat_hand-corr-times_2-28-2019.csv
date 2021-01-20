@@ -1,0 +1,424 @@
+Surveyor,Survey_Date,Page #,Row,StreamName,SectionName,AnglerType,AnglerCategory,TargetSpecies,NumAnglers,Guided?,FishingMethod,Num_Cars,Num_Trailers,Fishing_Start_Time,Interview_Start_Time,Fishing_time_corrected,Fishing_End_Time_Corrected,Percent_time_fished,Species,Origin,Fate,Qty,CompleteTrip,County1,interviewed_today,Comments
+"Lambert, Leah",2/1/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,7:00 AM,8:30 AM,1:30,8:30 AM,1,,,,,No,"98117,1,98155,1",No,yellow dodge truck
+"Bosley, April",2/1/2019,2,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,9:15 AM,1:15,9:15 AM,1,,,,,No,"98020,1,98036,1",No,
+"Bosley, April",2/1/2019,2,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,7:30 AM,9:30 AM,2:00,9:30 AM,1,,,,,No,98270,No,
+"Bosley, April",2/1/2019,2,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,9:52 AM,1:52,9:52 AM,1,,,,,No,98020,No,
+"Bosley, April",2/1/2019,2,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,10:30 AM,2:15,10:15 AM,0.9,,,,,No,"98045,1,98118,1",Yes,
+"Bosley, April",2/1/2019,2,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,10:30 AM,0:15,8:15 AM,0.1,,,,,No,"98045,1,98118,1",Yes,
+"Bosley, April",2/1/2019,2,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,9:30 AM,10:30 AM,1:00,10:30 AM,1,,,,,No,98133,No,
+"Bosley, April",2/1/2019,2,6,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,0,7:15 AM,10:45 AM,3:30,10:45 AM,1,,,,,Yes,98258,,
+"Nelson, Rachel",2/1/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,9:30 AM,4:00 PM,6:30,4:00 PM,1,BLC,,R,4,Yes,"98237,3",No,
+"Nelson, Rachel",2/1/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,9:30 AM,4:00 PM,6:30,4:00 PM,1,WF,,R,3,Yes,"98237,3",No,
+"Nelson, Rachel",2/1/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,1:30 PM,4:15 PM,2:45,4:15 PM,1,,,,,No,"98263,1",No,
+"Nelson, Rachel",2/1/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Bull trout,1,Yes,Fly,2,1,8:00 AM,4:30 PM,8:30,4:30 PM,1,BLC,,R,5,Yes,"98221,1",No,"client + guide, both fished, both were done for the day"
+"Nelson, Rachel",2/1/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,3:30 PM,5:00 PM,1:30,5:00 PM,1,,,,,Yes,"98284,1",No,
+"Bosley, April",2/2/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,2,0,7:15 AM,8:35 AM,1:20,8:35 AM,1,,,,,No,"98115,1,98107,1",No,
+"Bosley, April",2/2/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:30 AM,10:15 AM,2:45,10:15 AM,1,,,,,Yes,"98223,2",No,
+"Bosley, April",2/2/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:30 AM,11:15 AM,3:45,11:15 AM,1,,,,,No,"98020,1,98019,1",No,
+"Bosley, April",2/2/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Gear,1,0,7:30 AM,1:15 PM,5:45,1:15 PM,1,BLC,,R,4,Yes,"98034,2,98012,1",No,
+"Bosley, April",2/2/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:00 AM,1:30 PM,3:54,10:54 AM,0.6,,,,,No,"98229,1,98264,1",Yes,
+"Bosley, April",2/2/2019,1,5,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,7:00 AM,1:30 PM,2:36,9:36 AM,0.4,,,,,No,"98229,1,98264,1",Yes,
+"Bosley, April",2/2/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,11:30 AM,1:35 PM,2:05,1:35 PM,1,,,,,No,"98223,1",No,
+"Lambert, Leah",2/2/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,7:00 AM,8:30 AM,1:30,8:30 AM,1,,,,,No,"98235,1",No,
+"Lambert, Leah",2/2/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,7:00 AM,8:45 AM,1:45,8:45 AM,1,,,,,No,"98229,2",No,
+"Lambert, Leah",2/2/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,2,1,9:00 AM,12:00 PM,3:00,12:00 PM,1,BLC,,R,4,Yes,"98284,1,98237,1",No,
+"Lambert, Leah",2/2/2019,2,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,12:30 PM,5:00,12:30 PM,1,BLC,,R,1,Yes,"98272,1,98232,1",No,
+"Lambert, Leah",2/2/2019,2,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,6:00 AM,12:45 PM,6:45,12:45 PM,1,BLC,,R,1,Yes,"98233,2",No,
+"Lambert, Leah",2/2/2019,2,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,1:00 PM,1:15 PM,0:15,1:15 PM,1,,,,,No,"98273,1",No,
+"Armellino, Daniel",2/2/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:15 PM,1:45 PM,1:30,1:45 PM,1,,,,,No,"98223,1",No,
+"Armellino, Daniel",2/2/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,3:40 PM,5:22,1:22 PM,0.7,,,,,No,"98021,1,98403,1",No,
+"Armellino, Daniel",2/2/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,3:40 PM,2:18,10:18 AM,0.3,,,,,No,"98021,1,98403,1",No,
+"Armellino, Daniel",2/2/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,1:35 PM,5:05 PM,3:30,5:05 PM,1,,,,,Yes,"98223,1",Yes,repeat interview
+"Armellino, Daniel",2/2/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,12:30 PM,5:46 PM,5:16,5:46 PM,1,,,,,Yes,"98284,1,98284,1",Yes,repeat interview
+"Nelson, Rachel",2/2/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,10:00 AM,3:00 PM,5:00,3:00 PM,1,BLC,,R,2,Yes,"98273,1,98274,1",No,
+"Nelson, Rachel",2/2/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Both,1,1,2:00 PM,4:30 PM,2:30,4:30 PM,1,BLC,,R,1,Yes,"98229,1",No,
+"Nelson, Rachel",2/2/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,4:30 PM,9:00,4:30 PM,1,BLC,,R,2,Yes,"98282,1,98004,1",No,
+"Nelson, Rachel",2/2/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Pontoon / kick,Shore,Steelhead,2,No,Fly,1,0,9:00 AM,5:00 PM,8:00,5:00 PM,1,,,,,Yes,"98284,2",No,
+"Nelson, Rachel",2/2/2019,4,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,Yes,Fly,2,1,9:00 AM,5:00 PM,3:12,12:12 PM,0.4,,,,,Yes,"98221,1,37664,1",No,
+"Nelson, Rachel",2/2/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,Yes,Fly,2,1,9:00 AM,5:00 PM,4:48,1:48 PM,0.6,,,,,Yes,"98221,1,37664,1",No,
+"Nelson, Rachel",2/2/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,7:00 AM,6:00 PM,11:00,6:00 PM,1,BLC,,R,1,Yes,"98250,3",No,
+"Bosley, April",2/3/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,9:00 AM,9:30 AM,0:30,9:30 AM,1,,,,,No,"98284,1,98233,1",No,
+"Bosley, April",2/3/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,8:00 AM,9:50 AM,1:50,9:50 AM,1,WF,,R,1,No,"98102,2",No,
+"Bosley, April",2/3/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,8:00 AM,10:15 AM,2:15,10:15 AM,1,,,,,No,"98144,2",No,
+"Bosley, April",2/3/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,8:30 AM,10:30 AM,2:00,10:30 AM,1,,,,,No,"98119,1,98109,1",No,
+"Bosley, April",2/3/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,7:30 AM,12:10 PM,0:28,7:58 AM,0.1,,,,,No,"98112,1",Yes,
+"Bosley, April",2/3/2019,1,5,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,7:30 AM,12:10 PM,4:12,11:42 AM,0.9,,,,,No,"98112,1",Yes,
+"Bosley, April",2/3/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,9:50 AM,12:25 PM,2:35,12:25 PM,1,BLC,,R,1,No,"98102,2",Yes,
+"Bosley, April",2/3/2019,1,7,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,2:00 PM,6:30,2:00 PM,1,SH,,R,1,No,"98019,2",No,
+"Lambert, Leah",2/3/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,8:40 AM,9:10 AM,0:30,9:10 AM,1,,,,,No,"98294,2",No,
+"Lambert, Leah",2/3/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:15 AM,9:15 AM,2:00,9:15 AM,1,,,,,No,"98112,1",No,
+"Lambert, Leah",2/3/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,10:15 AM,2:15,10:15 AM,1,,,,,Yes,"98232,1",No,
+"Lambert, Leah",2/3/2019,2,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,8:00 AM,11:05 AM,3:05,11:05 AM,1,,,,,No,"98274,1",No,
+"Lambert, Leah",2/3/2019,2,5,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,1,1,7:00 AM,11:00 AM,4:00,11:00 AM,1,RT,,R,1,No,"98223,2",No,
+"Lambert, Leah",2/3/2019,2,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Gear,1,0,8:30 AM,11:00 AM,2:30,11:00 AM,1,,,,,No,"98241,1,98596,2",No,
+"Lambert, Leah",2/3/2019,2,7,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,12:20 PM,4:20,12:20 PM,1,,,,,Yes,"98223,1",No,
+"Armellino, Daniel",2/3/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,1:20 PM,1:45 PM,0:25,1:45 PM,1,,,,,No,"98290,2",No,just started fishing
+"Armellino, Daniel",2/3/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,2,0,10:30 AM,2:50 PM,2:10,12:40 PM,0.5,,,,,Yes,"98277,1,98223,1",No,
+"Armellino, Daniel",2/3/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,2,0,10:30 AM,2:50 PM,2:10,12:40 PM,0.5,,,,,Yes,"98277,1,98223,1",No,
+"Armellino, Daniel",2/3/2019,3,3,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:15 AM,4:30 PM,8:15,4:30 PM,1,BLC,,R,1,Yes,"98115,1,98027,1",Yes,
+"Armellino, Daniel",2/3/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,9:00 AM,5:38 PM,8:38,5:38 PM,1,,,,,Yes,"98229,1,98229,1",No,
+"Nelson, Rachel",2/3/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Fly,1,1,7:30 AM,12:00 PM,4:30,12:00 PM,1,SH,W,R,1,Yes,"98284,2",No,
+"Nelson, Rachel",2/3/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,1:15 PM,5:15,1:15 PM,1,,,,,Yes,"98267,2",,
+"Nelson, Rachel",2/3/2019,4,3,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,7:00 AM,2:30 PM,4:30,11:30 AM,0.6,,,,,Yes,"98284,2",,
+"Nelson, Rachel",2/3/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,7:00 AM,2:30 PM,3:00,10:00 AM,0.4,BLC,,R,1,Yes,"98284,2",No,
+"Nelson, Rachel",2/3/2019,4,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:45 AM,2:30 PM,3:52,10:37 AM,0.5,,,,,Yes,"98237,1",No,
+"Nelson, Rachel",2/3/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:45 AM,2:30 PM,3:52,10:37 AM,0.5,,,,,Yes,"98037,1",No,
+"Nelson, Rachel",2/3/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,9:00 AM,4:30 PM,7:30,4:30 PM,1,,,,,Yes,"98208,1,98117,1",No,
+"Nelson, Rachel",2/3/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,1,1,6:30 AM,5:15 PM,10:45,5:15 PM,1,BLC,,R,1,Yes,"98258,3",No,suspicious white GMC
+"Nelson, Rachel",2/3/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,1,1,6:30 AM,5:15 PM,10:45,5:15 PM,1,WF,,R,2,Yes,"98258,3",No,suspicious white GMC
+"Nelson, Rachel",2/5/2019,1,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:30 AM,3:13 PM,4:21,10:51 AM,0.5,,,,,Yes,"98237,1",No,
+"Nelson, Rachel",2/5/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:30 AM,3:13 PM,4:21,10:51 AM,0.5,,,,,Yes,"98237,1",No,
+"Nelson, Rachel",2/5/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,3:13 PM,8:13,3:13 PM,1,,,,,Yes,"98221,2",No,
+"Nelson, Rachel",2/6/2019,1,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,,2,1,8:00 AM,3:00 PM,5:36,1:36 PM,0.8,SH,W,R,1,Yes,"98115,3",No,
+"Nelson, Rachel",2/6/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,,2,1,8:00 AM,3:00 PM,1:24,9:24 AM,0.2,,,,,Yes,"98115,3",No,
+"Nelson, Rachel",2/6/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:00 PM,3:30 PM,0:30,3:30 PM,1,,,,,No,98263,No,Dean Knight (wants a hat)
+"Armellino, Daniel",2/6/2019,2,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,1:15 PM,1:48 PM,0:33,1:48 PM,1,,,,,No,"98274,2",No,
+"Armellino, Daniel",2/6/2019,2,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,9:00 AM,5:25 PM,8:25,5:25 PM,1,,,,,Yes,"98021,1",No,
+"Bosley, April",2/7/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:30 AM,11:00 AM,2:30,11:00 AM,1,,,,,No,"98258,1",No,
+"Bosley, April",2/7/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,1:00 PM,1:00,1:00 PM,1,,,,,Yes,"98223,1",No,
+"Bosley, April",2/7/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,1:10 PM,1:15 PM,0:05,1:15 PM,1,,,,,No,"98058,1",No,
+"Lambert, Leah",2/7/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,9:30 AM,10:30 AM,1:00,10:30 AM,1,,,,,Yes,"98233,1,98223,1",No,
+"Lambert, Leah",2/7/2019,2,2,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:45 AM,12:00 PM,4:43,11:28 AM,0.9,SH,W,R,1,Yes,"98237,1",No,Clay (Rachel's husband)
+"Lambert, Leah",2/7/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:45 AM,12:00 PM,0:31,7:16 AM,0.1,,,,,Yes,"98237,1",No,Clay (Rachel's husband)
+"Armellino, Daniel",2/7/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,11:00 AM,4:15 PM,5:15,4:15 PM,1,,,,,Yes,"98258,1",Yes,"had dog with him, went to 4 different spots"
+"Nelson, Rachel",2/7/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,11:30 AM,1:45 PM,2:15,1:45 PM,1,,,,,No,"98240,1",Yes,
+"Nelson, Rachel",2/8/2019,1,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,1,1,7:30 AM,1:45 PM,5:37,1:07 PM,0.9,,,,,Yes,"98237,1,98221,1",No,
+"Nelson, Rachel",2/8/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,1,1,7:30 AM,1:45 PM,0:37,8:07 AM,0.1,,,,,Yes,"98237,1,98221,1",No,
+"Nelson, Rachel",2/10/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,9:00 AM,1:00,9:00 AM,1,,,,,No,"98284,2",No,
+"Nelson, Rachel",2/10/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:30 AM,9:30 AM,1:00,9:30 AM,1,,,,,No,"98226,1",No,
+"Nelson, Rachel",2/10/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:00 AM,9:40 AM,0:40,9:40 AM,1,,,,,No,"98241,1",No,
+"Nelson, Rachel",2/10/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Fly,1,0,8:15 AM,9:45 AM,1:30,9:45 AM,1,,,,,No,"98225,3",No,
+"Nelson, Rachel",2/10/2019,1,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:30 AM,1:00 PM,4:30,1:00 PM,1,,,,,Yes,"98284,2",No,
+"Nelson, Rachel",2/10/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,1:15 PM,6:15,1:15 PM,1,,,,,No,"98024,1",No,
+"Nelson, Rachel",2/10/2019,1,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,7:00 AM,1:15 PM,6:15,1:15 PM,1,,,,,No,"98125,1",No,
+"Nelson, Rachel",2/10/2019,1,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,10:00 AM,1:30 PM,3:30,1:30 PM,1,,,,,No,"98126,2",No,
+"Lambert, Leah",2/10/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,,Gear,1,0,12:00 PM,1:00 PM,1:00,1:00 PM,1,,,,,No,"98273,1",No,
+"Lambert, Leah",2/10/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,9:30 AM,1:15 PM,3:45,1:15 PM,1,,,,,Yes,"98223,1",No,
+"Lambert, Leah",2/10/2019,2,3,Skagit,Darrington Mill bridge to mouth,Pontoon / kick,Shore,Steelhead,2,No,Both,1,0,10:15 AM,2:40 PM,3:32,1:47 PM,0.8,,,,,No,"98033,1,98117,1",No,
+"Lambert, Leah",2/10/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Pontoon / kick,Shore,Steelhead,2,No,Both,1,0,10:15 AM,2:40 PM,0:53,11:08 AM,0.2,,,,,No,"98033,1,98117,1",No,
+"Lambert, Leah",2/14/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,8:45 AM,1:45,8:45 AM,1,,,,,Yes,"98112,1",No,
+"Lambert, Leah",2/14/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:00 AM,9:50 AM,1:25,8:25 AM,0.5,,,,,No,"98277,1,98221,1",No,blk ford 150
+"Lambert, Leah",2/14/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,7:00 AM,9:50 AM,1:25,8:25 AM,0.5,,,,,No,"98277,1,98221,1",No,blk ford 150
+"Armellino, Daniel",2/14/2019,2,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,6:30 AM,3:14 PM,4:22,10:52 AM,0.5,,,,,Yes,"98026,1",No,
+"Armellino, Daniel",2/14/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,6:30 AM,3:14 PM,4:22,10:52 AM,0.5,BLC,,R,1,Yes,"98026,1",No,
+"Nelson, Rachel",2/14/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,,,2,1,8:00 AM,3:30 PM,7:30,3:30 PM,1,SH,W,R,1,Yes,"98237,1,28265,1",No,
+"Nelson, Rachel",2/14/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,,,2,1,8:00 AM,3:30 PM,7:30,3:30 PM,1,BLC,,R,1,Yes,"98237,1,28265,1",No,
+"Bosley, April",2/15/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,12:15 PM,12:42 PM,0:27,12:42 PM,1,,,,,No,"98225,1",No,
+"Bosley, April",2/15/2019,1,2,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,9:30 AM,1:00 PM,3:30,1:00 PM,1,SH,W,R,3,No,"98273,1,98223,1,96915,1",No,
+"Lambert, Leah",2/15/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,10:00 AM,2:00,10:00 AM,1,,,,,Yes,"98284,1",No,
+"Lambert, Leah",2/15/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:30 AM,12:09 PM,3:39,12:09 PM,1,,,,,Yes,"98263,1",,
+"Armellino, Daniel",2/15/2019,3,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,1:00 PM,2:00 PM,1:00,2:00 PM,1,,,,,Yes,"98273,1,98223,1,96915,1",Yes,Interviewed by April in AM (no catch since 1 pm)
+"Armellino, Daniel",2/15/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,2:00 PM,4:55 PM,2:55,4:55 PM,1,BLC,,R,1,Yes,"98229,2",No, 
+"Nelson, Rachel",2/15/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:09 PM,1:30 PM,1:21,1:30 PM,1,,,,,Yes,"98263,1",Yes,"Dean Knight, fly guy"
+"Nelson, Rachel",2/15/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:30 PM,2:15 PM,1:45,2:15 PM,1,,,,,No,"98284,1",No,
+"Nelson, Rachel",2/15/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Fly,2,1,8:30 AM,5:00 PM,8:30,5:00 PM,1,BLC,,R,2,Yes,"98229,1,98225,1",No,
+"Nelson, Rachel",2/15/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Fly,2,0,10:00 AM,5:15 PM,7:15,5:15 PM,1,,,,,Yes,"98107,1,80207,198114,1",No,
+"Bosley, April",2/16/2019,1,12,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Gear,2,0,6:45 AM,7:45 AM,1:00,7:45 AM,1,,,,,No,"98290,1,98258,1,98204,1",No,
+"Bosley, April",2/16/2019,1,13,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,4,No,Gear,1,0,8:00 AM,8:30 AM,0:30,8:30 AM,1,,,,,No,"98036,1,98034,2,98012,1",No,
+"Bosley, April",2/16/2019,1,14,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,7:00 AM,9:30 AM,2:30,9:30 AM,1,,,,,No,"98284,2",No,
+"Bosley, April",2/16/2019,1,15,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Fly,2,0,7:00 AM,9:35 AM,2:35,9:35 AM,1,,,,,No,"98284,2,98221,1",No,
+"Bosley, April",2/16/2019,1,16,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:15 AM,10:15 AM,1:00,10:15 AM,1,,,,,No,"98258,1",No,
+"Bosley, April",2/16/2019,1,17,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,9:15 AM,11:10 AM,1:55,11:10 AM,1,,,,,No,"98837,1,98354,1",No,
+"Bosley, April",2/16/2019,1,18,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,8:30 AM,11:20 AM,2:50,11:20 AM,1,,,,,No,"98225,1,98277,1",No,
+"Bosley, April",2/16/2019,1,19,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:45 AM,1:30 PM,5:10,12:55 PM,0.9,,,,,No,"98290,198204,1",Yes,
+"Bosley, April",2/16/2019,1,19,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,7:45 AM,1:30 PM,0:34,8:19 AM,0.1,,,,,No,"98290,198204,1",Yes,
+"Bosley, April",2/16/2019,1,20,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,12:30 PM,1:30 PM,1:00,1:30 PM,1,,,,,No,"98229,1",No,
+"Lambert, Leah",2/16/2019,2,12,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,4,No,Gear,1,0,7:00 AM,10:30 AM,2:37,9:37 AM,0.75,,,,,Yes,"98012,1,98036,1,98034,2",No,
+"Lambert, Leah",2/16/2019,2,12,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,4,No,Gear,1,0,7:00 AM,10:30 AM,0:52,7:52 AM,0.25,,,,,Yes,"98012,1,98036,1,98034,2",No,
+"Lambert, Leah",2/16/2019,2,13,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Gear,2,0,8:00 AM,12:15 PM,4:15,12:15 PM,1,BLC,,K,2,No,"98232,1,98226,1",No,
+"Lambert, Leah",2/16/2019,2,14,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Fly,1,0,7:00 AM,1:00 PM,6:00,1:00 PM,1,,,,,Yes,"91431,1,98112,1,98027,1",No,
+"Nelson, Rachel",2/16/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,2,1,9:00 AM,2:45 PM,5:45,2:45 PM,1,SH,W,R,1,Yes,"98233,3",No,steelhead park
+"Nelson, Rachel",2/16/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,2,1,9:00 AM,2:45 PM,5:45,2:45 PM,1,WF,,R,1,Yes,"98233,3",No,steelhead park
+"Nelson, Rachel",2/16/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Gear,1,0,11:00 AM,4:00 PM,5:00,4:00 PM,1,,,,,Yes,"98284,3",No,101 hole
+"Nelson, Rachel",2/16/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,4:00 PM,0:48,12:48 PM,0.2,,,,,No,"98226,1",No,101 hole
+"Nelson, Rachel",2/16/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,4:00 PM,3:12,3:12 PM,0.8,BLC,,R,1,No,"98226,1",No,101 hole
+"Nelson, Rachel",2/16/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,2:15 PM,4:00 PM,1:45,4:00 PM,1,,,,,No,"98284,1",,101 hole
+"Nelson, Rachel",2/16/2019,3,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:30 AM,4:30 PM,8:00,4:30 PM,1,,,,,Yes,"98223,2",No,baker launch
+"Nelson, Rachel",2/16/2019,3,6,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,1,1,8:00 AM,4:45 PM,8:45,4:45 PM,1,,,,,Yes,"98229,3",No,bug with impressive beard :)
+"Nelson, Rachel",2/16/2019,3,7,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Fly,1,0,3:30 PM,5:15 PM,1:45,5:15 PM,1,,,,,No,"98225,3",No,steelhead park
+"Nelson, Rachel",2/16/2019,3,8,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,,2,1,8:30 AM,5:30 PM,9:00,5:30 PM,1,,,,,Yes,"98036,1,98256,1",No,steelhead park
+"Armellino, Daniel",2/16/2019,4,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,,Fly,1,0,1:30 PM,2:30 PM,1:00,2:30 PM,1,,,,,Yes,"98241,2",No,
+"Armellino, Daniel",2/16/2019,4,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,3:30 PM,3:30,3:30 PM,1,BLC,,R,6,Yes,"98225,1",No,
+"Armellino, Daniel",2/16/2019,4,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,1:30 PM,3:40 PM,2:10,3:40 PM,1,,,,,No,"98229,1",Yes,interviewed by April
+"Armellino, Daniel",2/16/2019,4,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,10:00 AM,3:50 PM,5:50,3:50 PM,1,,,,,,"98290,1",No,
+"Armellino, Daniel",2/16/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,11:30 AM,4:30 PM,5:00,4:30 PM,1,,,,,No,"98119,1",Yes,interviewed by _______
+"Armellino, Daniel",2/16/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,11:10 AM,4:40 PM,5:30,4:40 PM,1,BLC,,R,1,No,"98857,1,98354,1",Yes,interviewed by April
+"Armellino, Daniel",2/16/2019,4,7,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,1,1,8:30 AM,5:00 PM,8:30,5:00 PM,1,BLC,,R,1,Yes,"93101,3",No,
+"Armellino, Daniel",2/16/2019,4,8,Skagit,Darrington Mill bridge to mouth,Pontoon / kick,Boat,Steelhead,1,No,Fly,1,1,8:00 AM,5:15 PM,9:15,5:15 PM,1,SH,W,R,1,Yes,"98022,1",No,
+"Armellino, Daniel",2/16/2019,4,9,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,10:30 AM,6:00 PM,7:30,6:00 PM,1,SH,W,R,4,Yes,"98233,2",Yes,
+"Bosley, April",2/17/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,6:45 AM,10:00 AM,2:55,9:40 AM,0.9,,,,,No,"98426,1,98244,1",No,
+"Bosley, April",2/17/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,6:45 AM,10:00 AM,0:19,7:04 AM,0.1,,,,,No,"98426,1,98244,1",No,
+"Bosley, April",2/17/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Gear,1,0,9:00 AM,11:15 AM,2:15,11:15 AM,1,,,,,Yes,"98290,1,98241,1,98408,1",No,
+"Bosley, April",2/17/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:40 AM,12:20 PM,2:08,11:48 AM,0.8,,,,,Yes,"98225,2",Yes,
+"Bosley, April",2/17/2019,1,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,9:40 AM,12:20 PM,0:32,10:12 AM,0.2,,,,,Yes,"98225,2",Yes,
+"Bosley, April",2/17/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,10:45 AM,12:25 PM,1:40,12:25 PM,1,,,,,No,"98229,1",No,
+"Bosley, April",2/17/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,10:30 AM,12:30 PM,2:00,12:30 PM,1,,,,,Yes,"98274,1,85296,1",No,
+"Bosley, April",2/17/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,12:15 PM,12:45 PM,0:30,12:45 PM,1,,,,,No,"98012,2",No,
+"Bosley, April",2/17/2019,1,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:15 PM,12:45 PM,0:30,12:45 PM,1,,,,,No,"98223,1",No,
+"Lambert, Leah",2/17/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,9:00 AM,9:40 AM,0:40,9:40 AM,1,,,,,No,"98225,2",No,"blk SUV, 2 younger guys "
+"Lambert, Leah",2/17/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:30 AM,12:00 PM,4:30,12:00 PM,1,SH,H,R,2,No,"96620,1",No,
+"Lambert, Leah",2/17/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,12:45 PM,0:45,12:45 PM,1,,,,,No,"96620,1",Yes,"silver dodge, Texas"
+"Armellino, Daniel",2/17/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,7:30 AM,1:30 PM,6:00,1:30 PM,1,,,,,Yes,"98270,2",No,
+"Armellino, Daniel",2/17/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:45 PM,3:38 PM,2:53,3:38 PM,1,,,,,Yes,"95801,1",No,
+"Armellino, Daniel",2/17/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:45 PM,4:05 PM,3:20,4:05 PM,1,,,,,No,"98223,1",Yes,
+"Armellino, Daniel",2/17/2019,3,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,3:50 PM,4:20 PM,0:30,4:20 PM,1,,,,,No,"98237,1",No,just started
+"Armellino, Daniel",2/17/2019,3,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,9:30 AM,5:30 PM,8:00,5:30 PM,1,SH,W,R,2,Yes,"98284,1,98223,1,98296,1",No,
+"Armellino, Daniel",2/17/2019,3,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,9:30 AM,5:30 PM,8:00,5:30 PM,1,BLC,,R,2,Yes,"98284,1,98223,1,98296,1",No,
+"Armellino, Daniel",2/17/2019,3,6,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,10:00 AM,5:40 PM,7:40,5:40 PM,1,BLC,,R,1,Yes,"98225,2",No,
+"Armellino, Daniel",2/17/2019,3,7,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,1,1,9:30 AM,5:40 PM,8:10,5:40 PM,1,BLC,,R,2,Yes,"98229,2",No,
+"Nelson, Rachel",2/17/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,,2,1,9:30 AM,3:00 PM,5:30,3:00 PM,1,,,,,Yes,"98271,2",No,launched at Swift Sutter
+"Nelson, Rachel",2/17/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,3:00 PM,8:00,3:00 PM,1,SH,W,R,1,Yes,"98103,1",No,steelhead park
+"Nelson, Rachel",2/17/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,9:00 AM,3:45 PM,6:45,3:45 PM,1,,,,,Yes,"98034,1,98112,1",,Marb launch
+"Nelson, Rachel",2/17/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,,Gear,2,1,7:30 AM,5:15 PM,9:45,5:15 PM,1,SH,W,R,2,Yes,"98237,2",,"Boat at steelhead, truck at fabor"
+"Nelson, Rachel",2/17/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:00 AM,5:15 PM,9:15,5:15 PM,1,CTT,,R,1,Yes,"98290,1,98203,1,98208,1",No,"vehicle at steelhead, trailer at concrete"
+"Nelson, Rachel",2/17/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,5:45 PM,10:45,5:45 PM,1,SH,W,R,1,Yes,"98233,2",No,"truck and trailor at Baker, vehicle at marblemount"
+"Nelson, Rachel",2/20/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,1:15 PM,6:15,1:15 PM,1,,,,,Yes,"98248,1,98230,1",No,Concrete Rockport launch
+"Nelson, Rachel",2/20/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Both,1,1,10:00 AM,2:00 PM,4:00,2:00 PM,1,,,,,Yes,"98250,1,98001,1",No,Fabor launch
+"Nelson, Rachel",2/20/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:30 AM,2:30 PM,8:00,2:30 PM,1,,,,,Yes,"98237,1",No,Clay (Rachel's husband)
+"Nelson, Rachel",2/20/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:45 AM,4:00 PM,15:15,4:00 PM,1,,,,,No,"98247,1",No,
+"Nelson, Rachel",2/20/2019,3,5,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,2:30 PM,4:00 PM,1:30,4:00 PM,1,,,,,No,"98263,1",No,the fly guy
+"Nelson, Rachel",2/20/2019,3,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,4:00 PM,6:00 PM,2:00,6:00 PM,1,,,,,Yes,"98263,1",Yes,Dean Knight fly guy
+"Armellino, Daniel",2/20/2019,4,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,2:00 PM,2:00,2:00 PM,1,,,,,Yes,"98241,1",No,Bryson
+"Armellino, Daniel",2/20/2019,4,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:30 PM,3:30 PM,0:18,12:48 PM,0.1,,,,,No,"98290,1",No,USFS launch
+"Armellino, Daniel",2/20/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:30 PM,3:30 PM,2:42,3:12 PM,0.9,,,,,No,"98290,1",No,USFS launch
+"Armellino, Daniel",2/20/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:30 PM,4:50 PM,1:20,4:50 PM,1,,,,,No,"98346,1",No,
+"Bosley, April",2/20/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:00 AM,10:30 AM,1:30,10:30 AM,1,BLC,,R,1,No,"98027,1,98133,1",No,
+"Bosley, April",2/20/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,10:15 AM,10:45 AM,0:30,10:45 AM,1,,,,,No,"98221,1",No,
+"Bosley, April",2/20/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,10:45 AM,11:20 AM,0:35,11:20 AM,1,,,,,No,"98223,1",No,
+"Bosley, April",2/20/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,,1,0,8:00 AM,11:30 AM,1:45,9:45 AM,0.5,,,,,No,"98862,1",No,
+"Bosley, April",2/20/2019,1,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,,1,0,8:00 AM,11:30 AM,1:45,9:45 AM,0.5,,,,,No,"98862,1",No,
+"Bosley, April",2/20/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,11:45 AM,12:00 PM,0:15,12:00 PM,1,,,,,No,"98208,1",No,
+"Lambert, Leah",2/20/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,10:00 AM,3:00,10:00 AM,1,SH,W,R,1,Yes,"98284,1",No,
+"Lambert, Leah",2/20/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,10:00 AM,3:00,10:00 AM,1,BLC,,R,1,Yes,"98284,1",No,
+"Lambert, Leah",2/20/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,10:15 AM,11:30 AM,1:15,11:30 AM,1,,,,,Yes,"76206,1",No,
+"Lambert, Leah",2/20/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,11:45 AM,1:15 PM,1:30,1:15 PM,1,,,,,Yes,"98225,2",No,
+"Bosley, April",2/21/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,7:30 AM,10:10 AM,2:40,10:10 AM,1,,,,,No,"98042,1",No,
+"Bosley, April",2/21/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,12:00 PM,12:10 PM,0:10,12:10 PM,1,,,,,No,"98226,1",No,
+"Lambert, Leah",2/21/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Fly,1,1,10:00 AM,1:00 PM,3:00,1:00 PM,1,,,,,No,"98296,1,V8G087,1",No,
+"Armellino, Daniel",2/21/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,1:00 PM,3:35 PM,2:35,3:35 PM,1,,,,,No,"98221,1",No,interviewed by enforcement 
+"Armellino, Daniel",2/21/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,3:40 PM,4:20 PM,0:40,4:20 PM,1,,,,,No,"98284,1",No,Hippie Bar
+"Armellino, Daniel",2/21/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,3:30 PM,5:20 PM,1:50,5:20 PM,1,BLC,,R,1,No,"98223,2",No,USFS
+"Armellino, Daniel",2/21/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,8:00 AM,5:30 PM,9:30,5:30 PM,1,BLC,,R,2,Yes,"96007,2",No,USFS
+"Armellino, Daniel",2/21/2019,3,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:45 AM,5:35 PM,8:50,5:35 PM,1,,,,,Yes,"98258,1",No,USFS
+"Nelson, Rachel",2/21/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,2:00 PM,6:00,2:00 PM,1,,,,,Yes,"85118,1,98226,1",No,Steelhead to Fabor
+"Nelson, Rachel",2/21/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Pontoon / kick,Shore,Steelhead,2,No,Fly,2,0,8:15 AM,4:15 PM,8:00,4:15 PM,1,,,,,Yes,"98107,1,80207,1",No,Fabor to Baker
+"Nelson, Rachel",2/21/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,Y,Gear,1,1,1:00 PM,4:30 PM,3:30,4:30 PM,1,,,,,Yes,"98296,1,V8G087,1",Yes,found anchor #206-679-1516
+"Nelson, Rachel",2/21/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,4:30 PM,9:30,4:30 PM,1,SH,W,R,2,Yes,"98043,2",No,Marblemount to Fabor
+"Nelson, Rachel",2/21/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,4:30 PM,9:30,4:30 PM,1,RT,,R,1,Yes,"98043,2",No,Marblemount to Fabor
+"Nelson, Rachel",2/21/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,,,2,1,9:00 AM,4:45 PM,7:45,4:45 PM,1,,,,,Yes,"98021,1,98221,1,V8G0E7,1",No,Steelhead to Baker
+"Nelson, Rachel",2/21/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,1,1,9:30 AM,5:00 PM,7:30,5:00 PM,1,SH,W,R,1,Yes,"98166,1,97017,1,59903,1",,Marblemount to Steelhead
+"Bosley, April",2/23/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,9:30 AM,10:30 AM,1:00,10:30 AM,1,,,,,No,"98241,1",No,
+"Bosley, April",2/23/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,10:35 AM,3:35,10:35 AM,1,,,,,No,"98233,1,98362,1",No,
+"Bosley, April",2/23/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,10:30 AM,11:20 AM,0:50,11:20 AM,1,,,,,No,"98225,2",No,
+"Bosley, April",2/23/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,2,0,7:30 AM,11:27 AM,3:57,11:27 AM,1,SH,W,R,1,Yes,"98108,1,98168,1",No,SUCK
+"Lambert, Leah",2/23/2019,2,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,7:30 AM,9:15 AM,0:42,8:12 AM,0.4,,,,,No,"98226,1",No,"white acura, bear patagonia hat"
+"Lambert, Leah",2/23/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,7:30 AM,9:15 AM,1:03,8:33 AM,0.6,,,,,No,"98226,1",No,"white acura, bear patagonia hat"
+"Lambert, Leah",2/23/2019,2,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,10:15 AM,1:07,9:07 AM,0.5,,,,,Yes,"98115,1",No,grey chevy
+"Lambert, Leah",2/23/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,10:15 AM,1:07,9:07 AM,0.5,,,,,Yes,"98115,1",No,grey chevy
+"Lambert, Leah",2/23/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,1,No,Gear,1,1,9:00 AM,11:45 AM,2:45,11:45 AM,1,,,,,No,"98225,1",No,
+"Lambert, Leah",2/23/2019,2,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,12:30 PM,4:57,11:57 AM,0.9,,,,,Yes,"98270,2",No,
+"Lambert, Leah",2/23/2019,2,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,12:30 PM,0:33,7:33 AM,0.1,,,,,Yes,"98270,2",No,
+"Armellino, Daniel",2/23/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,11:15 AM,1:30 PM,2:15,1:30 PM,1,BLC,,R,1,No,"98117,1,98052,1",No,
+"Armellino, Daniel",2/23/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,1:40 PM,1:40,1:40 PM,1,,,,,No,"98223,1",No,
+"Armellino, Daniel",2/23/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,10:00 AM,2:30 PM,4:30,2:30 PM,1,,,,,No,"98225,1",No,
+"Armellino, Daniel",2/23/2019,3,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:30 AM,2:40 PM,5:10,2:40 PM,1,,,,,No,"98226,1,98029,1",No,
+"Armellino, Daniel",2/23/2019,3,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,10:00 AM,3:50 PM,5:50,3:50 PM,1,,,,,Yes,"98320,1,V4A6P1,1",No,"British Columbia, White Rock"
+"Armellino, Daniel",2/23/2019,3,6,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,9:00 AM,4:15 PM,7:15,4:15 PM,1,,,,,Yes,"98296,2",No,
+"Armellino, Daniel",2/23/2019,3,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,10:35 AM,5:00 PM,6:25,5:00 PM,1,,,,,Yes,"98362,1,98233,1",Yes,interviewed by April
+"Armellino, Daniel",2/23/2019,3,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,11:30 AM,5:30 PM,6:00,5:30 PM,1,,,,,No,"98264,1",No,
+"Armellino, Daniel",2/23/2019,3,9,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,9:15 AM,5:45 PM,8:30,5:45 PM,1,BLC,,R,2,Yes,"98229,1,98116,2",No,
+"Nelson, Rachel",2/23/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,1,1,9:15 AM,12:45 PM,3:30,12:45 PM,1,BLC,,R,1,Yes,"98284,2,98233,1","98223,2",Baker
+"Nelson, Rachel",2/23/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Gear,3,0,1:00 PM,1:30 PM,0:30,1:30 PM,1,,,,,Yes,"98284,3",No,Baker
+"Nelson, Rachel",2/23/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Pontoon / kick,Shore,Steelhead,2,No,Gear,2,0,7:30 AM,1:00 PM,5:30,1:00 PM,1,,,,,Yes,"98292,1,98036,1",No,Fabor to Baker
+"Nelson, Rachel",2/23/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,1,1,9:00 AM,1:15 PM,4:15,1:15 PM,1,,,,,Yes,"98226,1,98229,1",No,Baker
+"Nelson, Rachel",2/23/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,2,1,8:30 AM,1:45 PM,5:15,1:45 PM,1,BLC,,R,1,Yes,"98232,2,98241,1",No,Fabor
+"Nelson, Rachel",2/23/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,,Gear,2,1,6:45 AM,2:45 PM,8:00,2:45 PM,1,,,,,Yes,"98284,2",,fabor to Baker
+"Nelson, Rachel",2/23/2019,4,7,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,10:00 AM,3:15 PM,5:15,3:15 PM,1,,,,,Yes,,No,"Very irate guy, cussed me [Rachel] out, not giving the zip code"
+"Nelson, Rachel",2/23/2019,4,8,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Fly,2,1,7:00 AM,5:00 PM,10:00,5:00 PM,1,,,,,Yes,"98233,1,98205,1",No,
+"Nelson, Rachel",2/23/2019,4,9,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,5:15 PM,9:15,5:15 PM,1,,,,,Yes,"98284,2",No,
+"Nelson, Rachel",2/23/2019,4,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,5:45 PM,9:45,5:45 PM,1,BLC,,R,1,Yes,"98223,2",No,
+"Nelson, Rachel",2/23/2019,4,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,5:45 PM,9:45,5:45 PM,1,CTT,,R,1,Yes,"98223,2",No,
+"Bosley, April",2/24/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,7:00 AM,9:10 AM,2:10,9:10 AM,1,,,,,No,"98022,1,98231,1",No,
+"Bosley, April",2/24/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,8:00 AM,10:20 AM,2:20,10:20 AM,1,,,,,No,"98003,1,84029,1,98204,1",No,
+"Bosley, April",2/24/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Both,1,0,9:45 AM,10:45 AM,1:00,10:45 AM,1,,,,,No,"98133,2,98115,1",No,
+"Bosley, April",2/24/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:10 AM,10:55 AM,1:45,10:55 AM,1,,,,,No,"98022,1,98321,1",Yes,
+"Bosley, April",2/24/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,10:30 AM,11:10 AM,0:40,11:10 AM,1,,,,,No,"98115,1",No,
+"Bosley, April",2/24/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:30 AM,11:30 AM,2:00,11:30 AM,1,,,,,No,"98136,1",No,
+"Bosley, April",2/24/2019,1,7,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:00 AM,12:00 PM,4:00,12:00 PM,1,SH,W,R,1,No,"98241,3",No,
+"Bosley, April",2/24/2019,1,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Both,1,0,11:15 AM,12:05 PM,0:50,12:05 PM,1,,,,,No,"98292,3",No,
+"Bosley, April",2/24/2019,1,9,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,12:00 PM,12:30 PM,0:30,12:30 PM,1,,,,,No,"98226,1",No,
+"Bosley, April",2/24/2019,1,10,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,10:30 AM,12:50 PM,2:20,12:50 PM,1,,,,,No,"98267,1",No,
+"Bosley, April",2/24/2019,1,11,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:00 AM,1:00 PM,4:00,1:00 PM,1,,,,,No,"98201,1,98290,1",No,
+"Bosley, April",2/24/2019,1,12,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,9:00 AM,1:00 PM,4:00,1:00 PM,1,,,,,No,"98225,1",No,
+"Lambert, Leah",2/24/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,7:30 AM,9:30 AM,2:00,9:30 AM,1,,,,,Yes,"98801,1,98103,1",No,
+"Armellino, Daniel",2/24/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,1:30 PM,1:30,1:30 PM,1,,,,,Yes,"98136,1",Yes,"near hatchery creek, april interviewed"
+"Armellino, Daniel",2/24/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,11:30 AM,1:40 PM,2:10,1:40 PM,1,,,,,No,"98052,1",No,near hatchery creek=
+"Armellino, Daniel",2/24/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:30 AM,2:30 PM,5:00,2:30 PM,1,,,,,No,"98296,1",No,
+"Armellino, Daniel",2/24/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,8:00 AM,2:45 PM,6:45,2:45 PM,1,CTT,,R,1,Yes,"98284,1,98237,2",No,"hippie bar, 1 cutthroat"
+"Armellino, Daniel",2/24/2019,3,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:30 AM,4:00 PM,7:30,4:00 PM,1,,,,,Yes,"98226,1,98290,1,98292,1",No,USFS launch
+"Armellino, Daniel",2/24/2019,3,6,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,1,1,9:30 AM,4:30 PM,7:00,4:30 PM,1,SH,W,R,1,Yes,"98208,2",No,"usfs launch, 1 steelhead"
+"Armellino, Daniel",2/24/2019,3,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,12:45 PM,4:40 PM,3:55,4:40 PM,1,,,,,Yes,"98290,1,98201,1",Yes,"usfs launch, interviewed by april"
+"Armellino, Daniel",2/24/2019,3,8,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,2,9:30 AM,5:00 PM,7:30,5:00 PM,1,,,,,Yes,"98296,1,98012,1",No,"2 boats, 98012"
+"Armellino, Daniel",2/24/2019,3,9,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,8:45 AM,5:30 PM,8:45,5:30 PM,1,,,,,Yes,"98223,1,98233",No,
+"Nelson, Rachel",2/24/2019,4,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:30 AM,1:45 PM,3:07,10:37 AM,0.5,,,,,Yes,"98226,2,98225,1",No,Sauk to Faber
+"Nelson, Rachel",2/24/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:30 AM,1:45 PM,3:07,10:37 AM,0.5,,,,,Yes,"98226,2,98225,1",No,Sauk to Faber
+"Nelson, Rachel",2/24/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,1,1,8:00 AM,1:45 PM,5:45,1:45 PM,1,,,,,Yes,"98237,3",No,Faber
+"Nelson, Rachel",2/24/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,6:30 AM,2:15 PM,7:45,2:15 PM,1,SH,W,R,1,Yes,"98284,1,98028,1",No,Steelhead to faber
+"Nelson, Rachel",2/24/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,No,Gear,1,1,7:00 AM,3:30 PM,8:30,3:30 PM,1,,,,,Yes,"98233,2,98225,1",No,"drift boat with motor, baker vehicle and trailer"
+"Nelson, Rachel",2/24/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,4,No,Fly,1,1,8:30 AM,4:00 PM,7:30,4:00 PM,1,,,,,Yes,"59802,3,98103,1",No,steelhead to baker
+"Nelson, Rachel",2/24/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,1,1,8:30 AM,4:00 PM,7:30,4:00 PM,1,,,,,Yes,"98284,1,84029,1,98103,1",No,Steelhead to Baker
+"Nelson, Rachel",2/24/2019,4,7,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,1,No,Gear,1,1,11:30 AM,4:15 PM,4:45,4:15 PM,1,,,,,Yes,"98273,1",No,Baker
+"Nelson, Rachel",2/24/2019,4,8,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,9:30 AM,5:00 PM,7:30,5:00 PM,1,SH,W,R,2,Yes,"98252,3",No,Steelhead to baker
+"Nelson, Rachel",2/24/2019,4,9,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:00 AM,5:15 PM,9:15,5:15 PM,1,SH,W,R,1,,"98036,1,98223,2",,Marblemount to Steelhead
+"Nelson, Rachel",2/24/2019,4,10,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:30 PM,6:00 PM,2:30,6:00 PM,1,,,,,No,"98263,1",No,Dean Knight fly guy steelhead park
+"Howard, Jillian",2/25/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,9:00 AM,1:00,9:00 AM,1,,,,,No,"98284,1",,
+"Howard, Jillian",2/25/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,10:30 AM,11:21 AM,0:51,11:21 AM,1,,,,,No,"98226,1",,
+"Howard, Jillian",2/25/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,12:00 PM,0:30,7:30 AM,0.1,,,,,No,"98020,1",,
+"Howard, Jillian",2/25/2019,1,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:00 AM,12:00 PM,4:30,11:30 AM,0.9,,,,,No,"98020,1",,
+"Bosley, April",2/25/2019,2,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Both,1,0,9:00 AM,11:10 AM,2:10,11:10 AM,1,,,,,No,"98233,1,98223,1",No,
+"Bosley, April",2/25/2019,2,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,9:00 AM,11:30 AM,2:30,11:30 AM,1,BLC,,R,1,No,"98225,1",No,
+"Armellino, Daniel",2/25/2019,3,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,3:20 PM,1:40,1:40 PM,0.5,,,,,Yes,"98229,1",No,
+"Armellino, Daniel",2/25/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,3:20 PM,1:40,1:40 PM,0.5,,,,,Yes,"98229,1",No,
+"Armellino, Daniel",2/25/2019,3,2,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,0,8:30 AM,6:00 PM,9:30,6:00 PM,1,,,,,Yes,"98292,1,98221,1",No,
+"Nelson, Rachel",2/25/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,1:00 PM,1:15 PM,0:15,1:15 PM,1,,,,,No,"98206,1",No,Faber
+"Nelson, Rachel",2/25/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,11:30 AM,1:30 PM,2:00,1:30 PM,1,,,,,No,"98225,1",No,Swift/Sutter
+"Nelson, Rachel",2/25/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,1:15 PM,2:00 PM,0:45,2:00 PM,1,,,,,Yes,"98206,1",Yes,Faber
+"Nelson, Rachel",2/25/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,11:00 AM,2:45 PM,3:45,2:45 PM,1,,,,,Yes,"98226,1",Yes,Baker
+"Nelson, Rachel",2/25/2019,4,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,6:00 AM,2:30 PM,6:48,12:48 PM,0.8,,,,,Yes,"98283,1,98237,1",No,"Hippie Bar to Baker, Clay"
+"Nelson, Rachel",2/25/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,6:00 AM,2:30 PM,1:42,7:42 AM,0.2,,,,,Yes,"98283,1,98237,1",No,"Hippie Bar to Baker, Clay"
+"Nelson, Rachel",2/25/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,9:30 AM,4:30 PM,7:00,4:30 PM,1,,,,,Yes,"59802,2,98027,1",No,Marblemount to Steelhead
+"Nelson, Rachel",2/25/2019,4,7,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,2,1,10:00 AM,5:45 PM,7:45,5:45 PM,1,,,,,Yes,"98284,1,98103,1,84029,1",No,Marb. To Steelhead
+"Bosley, April",2/26/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:20 AM,8:50 AM,1:30,8:50 AM,1,,,,,No,"98012,1",No,
+"Bosley, April",2/26/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:45 AM,9:45 AM,1:00,9:45 AM,1,,,,,No,"98115,1",No,
+"Bosley, April",2/26/2019,1,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,9:30 AM,10:25 AM,0:55,10:25 AM,1,,,,,No,"98027,1,98133,1",No,
+"Lambert, Leah",2/26/2019,2,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,11:45 AM,2:07,9:37 AM,0.5,,,,,Yes,"98223,2,98273,1",No,
+"Lambert, Leah",2/26/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,11:45 AM,2:07,9:37 AM,0.5,,,,,Yes,"98223,2,98273,1",No,
+"Lambert, Leah",2/26/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,1,1,7:00 AM,11:45 AM,4:45,11:45 AM,1,,,,,Yes,"98233,2",No,
+"Lambert, Leah",2/26/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,,Gear,1,0,9:30 AM,12:45 PM,3:15,12:45 PM,1,,,,,Yes,"98284,1",No,
+"Armellino, Daniel",2/26/2019,3,1,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,1:45 PM,5:45,1:45 PM,1,BLC,,R,1,Yes,"98241,2",No,Native Hole
+"Armellino, Daniel",2/26/2019,3,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:00 AM,1:52 PM,4:52,1:52 PM,1,,,,,No,"98115,1",Yes,Native Hole
+"Armellino, Daniel",2/26/2019,3,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,10:00 AM,2:00 PM,4:00,2:00 PM,1,,,,,No,"98012,1",No,Hippie Bar
+"Armellino, Daniel",2/26/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:00 AM,5:20 PM,9:20,5:20 PM,1,SH,W,R,2,Yes,"98226,2,Canada,1",,USFS Launch
+"Nelson, Rachel",2/26/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,2:30 PM,3:00 PM,0:30,3:00 PM,1,,,,,No,"98263,1",No,Dean the fly guy
+"Nelson, Rachel",2/26/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,2:00 PM,2:45 PM,0:45,2:45 PM,1,,,,,Yes,"98237,2",No,
+"Nelson, Rachel",2/26/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,2:15 PM,2:30 PM,0:15,2:30 PM,1,,,,,No,"98284,1",No,
+"Nelson, Rachel",2/26/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,No,Gear,1,1,6:00 AM,3:00 PM,9:00,3:00 PM,1,,,,,Yes,"98237,1",No,Clay
+"Nelson, Rachel",2/26/2019,4,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,1,1,10:00 AM,3:30 PM,5:30,3:30 PM,1,SH,W,R,1,Yes,"98284,2,84029,1",No,with p4 row 6
+"Nelson, Rachel",2/26/2019,4,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Fly,1,1,10:00 AM,3:30 PM,5:30,3:30 PM,1,SH,W,R,1,Yes,"Montana,2,98284,1",No,with p4 row 5
+"Nelson, Rachel",2/26/2019,4,7,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,2:30 PM,3:30 PM,1:00,3:30 PM,1,,,,,No,"98284,1",No,was at Swift at count then gave the [illegible]
+"Nelson, Rachel",2/26/2019,4,8,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:00 PM,4:00 PM,1:00,4:00 PM,1,,,,,No,"98263,1",Yes,Dean the fly guy
+"Nelson, Rachel",2/26/2019,4,9,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,3:00 PM,4:00 PM,0:48,3:48 PM,0.8,,,,,No,"98012,1",No,Jimmy
+"Nelson, Rachel",2/26/2019,4,9,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:00 PM,4:00 PM,0:12,3:12 PM,0.2,BLC,,R,1,No,"98012,1",No,Jimmy
+"Nelson, Rachel",2/26/2019,4,10,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,3,1,8:15 AM,4:30 PM,4:07,12:22 PM,0.5,CTT,,R,1,No,"98290,1,98329,1,98024,1",No,
+"Nelson, Rachel",2/26/2019,4,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,3,1,8:15 AM,4:30 PM,4:07,12:22 PM,0.5,BLC,,R,1,Yes,"98290,1,98329,1,98024,1",No,
+"Nelson, Rachel",2/26/2019,4,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,3,1,8:15 AM,4:30 PM,4:07,12:22 PM,0.5,CTT,,R,1,Yes,"98290,1,98329,1,98024,1",No,
+"Nelson, Rachel",2/26/2019,4,11,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,8:45 AM,5:00 PM,8:15,5:00 PM,1,,,,,Yes,"98292,1,98225,1",No,Fabers to Baker
+"Nelson, Rachel",2/26/2019,4,12,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,,2,0,11:00 AM,5:00 PM,6:00,5:00 PM,1,,,,,Yes,"98290,1,98229,1",No,Steelhead to Baker
+"Nelson, Rachel",2/26/2019,4,13,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,4:00 PM,6:00 PM,2:00,6:00 PM,1,,,,,No,"98236,1",Yes,Dean the fly guy
+"Bosley, April",2/27/2019,1,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,Yes,Fly,1,0,8:00 AM,9:35 AM,1:35,9:35 AM,1,,,,,No,"80134,1",No,client of guide
+"Bosley, April",2/27/2019,1,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,1,Yes,Fly,1,1,8:00 AM,9:35 AM,1:35,9:35 AM,1,,,,,No,"98292,1",No,guide 
+"Bosley, April",2/27/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:25 AM,10:15 AM,0:50,10:15 AM,1,,,,,No,"98201,1,98027,1",No,
+"Bosley, April",2/27/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,11:15 AM,11:55 AM,0:40,11:55 AM,1,,,,,No,"98126,1,98144,1",No,
+"Bosley, April",2/27/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Both,1,0,9:00 AM,12:15 PM,3:15,12:15 PM,1,,,,,No,"98029,1",No,
+"Bosley, April",2/27/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,9:00 AM,12:15 PM,3:15,12:15 PM,1,,,,,No,"98258,1,98201,1",No,
+"Lambert, Leah",2/27/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,9:45 AM,12:30 PM,2:45,12:30 PM,1,,,,,No,"98225,2",No,
+"Nelson, Rachel",2/27/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,1:00 PM,1:00,1:00 PM,1,,,,,No,"98284,1",No,Swift creek
+"Nelson, Rachel",2/27/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,2,0,12:30 PM,3:30 PM,3:00,3:30 PM,1,,,,,No,"98225,2",Yes,Steelhead Park
+"Nelson, Rachel",2/27/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,8:00 AM,6:30 PM,10:30,6:30 PM,1,,,,,Yes,"80134,1,98292,1",No,Faber to Baker
+"Nelson, Rachel",2/27/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:45 PM,4:45 PM,1:00,4:45 PM,1,,,,,No,"98263,1",No,Dean the fly guy
+"Nelson, Rachel",2/27/2019,3,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,,2,0,7:00 AM,6:00 PM,11:00,6:00 PM,1,,,,,Yes,"98248,2",No,"USFS to Faber; originally entered with both rivers circled, but Rachel stated that the anglers only floated from the mouth of the Sauk to Faber where they took out. "
+"Nelson, Rachel",2/27/2019,3,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,4:45 PM,6:30 PM,1:45,6:30 PM,1,,,,,,"98263,1",Yes,Dean the fly guy
+"Howard, Jillian",3/2/2019,4,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,2,0,6:40 AM,9:05 AM,2:25,9:05 AM,1,,,,,No,"98284,2",No,Baker Launch
+"Howard, Jillian",3/2/2019,4,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,2,1,7:30 AM,9:30 AM,2:00,9:30 AM,1,,,,,No,"80134,1,98292,1",No,"have raft on a trailer but not using it today (river too crowded), at the access point east of Eagles Nest Motel"
+"Howard, Jillian",3/2/2019,4,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,7:30 AM,10:15 AM,2:45,10:15 AM,1,,,,,No,"98125,1,98033,1",No,"leaving Chapel, headed to Cascadian Farm then up the Sauk"
+"Howard, Jillian",3/2/2019,4,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,8:00 AM,10:30 AM,2:30,10:30 AM,1,,,,,No,"98115,2",No,west side of marblemount bridge
+"Bosley, April",3/2/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,2,0,9:00 AM,9:30 AM,0:30,9:30 AM,1,,,,,No,"98033,1,98270,1",No,
+"Bosley, April",3/2/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:30 AM,9:40 AM,1:10,9:40 AM,1,,,,,No,"98115,1",No,
+"Bosley, April",3/2/2019,1,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,7:00 AM,9:45 AM,2:45,9:45 AM,1,BLC,,R,1,No,"98115,1,98406,1",No,
+"Bosley, April",3/2/2019,1,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,6:45 AM,10:00 AM,3:15,10:00 AM,1,BLC,,R,4,No,"98258,1",No,
+"Bosley, April",3/2/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Fly,2,0,9:40 AM,10:40 AM,1:00,10:40 AM,1,,,,,No,"98115,1,98119,1,98004,1",Yes,"interview #2, was the earlier interview (row 2), other 2 people joined later"
+"Bosley, April",3/2/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:00 AM,10:45 AM,1:45,10:45 AM,1,,,,,No,"98065,1",No,
+"Bosley, April",3/2/2019,1,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,7:30 AM,11:00 AM,3:30,11:00 AM,1,,,,,No,"98354,1,98092,1",No,
+"Bosley, April",3/2/2019,1,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Fly,1,0,10:45 AM,11:10 AM,0:25,11:10 AM,1,,,,,No,"98226,1,98250,1,98225,1",No,
+"Bosley, April",3/2/2019,1,9,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,11:00 AM,11:15 AM,0:15,11:15 AM,1,,,,,No,"98208,1,98252,1",No,
+"Bosley, April",3/2/2019,1,10,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,1:00 PM,1:30 PM,0:30,1:30 PM,1,,,,,No,"98225,1,99344,1",No,
+"Armellino, Daniel",3/2/2019,2,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,9:30 AM,2:40 PM,5:10,2:40 PM,1,,,,,No,"98225,1",No,Native Hole
+"Armellino, Daniel",3/2/2019,2,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,3,No,Fly,2,0,9:40 AM,3:55 PM,4:41,2:21 PM,0.75,,,,,No,"98115,1,98119,1,98004,1",Yes,interviewed by april
+"Armellino, Daniel",3/2/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,3,No,Fly,2,0,9:40 AM,3:55 PM,1:33,11:13 AM,0.25,,,,,No,"98115,1,98119,1,98004,1",Yes,interviewed by april
+"Armellino, Daniel",3/2/2019,2,3,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,11:00 AM,4:10 PM,2:35,1:35 PM,0.5,,,,,No,"98092,1,98354,1",Yes,
+"Armellino, Daniel",3/2/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,11:00 AM,4:10 PM,2:35,1:35 PM,0.5,,,,,No,"98092,1,98354,1",Yes,
+"Armellino, Daniel",3/2/2019,2,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,3:00 PM,4:30 PM,1:30,4:30 PM,1,,,,,No,"98258,1,98034,1",No,hippie bar
+"Armellino, Daniel",3/2/2019,2,5,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,9:00 AM,4:50 PM,7:50,4:50 PM,1,BLC,,R,3,Yes,"98113,1,98204,1",No,native hole
+"Armellino, Daniel",3/2/2019,2,6,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,Yes,Fly,1,1,9:00 AM,5:00 PM,8:00,5:00 PM,1,SH,W,R,1,Yes,"98011,1,97058,1,98705,1",No,native hole
+"Armellino, Daniel",3/2/2019,2,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,5:20 PM,9:20,5:20 PM,1,,,,,Yes,"98233,1",No,bryson
+"Armellino, Daniel",3/2/2019,2,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,11:00 AM,6:00 PM,4:12,3:12 PM,0.6,,,,,Yes,"98042,1,98027,1",No,
+"Armellino, Daniel",3/2/2019,2,8,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,11:00 AM,6:00 PM,2:48,1:48 PM,0.4,,,,,Yes,"98042,1,98027,1",No,
+"Nelson, Rachel",3/2/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,12:15 PM,12:45 PM,0:30,12:45 PM,1,,,,,No,"98237,1,98235,1",No,sketchy people with big pitbull
+"Nelson, Rachel",3/2/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,1:00 PM,6:00,1:00 PM,1,,,,,Yes,"98237,1,98283,1",No,"Pills [Dills?] + Josiah, Marb - Rock"
+"Nelson, Rachel",3/2/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,12:45 PM,1:15 PM,0:30,1:15 PM,1,,,,,No,"98108,1,98118,1",No,Steelhead
+"Nelson, Rachel",3/2/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,12:30 PM,1:30 PM,1:00,1:30 PM,1,,,,,No,"98284,2",No,by Baker Launch
+"Nelson, Rachel",3/2/2019,3,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:00 AM,1:45 PM,5:45,1:45 PM,1,,,,,Yes,"98223,2",No,Rock to Faber
+"Nelson, Rachel",3/2/2019,3,6,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:00 AM,2:00 PM,7:00,2:00 PM,1,SH,W,R,1,Yes,"98241,3",No,Marb to Rock
+"Nelson, Rachel",3/2/2019,3,7,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,2:30 PM,7:00,2:30 PM,1,,,,,Yes,"98292,1,98232,1",No,Marb to Faber
+"Nelson, Rachel",3/2/2019,3,8,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,1,0,1:30 PM,3:00 PM,1:30,3:00 PM,1,,,,,No,"98284,2",Yes,by Baker Launch
+"Nelson, Rachel",3/2/2019,3,9,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,4,No,Gear,1,1,11:00 AM,3:00 PM,4:00,3:00 PM,1,,,,,Yes,"98284,4",No,Faber to Baker
+"Nelson, Rachel",3/2/2019,3,10,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,6:00 AM,4:00 PM,5:00,11:00 AM,0.5,,,,,Yes,"98506,1",No,Faber
+"Nelson, Rachel",3/2/2019,3,10,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,6:00 AM,4:00 PM,5:00,11:00 AM,0.5,,,,,Yes,"98506,1",No,Faber
+"Nelson, Rachel",3/2/2019,3,11,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:30 AM,4:15 PM,8:45,4:15 PM,1,SH,W,R,1,Yes,"98156,1,98235,1,98258,1",No,Faber to Baker
+"Nelson, Rachel",3/2/2019,4,12,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:30 AM,5:00 PM,7:36,3:06 PM,0.8,BLC,,R,1,Yes,"98284,1,98234,1,98273,1",No,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,12,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:30 AM,5:00 PM,1:54,9:24 AM,0.2,,,,,Yes,"98284,1,98234,1,98273,1",No,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,13,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,9:00 AM,5:00 PM,6:24,3:24 PM,0.8,SH,W,R,1,Yes,"98922,1,98941,1,98402,1",No,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,13,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,9:00 AM,5:00 PM,1:36,10:36 AM,0.2,,,,,Yes,"98922,1,98941,1,98402,1",No,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,14,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:00 AM,5:00 PM,10:00,5:00 PM,1,,,,,Yes,"98233,3",No,marb to faber
+"Nelson, Rachel",3/2/2019,4,15,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:45 AM,5:15 PM,5:57,2:42 PM,0.7,,,,,Yes,"98230,1,28225,2",,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,15,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,8:45 AM,5:15 PM,2:33,11:18 AM,0.3,,,,,Yes,"98230,1,28225,2",,hippie bar to faber
+"Nelson, Rachel",3/2/2019,4,16,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,4:00 PM,6:15 PM,2:15,6:15 PM,1,,,,,Yes,"98263,1",No,Dean the fly guy
+"Nelson, Rachel",3/2/2019,4,17,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,1,1,10:30 AM,6:15 PM,7:45,6:15 PM,1,SH,W,R,1,Yes,"98221,1",No,Graig 
+"Bosley, April",3/3/2019,1,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,1,7:15 AM,8:20 AM,1:05,8:20 AM,1,,,,,No,"11561,1",No,
+"Bosley, April",3/3/2019,1,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,8:00 AM,9:05 AM,1:05,9:05 AM,1,,,,,No,"98115,1",No,
+"Bosley, April",3/3/2019,1,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,6:45 AM,9:30 AM,2:45,9:30 AM,1,,,,,No,"98284,1",No,
+"Bosley, April",3/3/2019,1,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,7:45 AM,9:45 AM,2:00,9:45 AM,1,,,,,No,"98107,1",No,
+"Bosley, April",3/3/2019,1,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,9:10 AM,10:10 AM,1:00,10:10 AM,1,,,,,No,"98267,1",No,
+"Bosley, April",3/3/2019,1,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,,1,0,10:15 AM,10:45 AM,0:30,10:45 AM,1,,,,,No,"98036,2",No,
+"Bosley, April",3/3/2019,1,7,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,2,0,6:30 AM,11:20 AM,4:50,11:20 AM,1,,,,,No,"98208,1,98284,1",No,
+"Bosley, April",3/3/2019,1,8,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,8:00 AM,12:15 PM,4:15,12:15 PM,1,,,,,No,"98201,1",No,
+"Lambert, Leah",3/3/2019,2,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Gear,1,0,9:30 AM,10:30 AM,1:00,10:30 AM,1,,,,,No,"98232,1",No,blue dodge
+"Lambert, Leah",3/3/2019,2,2,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,1,1,7:00 AM,10:45 AM,3:45,10:45 AM,1,,,,,Yes,"98273,2",No,
+"Lambert, Leah",3/3/2019,2,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,7:00 AM,12:00 PM,5:00,12:00 PM,1,SH,W,R,1,Yes,"98258,2,98282,1",No,
+"Lambert, Leah",3/3/2019,2,4,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,2,No,Gear,1,1,9:00 AM,12:40 PM,3:40,12:40 PM,1,,,,,Yes,"98229,2",No,
+"Nelson, Rachel",3/3/2019,3,1,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:00 AM,2:45 PM,7:45,2:45 PM,1,,,,,Yes,"98226,2",No,Marb to Rock
+"Nelson, Rachel",3/3/2019,3,2,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,6:30 AM,3:00 PM,8:30,3:00 PM,1,SH,W,R,1,Yes,"98270,3",No,Rock to Faber
+"Nelson, Rachel",3/3/2019,3,3,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,1:30 PM,3:15 PM,1:45,3:15 PM,1,,,,,No,"98284,2",No,Jackman Bridge
+"Nelson, Rachel",3/3/2019,3,4,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,6:30 AM,3:30 PM,4:30,11:00 AM,0.5,SH,W,R,1,Yes,"98292,1,98290,1",No,Hippie Bar to Jackman
+"Nelson, Rachel",3/3/2019,3,4,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,Gear,2,1,6:30 AM,3:30 PM,4:30,11:00 AM,0.5,,,,,Yes,"98292,1,98290,1",No,Hippie Bar to Jackman
+"Nelson, Rachel",3/3/2019,3,5,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,4,No,Both,2,1,8:30 AM,3:30 PM,7:00,3:30 PM,1,,,,,Yes,"98292,4",No,Rock to Baker
+"Nelson, Rachel",3/3/2019,3,6,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:15 PM,3:30 PM,0:15,3:30 PM,1,,,,,No,"98263,1",No,Dean the fly guy
+"Nelson, Rachel",3/3/2019,3,7,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:30 PM,3:45 PM,0:15,3:45 PM,1,,,,,No,"98225,1",No,by Baker
+"Nelson, Rachel",3/3/2019,3,8,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,7:30 AM,3:45 PM,8:15,3:45 PM,1,,,,,Yes,"98117,1,98108,1",No,Rock to Baker
+"Nelson, Rachel",3/3/2019,3,9,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,,2,1,7:30 AM,4:45 PM,8:19,3:49 PM,0.9,SH,H,R,2,Yes,"98253,3",No,"USFS to Faber; Rachel confirms the validity of this report, individual is someone she has know for 15 years who she believes, also he said that the fish were released because they were 'spawned out'"
+"Nelson, Rachel",3/3/2019,3,9,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,,2,1,7:30 AM,4:45 PM,8:19,3:49 PM,0.9,BLC,,R,1,Yes,"98253,3",No,USFS to Faber
+"Nelson, Rachel",3/3/2019,3,9,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,3,No,,2,1,7:30 AM,4:45 PM,0:55,8:25 AM,0.1,,,,,Yes,"98253,3",No,USFS to Faber
+"Nelson, Rachel",3/3/2019,3,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,8:30 AM,5:00 PM,8:30,5:00 PM,1,,,,,Yes,"98027,1,98115,1",No,Rock to Baker
+"Nelson, Rachel",3/3/2019,3,11,Skagit,Dalles bridge to Marblemount bridge,Boat with motor,Boat,Steelhead,3,,Both,2,1,8:00 AM,5:30 PM,9:30,5:30 PM,1,BLC,,R,6,Yes,"98203,1,98034,1,98028,1",No,Faber
+"Nelson, Rachel",3/3/2019,4,12,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,10:00 AM,5:30 PM,5:15,3:15 PM,0.7,,,,,Yes,"98225,1,98221,1",No,Hippie Bar to Faber
+"Nelson, Rachel",3/3/2019,4,12,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Fly,2,1,10:00 AM,5:30 PM,2:15,12:15 PM,0.3,,,,,Yes,"98225,1,98221,1",No,Hippie Bar to Faber
+"Nelson, Rachel",3/3/2019,4,13,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,10:00 AM,6:00 PM,8:00,6:00 PM,1,SH,W,R,1,Yes,"98223,2",No,Rock to Baker
+"Nelson, Rachel",3/3/2019,4,13,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,10:00 AM,6:00 PM,8:00,6:00 PM,1,BLC,,R,1,Yes,"98223,2",No,Rock to Baker
+"Nelson, Rachel",3/3/2019,4,14,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,1,No,Fly,1,0,3:30 PM,6:30 PM,3:00,6:30 PM,1,,,,,Yes,"98263,1",Yes,Dean the fly guy
+"Armellino, Daniel",3/3/2019,5,1,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Gear,1,0,1:00 PM,2:15 PM,0:45,1:45 PM,0.6,,,,,No,"98028,2",No,
+"Armellino, Daniel",3/3/2019,5,1,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Gear,1,0,1:00 PM,2:15 PM,0:30,1:30 PM,0.4,,,,,No,"98028,2",No,
+"Armellino, Daniel",3/3/2019,5,2,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,12:00 PM,3:00 PM,3:00,3:00 PM,1,BLC,,R,1,No,"98201,1",Yes,interviewed by April
+"Armellino, Daniel",3/3/2019,5,3,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,3:30 PM,1:36,9:06 AM,0.2,,,,,Yes,"98233,1,98272,1",No,Fabers South
+"Armellino, Daniel",3/3/2019,5,3,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,7:30 AM,3:30 PM,6:24,1:54 PM,0.8,,,,,Yes,"98233,1,98272,1",No,Fabers South
+"Armellino, Daniel",3/3/2019,5,4,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,2,0,9:00 AM,4:00 PM,2:06,11:06 AM,0.3,,,,,No,"98119,1,98107,1",Yes,Interviwed by April
+"Armellino, Daniel",3/3/2019,5,4,Skagit,Dalles bridge to Marblemount bridge,Shore,Shore,Steelhead,2,No,Fly,2,0,9:00 AM,4:00 PM,4:54,1:54 PM,0.7,,,,,No,"98119,1,98107,1",Yes,Interviewed by April
+"Armellino, Daniel",3/3/2019,5,5,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,2,No,Fly,1,0,12:00 PM,4:20 PM,4:20,4:20 PM,1,,,,,No,"98229,2",No,
+"Armellino, Daniel",3/3/2019,5,6,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Fly,1,0,1:20 PM,4:45 PM,3:25,4:45 PM,1,BLC,,R,1,Yes,"98223,1",No,
+"Armellino, Daniel",3/3/2019,5,7,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,3,No,Both,2,1,7:30 AM,5:10 PM,9:40,5:10 PM,1,BLC,,R,1,Yes,"98198,1,98005,1,98815,1",No,
+"Armellino, Daniel",3/3/2019,5,8,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,12:00 PM,5:45 PM,4:18,4:18 PM,0.75,,,,,Yes,"98290,2",No,
+"Armellino, Daniel",3/3/2019,5,8,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,12:00 PM,5:45 PM,1:26,1:26 PM,0.25,,,,,Yes,"98290,2",No,
+"Armellino, Daniel",3/3/2019,5,9,Skagit,Darrington Mill bridge to mouth,Shore,Shore,Steelhead,1,No,Gear,1,0,3:30 PM,5:50 PM,2:20,5:50 PM,1,,,,,Yes,"98241,1",No,
+"Armellino, Daniel",3/3/2019,5,10,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:30 AM,6:20 PM,6:53,3:23 PM,0.7,,,,,Yes,"98133,1,98177,1",No,
+"Armellino, Daniel",3/3/2019,5,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:30 AM,6:20 PM,2:57,11:27 AM,0.3,SH,W,R,1,Yes,"98133,1,98177,1",No,
+"Armellino, Daniel",3/3/2019,5,10,Skagit,Dalles bridge to Marblemount bridge,Drift boat / raft,Boat,Steelhead,2,No,Gear,2,1,8:30 AM,6:20 PM,2:57,11:27 AM,0.3,BLC,,R,1,Yes,"98133,1,98177,1",No,
+"Armellino, Daniel",3/3/2019,5,11,Skagit,Darrington Mill bridge to mouth,Drift boat / raft,Boat,Steelhead,2,No,,2,1,6:30 AM,6:30 PM,12:00,6:30 PM,1,SH,W,R,2,Yes,"98284,1,98223,1",No,
