@@ -31,20 +31,11 @@ The purpose of this document is to record the steps and code necessary to reprod
 # Requirements
 All analyses require R software [**(link)**](https://cran.r-project.org/) (v3.4.3) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. For Stan to work, rtools must also be installed: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
 
-
 # Functions
-We also need a couple of helper functions which we will load from the functions folder, which we will load using the walk() function from the purrr package (which we will install if it is not already installed).
+We also need a couple of helper functions which we will load from the functions folder, which we will load using sapply
 ```{r load_funcs, results = "hide"}
-#==========================================
-# Source function files in functions folder
-#==========================================
-if(!require("purrr")) {
-  install.packages("purrr")
-  library("purrr")
-}else(library(purrr))
-path <- "functions/"
-files <- paste0(path, list.files(path))
-purrr::walk(files, source)
+wd_functions<-"functions"
+sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
 ```
 
 # Packages
@@ -78,113 +69,86 @@ using("tidyverse",
       "timeDate"
       )
 ```
+# User inputs
+```{r user_inputs,message=FALSE, warning=FALSE}
+#======================================================
+# Specify relative working directories for sub-folders
+#======================================================
+wd_LUTs <-"lookup tables"  # Location of look-up tables (maybe could be merged with data files??)
+wd_data   <-"data"        # Location where data files are stored
+wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
+wd_models  <-"models"      # Location of model files 
 
-# User Inputs
-We need to specify data source file names and sub-folders, list some manual data filter conditions:
-```{r user_inputs, message=FALSE, warning=FALSE}
-#---------------------------------------------------------------------------------------------------------- -  
-# (1) SPECIFY WORKING DIRECTORIES, SET SEED(S), AND LOAD R PACKAGES, FUNCTIONS, AND LOOK-UP TABLES (LUTs)----
-#---------------------------------------------------------------------------------------------------------- -
-# Specify working directory
-      wd_LUT_files <-"lookup tables"  # Location of look-up tables (maybe could be merged with data files??)
-      wd_data_files   <-"data"        # Location where data files are stored
-      wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
-      wd_model_files  <-"models"      # Location of model files 
-      wd_output_files<-"outputs" # Location of saved output (summary figures/tables and model results)
+#======================================================
+# Specify names of .csv data files
+#======================================================
+effort_file_name<-   "03_Effort_dat - improved_tiein_entry - 2019_Skagit_creel_JSH_2-17-19.csv"
+interview_file_name<-"03_Interview-dat_hand-corr-times_2-28-2019.csv"
+
+#======================================================
+# Denote data of interest (used to filter data below)
+#======================================================
+# Specify filter type(s) to extract data by (Enter "Y" or "N")
+  by.Year<-      "N" # If "Y", will filter by full calendar year(s) (Jan. 1 - Dec. 31)
+  by.YearGroup<- "N" # If "Y", will filter by a "Year Group", which go from May 1st Yr1 - April 30 Yr2
+  by.Season<-    "N" # If "Y", will filter by "season", which is either Summer (May 1st - Oct 31st) or Winter (Nov. 1 - April 30)
+  by.StreamName<-"Y" # If "Y", will filter by stream name
+  by.Date<-      "N" # If "Y", will filter by a date range
+  
+# Specify date ranges for "Year Groups" and "Seasons"
+  YearBegin<-  121 # day of year a "YearGroup" begins (FYI - 121 = May 1st in a non-leap year)
+  summerBegin<-121 
+  summerEnd<-  304 # FYI - 304 = Oct. 31st (in a non-leap year)
+  winterBegin<-305 
+  winterEnd<-  120 
+
+# Specify filter unit(s)
+  YearGroup.of.Interest<- c("2017-2018") 
+  Season.of.Interest<-    c("Winter") 
+  Year.of.Interest<-      c("2017") 
+  StreamName.of.Interest<-c("Skagit")
+  Begin.Date<-            c("2016-05-01") #Format must be "yyyy-mm-dd"
+  End.Date<-              c("2017-03-31") #Format must be "yyyy-mm-dd"
+  
+#======================================================
+# Denote catch group of interest (species_origin_fate) 
+#======================================================  
+  catch.group.of.interest<-c("SH_W_R") 
+
+#======================================================
+# Identify dates when fishery was closed by section
+#======================================================     
+  total.closed.dates<-0 # Total number of dates that at least one section of the river was closed (i.e., there should not have been any effort or catch)
+  
+# NOTE: if "total.closed.dates" >0, use the following format to enter closure dates and section, where :
+      # the first column is the list of individual dates (by row) the fishery was closed date 
+      # the number of additional columns equals the number of "final" sections based on "final.effort.section.xwalk" 
+      # the enter the following values below each section:
+      # Enter 1 if the section was open and enter 0 if the section was closed  
+    
+                           #    Date   , Section-1, Section-2
+    closed.Dates.Sections<-c("2019-02-11",     0,         0 )  
 ```
 
 # Data Preparation
 ```{r data_prep,message=FALSE, warning=FALSE,results = "hide"}
-#---------------------------------------------------------------------------------------------------------- -
-# (3) IMPORT ALL CREEL SURVEY DATA AND FORMAT                                                            ####
-#---------------------------------------------------------------------------------------------------------- - 
 # Load LUTs
-source(paste0(wd_source_files, "/Load_LUTs.R"))
+  source(paste0(wd_source_files, "/Load_LUTs.R"))
 
-# Import creel survey effort and interview .csv data files
-effort.dat<-read.csv(paste0(wd_data_files, "/03_Effort_dat - improved_tiein_entry - 2019_Skagit_creel_JSH_2-17-19.csv"), header=TRUE) #updated file name/version 3/4/2019 JSH
-interview.dat<-read.csv(paste0(wd_data_files, "/03_Interview-dat_hand-corr-times_2-28-2019.csv"), header=TRUE)
-    
-# Quickly evaluate creel data files
-head(effort.dat)
-head(interview.dat)
+# Load creel data and format
+  source(paste0(wd_source_files, "/Import_Skagit_Creel_Data_and_Format.R"))
 
-# Run source summary file 
-source(paste0(wd_source_files, "/03_Import_Creel_Data_and_Format_2019-04-08.R"))
-#---------------------------------------------------------------------------------------------------------- -
-# (4) DENOTE DATA OF INTEREST (i.e., data to extract and evaluate)                                       ####
-#---------------------------------------------------------------------------------------------------------- - 
- # Extract by "YearGroup"?
-      by.YearGroup<-"N" #Enter "Y" or "N" 
-      unique(effort.dat$YearGroup) #YearGroup runs from May 1st - April 30th
-      YearGroup.of.Interest<-c("2017-2018") 
-      
-  # Extract by "Season"? (Summer vs. Winter)
-      by.Season<-"N" #Enter "Y" or "N" 
-      unique(effort.dat$Season) #Summer (May 1st - Oct 31st), Winter (Nov. 1 - April 30)
-      Season.of.Interest<-c("Winter")
-  
-  # Extract by "Year"?        
-      by.Year<-"N" #Enter "Y" or "N" 
-      unique(effort.dat$Year)
-      Year.of.Interest<-c("2017") 
-      
-  # Extract by "StreamName"?
-      by.StreamName<-"Y" #Enter "Y" or "N" 
-      unique(effort.dat$StreamName)
-      StreamName.of.Interest<-c("Skagit")
-      
-  # Extract by Date (Range)?
-      by.Date<-"N" #Enter "Y" or "N" 
-      #unique(effort.dat$Date)
-      Begin.Date<-c("2016-05-01") #Format must be "yyyy-mm-dd"
-      End.Date<-c("2017-03-31") #Format must be "yyyy-mm-dd"
-      
-  # Extract by Surveyor?
-      by.Surveyor<-"N" #Enter "Y" or "N" 
-      unique(effort.dat$Surveyor)
-      Surveyor.of.Interest<-c("") 
+# Extract data of interest and format 
+  ## add code that shows options for filtering data by date/year/season/location
+  source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))  
 
-#---------------------------------------------------------------------------------------------------------- -
-# (5) EXTRACT DATA OF INTEREST AND CALCULATE FIELDS                                                      ----
-#---------------------------------------------------------------------------------------------------------- -
-# Run source summary file    
-source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))  
+#Run source summary file 
+  ## add code that shows options for "catch groups"
+  source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
 
-#---------------------------------------------------------------------------------------------------------- -
-# (6) SUMMARIZE EFFORT AND CATCH DATA FOR TIME-SERIES MODEL                                              ----
-#---------------------------------------------------------------------------------------------------------- - 
-# Identify catch groupings of interest
-      unique(sub.group.dat$Catch.Group[order(sub.group.dat$Catch.Group)])
-      catch.group.of.interest<-c("SH_W_R") #ONLY SELECT ONE GROUPING AT A TIME
-    
-  # Identify first and last dates of fishery (i.e., over what continuous range of dates do we want to estimate effort and catch)
-      range(sub.effort.dat$Date); #range of creel data dates (NOTE: this may not match the range of dates the fishery was open)
-      Date_Begin<-min(sub.effort.dat$Date) #c("2018-04-01") #Define date as the first day for which you want to make an estimate for the fishery (not necessarily first survey date)
-      Date_End<-  max(sub.effort.dat$Date) #c("2018-04-30")    
-    
-  # Identify dates when fishery was closed by section (i.e., there should not have been any effort or catch)
-      # Total number of dates that at least one section of the river was closed
-          total.closed.dates<-0
-      
-      # Final number of "sub-sections" we are breaking up the estimates by
-          final.effort.section.xwalk
-          
-      # NOTE: if "total.closed.dates" >0, use the following format to enter closure dates and section, where :
-            # the first column is the list of individual dates (by row) the fishery was closed date 
-            # the number of additional columns equals the number of "final" sections based on "final.effort.section.xwalk" 
-            # the enter the following values below each section:
-            # Enter 1 if the section was open and enter 0 if the section was closed  
-          
-                                 #    Date   , Section-1, Section-2
-          closed.Dates.Sections<-c("2018-04-16",     0,         0,
-                                   "2018-04-17",     0,         0,
-                                   "2018-04-23",     0,         0,
-                                   "2018-04-24",     0,         0 )
+  ##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
 
 
-  #Run source summary file 
-    source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))
 
 ```
 
