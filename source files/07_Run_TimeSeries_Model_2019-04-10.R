@@ -49,7 +49,7 @@
       standat$value_betashape_phi_C_scaled<-value_betashape_phi_C_scaled 
               
     #Compile Model
-      model<-stan_model(paste(wd_model_files, model.file.name, sep="/")) 
+      model<-stan_model(paste(wd_models, model.file.name, sep="/")) 
       
     #Run model in using NUTS/HMC
       start.time<-Sys.time()
