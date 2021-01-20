@@ -48,7 +48,7 @@ purrr::walk(files, source)
 ```
 
 # Packages
-In addition to purr, We also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them.
+In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them.
 ```{r load_pkgs, message = FALSE, warning = FALSE}
 #===============================================
 # Load packages, install and load if not already
@@ -58,7 +58,7 @@ using("tidyverse",
       "RColorBrewer",
       "readxl",
       "readr",
-      "ggplot2",
+      #"ggplot2",
       "tinytex",
       "here", 
       "plyr",
@@ -80,8 +80,8 @@ using("tidyverse",
 ```
 
 # User Inputs
-We need to specify data source file names, list some manual  data filter conditions, and specify which ESUs and DPSs we would like to analyze to estimate trends and smoothed abundances for:
-```{r user_inputs,message=FALSE, warning=FALSE}
+We need to specify data source file names and sub-folders, list some manual data filter conditions:
+```{r user_inputs, message=FALSE, warning=FALSE}
 #---------------------------------------------------------------------------------------------------------- -  
 # (1) SPECIFY WORKING DIRECTORIES, SET SEED(S), AND LOAD R PACKAGES, FUNCTIONS, AND LOOK-UP TABLES (LUTs)----
 #---------------------------------------------------------------------------------------------------------- -
@@ -90,7 +90,7 @@ We need to specify data source file names, list some manual  data filter conditi
       wd_data_files   <-"data"        # Location where data files are stored
       wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
       wd_model_files  <-"models"      # Location of model files 
-      wd_output_files<-"output" # Location of saved output (summary figures/tables and model results)
+      wd_output_files<-"outputs" # Location of saved output (summary figures/tables and model results)
 ```
 
 # Data Preparation
@@ -99,7 +99,7 @@ We need to specify data source file names, list some manual  data filter conditi
 # (3) IMPORT ALL CREEL SURVEY DATA AND FORMAT                                                            ####
 #---------------------------------------------------------------------------------------------------------- - 
 # Load LUTs
-source(paste0(wd_source_files, "/01_Load_LUTs.R"))
+source(paste0(wd_source_files, "/Load_LUTs.R"))
 
 # Import creel survey effort and interview .csv data files
 effort.dat<-read.csv(paste0(wd_data_files, "/03_Effort_dat - improved_tiein_entry - 2019_Skagit_creel_JSH_2-17-19.csv"), header=TRUE) #updated file name/version 3/4/2019 JSH
@@ -114,7 +114,7 @@ source(paste0(wd_source_files, "/03_Import_Creel_Data_and_Format_2019-04-08.R"))
 #---------------------------------------------------------------------------------------------------------- -
 # (4) DENOTE DATA OF INTEREST (i.e., data to extract and evaluate)                                       ####
 #---------------------------------------------------------------------------------------------------------- - 
-  # Extract by "YearGroup"?
+ # Extract by "YearGroup"?
       by.YearGroup<-"N" #Enter "Y" or "N" 
       unique(effort.dat$YearGroup) #YearGroup runs from May 1st - April 30th
       YearGroup.of.Interest<-c("2017-2018") 
@@ -154,7 +154,7 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
 #---------------------------------------------------------------------------------------------------------- -
 # (6) SUMMARIZE EFFORT AND CATCH DATA FOR TIME-SERIES MODEL                                              ----
 #---------------------------------------------------------------------------------------------------------- - 
-  # Identify catch groupings of interest
+# Identify catch groupings of interest
       unique(sub.group.dat$Catch.Group[order(sub.group.dat$Catch.Group)])
       catch.group.of.interest<-c("SH_W_R") #ONLY SELECT ONE GROUPING AT A TIME
     
@@ -165,7 +165,7 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
     
   # Identify dates when fishery was closed by section (i.e., there should not have been any effort or catch)
       # Total number of dates that at least one section of the river was closed
-          total.closed.dates<-1
+          total.closed.dates<-0
       
       # Final number of "sub-sections" we are breaking up the estimates by
           final.effort.section.xwalk
@@ -177,11 +177,14 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
             # Enter 1 if the section was open and enter 0 if the section was closed  
           
                                  #    Date   , Section-1, Section-2
-          closed.Dates.Sections<-c("2019-02-11",     0,         0 )
+          closed.Dates.Sections<-c("2018-04-16",     0,         0,
+                                   "2018-04-17",     0,         0,
+                                   "2018-04-23",     0,         0,
+                                   "2018-04-24",     0,         0 )
 
 
-    #Run source summary file 
-    source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-08.R"))
+  #Run source summary file 
+    source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))
 
 ```
 
@@ -190,9 +193,9 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
 #---------------------------------------------------------------------------------------------------------- -
 # (7) RUN/LOAD CREEL MODEL                                                                               ----
 #---------------------------------------------------------------------------------------------------------- - 
-  # Denote whether you want to run a "new" model or load "saved" results from a previous model run
+   # Denote whether you want to run a "new" model or load "saved" results from a previous model run
       model_source<-c("new")  #enter either "saved" or "new"
-      saved_model_date<-c("2019-05-03") #If loading a "saved" model (.RDS file), enter the date that data were exported (note: this date will be the folder name)     
+      saved_model_date<-c("2019-04-12") #If loading a "saved" model (.RDS file), enter the date that data were exported (note: this date will be the folder name)     
           
   # Denote which creel model you want to run
       creel_models[,1:3] #model summary table
@@ -223,8 +226,8 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
       n.cores<-4           #Number of cores to use when executing the chains in parallel. The defaults is 1.Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
       n.warmup<-100       # number of warmup (aka burnin) iterations per chain.  The default is n.iter/2.  
       n.thin<-1          # the period for saving samples. The default is 1, which is usually the recommended value.
-      set.adapt_delta<-0.90 # (originally 0.95) the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1.  Increasing it will force Stan to take smaller steps (and thus run time will be longer). The default is 0.8.
-      max.tree<-12
+      set.adapt_delta<-0.80 # (originally 0.95) the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1.  Increasing it will force Stan to take smaller steps (and thus run time will be longer). The default is 0.8.
+      max.tree<-10
       
   # Run either (1) "new" time-series model or (2) load previously run model output
       source(paste0(wd_source_files, "/07_Run_TimeSeries_Model_2019-04-10.R"))
@@ -238,7 +241,7 @@ source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Field
   # Create summary output files and save model results (only runs if "new" model) 
       if(model_source== "new"){source(paste0(wd_source_files, "/08a_Save_TimeSeries_Model_Output_2019-04-10.R"))}
 
-  # Create plots and tables of results
+  # Create plots and tables of results CREATE PLOTS AND TABLES OF RESULTS    
       source(paste0(wd_source_files, "/08b_Summarize_Model_Output_Figures_and_Tables_2019-04-10.R")) 
       
   # Look at some of the model output       
