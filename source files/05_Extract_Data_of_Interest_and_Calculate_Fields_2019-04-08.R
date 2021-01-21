@@ -71,14 +71,7 @@
       # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Date %in% sub.Date.Range,]
       sub.header.dat<-sub.header.dat[sub.header.dat$Date %in% sub.Date.Range,]
     }  
-    
-  #Extract by Surveyor?
-    if(by.Surveyor == "Y"){
-      sub.effort.dat<-sub.effort.dat[sub.effort.dat$Surveyor %in% Surveyor.of.Interest,]
-      sub.group.dat<-sub.group.dat[sub.group.dat$Surveyor %in% Surveyor.of.Interest,]
-      # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Surveyor %in% Surveyor.of.Interest,]
-      sub.header.dat<-sub.header.dat[sub.header.dat$Surveyor %in% Surveyor.of.Interest,]
-    }
+
 
 #------------------------------------------------------------------------------------------------------------   
   
