@@ -1,11 +1,6 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This file summarizes creel model output by creating summary plots and tables
+# This file summarizes creel model estimates by creating summary plots and tables
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#Reset working directory
-    if(model_source=="new"){filepath_outputs<-paste(wd_output_files, catch.group.of.interest, model.name, new_model_run_date, sep="/")
-    }else{
-    if(model_source=="saved"){filepath_outputs<-paste(wd_output_files, catch.group.of.interest, model.name, saved_model_date, sep="/")}}
 
 #--------------------------------------------------------------------------------------------------------------------- -
 # SUMMARIZE SEASON TOTAL EFFORT AND CATCH                                                                ----
@@ -19,7 +14,7 @@
     
   #Export .csv of total catch and effort
     catch.effort.totals<-rbind(Total_season_catch, Total_season_effort)
-    write.csv(catch.effort.totals, paste(filepath_outputs, paste("Summary_Total_Catch_and_Effort", catch.group.of.interest, model.name, ".csv", sep="_"), sep="/"), row.names = T)
+    write.csv(catch.effort.totals, paste(filepath_modelestimates, paste("Summary_Total_Catch_and_Effort", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = T)
 
 #--------------------------------------------------------------------------------------------------------------------- -
 # SUMMARIZE TOTAL EFFORT DATA - by date, section, and gear-type (all Skagit models estimate effort by section and gear)                                                                                 ----
@@ -67,7 +62,7 @@
      Effort.summary<-left_join(Effort.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
 
   # write "Effort.summary" to a .csv file   
-      write.csv(Effort.summary, paste(filepath_outputs, paste("Summary_Effort (total hours per Period) by Section and Gear", catch.group.of.interest, model.name, ".csv", sep="_"), sep="/"), row.names = F)
+      write.csv(Effort.summary, paste(filepath_modelestimates, paste("Summary_Effort (total hours per Period) by Section and Gear", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
 
 #--------------------------------------------------------------------------------------------------------------------- -
 # SUMMARIZE CATCH AND CPUE DATA                                                                                 ----
@@ -117,7 +112,7 @@
        Catch.summary<-left_join(Catch.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
        
     # write "Catch.summary" to a .csv file   
-       write.csv(Catch.summary, paste(filepath_outputs, paste("Summary_Catch (total fish per Period) by Gear and Section", catch.group.of.interest, model.name, ".csv", sep="_"), sep="/"), row.names = F)
+       write.csv(Catch.summary, paste(filepath_modelestimates, paste("Summary_Catch (total fish per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
        
   #=============================================================================================================== =
   # CPUE SUMMARY
@@ -164,7 +159,7 @@
        CPUE.summary<-left_join(CPUE.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
        
     # write "CPUE.summary" to a .csv file   
-       write.csv(CPUE.summary, paste(filepath_outputs, paste("Summary_CPUE (fish per hr per Period) by Gear and Section", catch.group.of.interest, model.name, ".csv", sep="_"), sep="/"), row.names = F)   
+       write.csv(CPUE.summary, paste(filepath_modelestimates, paste("Summary_CPUE (fish per hr per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)   
 
 #--------------------------------------------------------------------------------------------------------------------- -
 # GENERATE PLOTS OF EFFORT AND CATCH SUMMARIES                                                                      ----
@@ -191,7 +186,7 @@
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
 #START OF PDF FUNCTION!!!!! 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
-  pdf(paste(filepath_outputs, paste("BSS creel model summary plots", catch.group.of.interest, model.name,".pdf", sep="_"), sep="/"), width=plot.width, height=plot.height)
+  pdf(paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/"), width=plot.width, height=plot.height)
   mpg_axis<-0
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
