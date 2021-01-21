@@ -1,15 +1,15 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This code generates summaries files regarding the inputs and outputs for a new model run 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Model warnings #KB note: this doesn't appear to be working (not sure why)
-    if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
-    writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutputs, "/info_Model_warnings_", Sys.Date(), ".txt"))
+# # Model warnings #KB note: this doesn't appear to be working (not sure why)
+#     if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
+#     writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutputs, "/info_Model_warnings_", Sys.Date(), ".txt"))
 
 # R session Info
   writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutputs, "/info_sessionInfo_", Sys.Date(), ".txt"))
     
 # Model summary
-    mod.sum.elements<-
+  mod.sum.elements<-
       c("Model Name"                   , as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
       , "Model File"                   , model.file.name
       , "Model Period"                 , model_period
@@ -38,15 +38,15 @@
       , "value_normal_mu_mu_E"         , round(value_normal_mu_mu_E, 3) 
       , "value_normal_sigma_mu_E"      , round(value_normal_sigma_mu_E, 3)
       , "value_betashape_phi_E_scaled" , value_betashape_phi_E_scaled 
-      , "value_betashape_phi_C_scaled" ,  value_betashape_phi_C_scaled 
-    )
-    mod.sum<-setNames(as.data.frame(matrix(mod.sum.elements, nrow=length(mod.sum.elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
-    writeLines(capture.output(mod.sum), paste0(filepath_modeloutputs, "/info_Model_setup_", Sys.Date(), ".txt"))
-  
+      , "value_betashape_phi_C_scaled" , value_betashape_phi_C_scaled 
+  )
+  mod.sum<-setNames(as.data.frame(matrix(mod.sum.elements, nrow=length(mod.sum.elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
+  writeLines(capture.output(mod.sum), paste0(filepath_modeloutputs, "/info_Model_setup_", Sys.Date(), ".txt"))
+
 # Model run-time
-    run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
-    mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
-    writeLines(capture.output(mod_run.time), paste0(filepath_modeloutputs, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
+  run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
+  mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
+  writeLines(capture.output(mod_run.time), paste0(filepath_modeloutputs, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
 
 # Save a file of the summary model results
   s.stan<-summary(res_Stan)
