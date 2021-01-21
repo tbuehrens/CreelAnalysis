@@ -14,6 +14,10 @@
       standat$period<-all.Dates$Weeknum_Rel
     }
   }
+  
+# proportion tie-in expansion
+  p_TI<-matrix(rep(1, standat$G * standat$S), nrow=standat$G, ncol=standat$S)
+  standat$p_TI<-p_TI
 
 # Add priors to "standat"
     standat$value_cauchyDF_sigma_eps_C<-value_cauchyDF_sigma_eps_C   
