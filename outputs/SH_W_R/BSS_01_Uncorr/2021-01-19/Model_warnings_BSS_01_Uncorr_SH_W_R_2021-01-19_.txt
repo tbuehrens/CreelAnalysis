@@ -1,3 +1,0 @@
-1 identical warnings:
-In file(file, "rt") :
-  cannot open file 'data03_Interview-dat_hand-corr-times_2-28-2019.csv/': No such file or directory
