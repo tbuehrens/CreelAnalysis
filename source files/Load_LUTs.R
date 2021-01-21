@@ -1,6 +1,6 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This file loads the look-up tables (LUTs) that are necessary to run analysis code
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    effort_xwalk<-read.csv(paste0(wd_LUTs, "/02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv"), header=TRUE) #Effort Section table
-    river_loc<-read.csv(paste0(wd_LUTs, "/02_River.Locations_2019-01-07.csv"), header=TRUE) #River Location table
-    creel_models<-read.csv(paste0(wd_LUTs, "/02_Creel_Models_2021-01-20.csv"), header=TRUE) #Creel model file names and descriptions
+    effort_xwalk<-read.csv(file.path(wd_LUTs,effort_xwalk_filename)) #Effort Section table
+    river_loc<-read.csv(file.path(wd_LUTs,river_loc_filename)) #River Location table
+    creel_models<-read.csv(file.path(wd_LUTs,creel_models_filename))#Creel model file names and descriptions
