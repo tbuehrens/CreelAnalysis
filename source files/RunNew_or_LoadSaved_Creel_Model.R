@@ -36,7 +36,8 @@ if(model_source== "load_saved"){
   approx.model.runtime.minutes<-max(elasped_time_by_chain[,2])/60+max(elasped_time_by_chain[,1])/60
   
 #Save Model warnings
-  model_warnings<-warnings(res_Stan) #KB note: this doesn't appear to be working (not sure why)
+  print(warnings())
+  model_warnings<-warnings() #KB note: this doesn't appear to be working (not sure why)
 }
 #Extract posterior draws    
   res<-extract(res_Stan) 
