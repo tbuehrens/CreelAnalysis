@@ -2,15 +2,15 @@
 title: Skagit Creel Analysis
 author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     fig_caption: yes
     theme: cerulean
     toc: yes
     toc_depth: 3
     toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ***
@@ -74,10 +74,11 @@ using("tidyverse",
 #======================================================
 # Specify relative working directories for sub-folders
 #======================================================
-wd_LUTs <-"lookup tables"  # Location of look-up tables (maybe could be merged with data files??)
-wd_data   <-"data"        # Location where data files are stored
+wd_LUTs <-"lookup tables"       # Location of look-up tables (maybe could be merged with data files??)
+wd_data   <-"data"              # Location where data files are stored
 wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
-wd_models  <-"models"      # Location of model files 
+wd_models  <-"models"           # Location of model files 
+wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
 
 #======================================================
 # Specify names of .csv data files
@@ -127,7 +128,7 @@ interview_file_name<-"03_Interview-dat_hand-corr-times_2-28-2019.csv"
       # Enter 1 if the section was open and enter 0 if the section was closed  
     
                            #    Date   , Section-1, Section-2
-    closed.Dates.Sections<-c("2019-02-11",     0,         0 )  
+    closed.Dates.Sections<-c("2019-02-11",     0,         0 ) 
 ```
 
 # Data Preparation
@@ -146,74 +147,73 @@ interview_file_name<-"03_Interview-dat_hand-corr-times_2-28-2019.csv"
   ## add code that shows options for "catch groups"
   source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
 
-  ##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
-
-
-
+##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
 ```
 
 # Run Analysis
 ```{r run_analysis,message=FALSE, warning=FALSE,results = "hide"}
-#---------------------------------------------------------------------------------------------------------- -
-# (7) RUN/LOAD CREEL MODEL                                                                               ----
-#---------------------------------------------------------------------------------------------------------- - 
-   # Denote whether you want to run a "new" model or load "saved" results from a previous model run
-      model_source<-c("new")  #enter either "saved" or "new"
-      saved_model_date<-c("2019-04-12") #If loading a "saved" model (.RDS file), enter the date that data were exported (note: this date will be the folder name)     
-          
-  # Denote which creel model you want to run
-      creel_models[,1:3] #model summary table
-      model_number<-c(1)
-      
-  # Specify time period to stratify data by - day vs. week 
-      model_period<-c("day") #enter "day" or "week"
-      
-  # Specify parameter values for model priors
-      value_cauchyDF_sigma_eps_C = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C; default = 1  
-      value_cauchyDF_sigma_eps_E = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E; default = 1  
-      value_cauchyDF_sigma_r_E = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
-      value_cauchyDF_sigma_r_C = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1  
-      value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
-      value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
-      value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
-      value_normal_sigma_B1 = 5 # the SD hyperparameter in the prior distribution B1; default = 5  
-      value_normal_mu_mu_C = log(0.02) # the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
-      value_normal_sigma_mu_C = 1.5 # the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
-      value_normal_mu_mu_E = log(15) # the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
-      value_normal_sigma_mu_E = 2  # the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
-      value_betashape_phi_E_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
-      value_betashape_phi_C_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
-    
-  # Specific Stan model arguments
-      n.chain<-4            # number of Markov chains. The default is 4.
-      n.iter<-200        # number of iterations for each chain (including warmup). The default is 2000.
-      n.cores<-4           #Number of cores to use when executing the chains in parallel. The defaults is 1.Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
-      n.warmup<-100       # number of warmup (aka burnin) iterations per chain.  The default is n.iter/2.  
-      n.thin<-1          # the period for saving samples. The default is 1, which is usually the recommended value.
-      set.adapt_delta<-0.80 # (originally 0.95) the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1.  Increasing it will force Stan to take smaller steps (and thus run time will be longer). The default is 0.8.
-      max.tree<-10
-      
-  # Run either (1) "new" time-series model or (2) load previously run model output
-      source(paste0(wd_source_files, "/07_Run_TimeSeries_Model_2019-04-10.R"))
+# Denote whether you want to run a new model or load "saved" results from a previous model run
+  model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
+
+# Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
+  Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+
+# Denote which creel model you want to run
+  creel_models[,1:3] #model summary table
+  model_number<-c(1)
+  
+# Specify time period to stratify data by - day vs. week 
+  model_period<-c("day") #enter "day" or "week"
+  
+# Specify parameter values for model priors
+  value_cauchyDF_sigma_eps_C = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C; default = 1  
+  value_cauchyDF_sigma_eps_E = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E; default = 1  
+  value_cauchyDF_sigma_r_E = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
+  value_cauchyDF_sigma_r_C = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1  
+  value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
+  value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
+  value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
+  value_normal_sigma_B1 = 5 # the SD hyperparameter in the prior distribution B1; default = 5  
+  value_normal_mu_mu_C = log(0.02) # the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_sigma_mu_C = 1.5 # the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
+  value_normal_mu_mu_E = log(15) # the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
+  value_normal_sigma_mu_E = 2  # the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
+  value_betashape_phi_E_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
+  value_betashape_phi_C_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
+
+# Specific Stan model arguments
+  n_chain<-4         # set the number of Markov chains. The default is 4.
+  n_iter<-200        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
+  n_warmup<-100      # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+  adapt_delta<-0.80  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+
+# Create sub-folders for output (if they don't already exist)
+    source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
+
+# Run source code to prepare data for model
+    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))   
+
+# Run source code to generate creel estimates
+  source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
+  
+# Generate summaries of model inputs and outputs
+  if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}  
 ```
 
 # Summarize Results
 ```{r summarize_results,message=FALSE, warning=FALSE,results = "hide"}
-#---------------------------------------------------------------------------------------------------------- -
-# (8) SUMMARIZE MODEL OUTPUTS AND SAVE                                                                   ----
-#---------------------------------------------------------------------------------------------------------- - 
-  # Create summary output files and save model results (only runs if "new" model) 
-      if(model_source== "new"){source(paste0(wd_source_files, "/08a_Save_TimeSeries_Model_Output_2019-04-10.R"))}
 
-  # Create plots and tables of results CREATE PLOTS AND TABLES OF RESULTS    
-      source(paste0(wd_source_files, "/08b_Summarize_Model_Output_Figures_and_Tables_2019-04-10.R")) 
-      
-  # Look at some of the model output       
-      print(names(res)) #list with named components corresponding to the model parameters
-      dim(res$lambda_E_S)
+#convergence diagnostics
+  launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
+  if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
 
-  # Evaluate model results with "Shinystan" 
-      #launch_shinystan(res_Stan)
+# generate plots and tables of creel estimates 
+  source(paste0(wd_source_files, "/Generate_Summaries_of_Creel_Estimates.R")) 
+    
+# KB note: update so table/plots of results are shown in PDF document
 ```
 
 # Reproducing this pdf or html page
@@ -221,4 +221,3 @@ In order to reproduce this pdf or html page you need to have a LaTex application
 ```{r install_tinytex,message=FALSE, warning=FALSE}
 #tinytex::install_tinytex()
 ```
-
