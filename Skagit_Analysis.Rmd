@@ -213,7 +213,7 @@ interview_file_name<-"03_Interview-dat_hand-corr-times_2-28-2019.csv"
       dim(res$lambda_E_S)
 
   # Evaluate model results with "Shinystan" 
-      launch_shinystan(res_Stan)
+      #launch_shinystan(res_Stan)
 ```
 
 # Reproducing this pdf or html page
