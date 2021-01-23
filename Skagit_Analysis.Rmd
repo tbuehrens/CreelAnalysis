@@ -2,15 +2,15 @@
 title: Skagit Creel Analysis
 author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     fig_caption: yes
     theme: cerulean
     toc: yes
     toc_depth: 3
     toc_float: yes
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
 ---
 
 ***
@@ -246,7 +246,57 @@ print(results)
 
 # Results Figures: Summary of Effort, CPUE, and Catch
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Total Catch and Total Effort", "Daily Effort", "Daily Catch", "Daily CPUE"),out.extra=c('page=1', 'page=2','page=3','page=4'),  echo=FALSE}
-plots<-paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/")
-knitr::include_graphics(rep(plots,4))
+# plots<-paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/")
+# knitr::include_graphics(rep(plots,4))
 ```
 
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 1. Season total catch and effort. Dashed lines show posterior medians 95% CI"),echo=FALSE}
+season_results<-data.frame(res$C_sum,res$E_sum)%>%
+  mutate(iter=row_number())%>%
+  rename(`Season Total Catch`=res.C_sum,`Season Total Effort`=res.E_sum)%>%
+  pivot_longer(names_to = "Parameter",values_to="value",cols=c(`Season Total Catch`,`Season Total Effort`))
+
+ggplot(season_results,aes(x=value,fill=Parameter))+
+  facet_wrap(~Parameter,ncol=1,  scales = 'free')+
+  theme_bw()+
+  geom_density()+
+  geom_vline(season_results%>%group_by(Parameter)%>%summarise(value = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975)),mapping=aes(xintercept=value,group=Parameter),linetype="dashed")+
+  theme(legend.title = element_blank())
+
+```
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 2. Daily catch. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
+ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab(paste0("Catch - ",catch.group.of.interest," (fish)"))+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 3. Daily effort. Lines are posterior medians and shading shows 95% CI"), echo=FALSE}
+ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab("Angling Effort (hrs)")+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 4. Daily CPUE. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
+ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab("Catch Per Unit Effort (fish/hrs)")+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```

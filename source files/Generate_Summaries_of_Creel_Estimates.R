@@ -7,7 +7,7 @@
 #--------------------------------------------------------------------------------------------------------------------- - 
   #calculate season total effort
     #Total_season_catch<-c(setNames(mean(res$C_sum), "Mean"), quantile(res$C_sum,c(0.025,0.25,0.5,0.75,0.975)), setNames(sd(res$C_sum)/mean(res$C_sum), "CV"))
-    Total_season_catch<-c(setNames(round(mean(c(apply(res$lambda_Ctot_S, c(1), sum))),0), "Mean"), round(quantile(apply(res$lambda_Ctot_S, c(1), sum),c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(c(apply(res$lambda_Ctot_S, c(1), sum)))/mean(c(apply(res$lambda_Ctot_S, c(1), sum))),3), "CV"))
+    Total_season_catch<-c(setNames(round(mean(c(apply(res$C_sum, c(1), sum))),0), "Mean"), round(quantile(apply(res$C_sum, c(1), sum),c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(c(apply(res$C_sum, c(1), sum)))/mean(c(apply(res$C_sum, c(1), sum))),3), "CV"))
   
   #calculate season total catch
     Total_season_effort<-c(setNames(round(mean(res$E_sum),0), "Mean"), round(quantile(res$E_sum,c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(res$E_sum)/mean(res$E_sum),3), "CV"))
@@ -197,14 +197,14 @@
         par(mfcol=c(2,1), family='sans',  xaxs="i", yaxs="i", cex.axis=1, cex=1, mgp=c(2, 0.75, mpg_axis), mar=c(3,3,1,1), oma=c(4,3,1.5,1)) 
     
       #total seasonal catch    
-        plot(density(apply(res$lambda_Ctot_S, c(1), sum)), col="blue", xlab="Total Catch (fish)", ylab="Probability Density", main="", bty="n")
-        #abline(v=mean(c(apply(res$lambda_Ctot_S, c(1), sum))),lwd=2, lty=2, col="red") #add abline for mean
-        abline(v=median(c(apply(res$lambda_Ctot_S, c(1), sum))),lwd=2, lty=2,  col="red") #add abline for median
-        abline(v=quantile(apply(res$lambda_Ctot_S, c(1), sum), 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(apply(res$lambda_Ctot_S, c(1), sum), 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
+        plot(density(apply(res$C_sum, c(1), sum)), col="blue", xlab="Total Catch (fish)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
+        #abline(v=mean(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2, col="red") #add abline for mean
+        abline(v=median(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2,  col="red") #add abline for median
+        abline(v=quantile(apply(res$C_sum, c(1), sum), 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(apply(res$C_sum, c(1), sum), 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
         legend("topright", c( "median", "95%CI"), lty=2, col=c("red", "black"), bty="n", lwd=2)
       
       #total seasonal effort  
-        plot(density(res$E_sum),col="blue",xlab="Total Effort (hrs)", ylab="Probability Density", main="", bty="n")
+        plot(density(res$E_sum),col="blue",xlab="Total Effort (hrs)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
         #abline(v=mean(res$E_sum),lwd=2, lty=2, col="red") #add abline for mean
         abline(v=quantile(res$E_sum, 0.5),lwd=2, lty=2,  col="red") #add abline for median
         abline(v=quantile(res$E_sum, 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(res$E_sum, 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
