@@ -26,6 +26,7 @@ if(model_source== "load_saved"){
       , cores=n_cores
       , iter=n_iter
       , thin=n_thin
+      , init="0"
       , warmup=n_warmup
       , include=T
       , control=list(adapt_delta=adapt_delta , max_treedepth=max_treedepth)

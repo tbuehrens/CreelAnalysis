@@ -2,15 +2,15 @@
 title: Skagit Creel Analysis
 author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     fig_caption: yes
     theme: cerulean
     toc: yes
     toc_depth: 3
     toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ***
@@ -44,7 +44,8 @@ In addition to purrr, we also need a few packages that are not included with the
 #===============================================
 # Load packages, install and load if not already
 #===============================================
-using("tidyverse",
+using("plyr",
+      "tidyverse",
       "rstan",
       "RColorBrewer",
       "readxl",
@@ -52,7 +53,6 @@ using("tidyverse",
       #"ggplot2",
       "tinytex",
       "here", 
-      "plyr",
       "lubridate", 
       "devtools",
       "xlsx",
@@ -66,7 +66,8 @@ using("tidyverse",
       "RColorBrewer",
       "reshape2",
       "MASS", 
-      "timeDate"
+      "timeDate",
+      "kableExtra"
       )
 ```
 # User inputs
@@ -161,14 +162,14 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #=======
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
-  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
+  model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
-  Model_Run<-9 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+  Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
 
 # Denote which creel model you want to run
   creel_models[,1:3] #model summary table
-  model_number<-c(5) # 1 and 2 are the 6-3-2019 uncorr and corr
+  model_number<-c(2)
   
 # Specify time period to stratify data by - day vs. week 
   model_period<-c("day") #enter "day" or "week"
@@ -195,9 +196,9 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   n_chain<-4        # set the number of Markov chains. The default is 4.
   n_iter<-200        # set the number of iterations for each chain (including warmup). The default is 2000.
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
-  n_warmup<-100     # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_warmup<-100    # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.9  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.8  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
@@ -231,10 +232,21 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 In order to reproduce this pdf or html page you need to have a LaTex application installed. Running this snippet of code will automatically install tinytex on your machine so you can render pdfs and html:
 ```{r install_tinytex,message=FALSE, warning=FALSE}
 #tinytex::install_tinytex()
+#tinytex::tlmgr_install("multirow")
+#uninstall_tinytex(force = FALSE, dir = tinytex_root())
+```
+# Results Table: Summary of Effort and Catch
+```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE}
+results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
+  dplyr::rename(Variable=X1)%>%
+  kbl(caption = "Table 1. Total Catch and Effort ",digits =1)%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+print(results)
 ```
 
-# Results: Summary of Effort, CPUE, and Catch
-```{r, out.width="1.0\\linewidth", include=TRUE, fig.align="center", fig.cap=c("Total Catch and Total Effort", "Daily Effort", "Daily Catch", "Daily CPUE"),out.extra=c('page=1', 'page=2','page=3','page=4'),  echo=FALSE}
+# Results Figures: Summary of Effort, CPUE, and Catch
+```{r, include=TRUE, fig.align="center", fig.cap=c("Total Catch and Total Effort", "Daily Effort", "Daily Catch", "Daily CPUE"),out.extra=c('page=1', 'page=2','page=3','page=4'),  echo=FALSE}
 plots<-paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/")
 knitr::include_graphics(rep(plots,4))
 ```
+
