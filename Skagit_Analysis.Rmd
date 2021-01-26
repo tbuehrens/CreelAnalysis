@@ -30,6 +30,9 @@ The purpose of this page is to:
   1) record the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021.
   2) provide a pre-season comparison of planned Skagit steelhead sport fishery impacts with allowable impacts based on the Skagit Resource         Management Plan.
   3) provide in-season tracking of Skagit steelhead sport fishery impacts relative to allowable impacts based on the Skagit Resource               Management Plan.
+
+# Disclaimer
+Contents of this document should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
   
 # Running the analysis yourself
 To run the analysis yourself, download the repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions below. The following subsections detail reproducing the analysis and refer to code chunks in the .RMD file that created this page: [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis.Rmd). If only interested in results, the pre-season fishery plan and the inseason fishery results, skip down to pre-season fishery plan section. If interested in running the analysis, the subsections below provide brief descriptions of what these code chunks in the .RMD file do.
