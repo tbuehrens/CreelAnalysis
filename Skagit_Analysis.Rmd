@@ -174,7 +174,7 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
 #=======
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
-  model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
+  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
   Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
@@ -217,8 +217,7 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
     source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
 
 # Run source code to prepare data for model
-    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))   
-
+    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))
 # Run source code to generate creel estimates
   source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
   
