@@ -1,0 +1,13 @@
+
+Computed from 400 by 6188 log-likelihood matrix
+
+------
+Monte Carlo SE of elpd_loo is NA.
+
+Pareto k diagnostic values:
+                         Count Pct.    Min. n_eff
+(-Inf, 0.5]   (good)     5850  94.5%   76        
+ (0.5, 0.7]   (ok)        222   3.6%   33        
+   (0.7, 1]   (bad)       105   1.7%   9         
+   (1, Inf)   (very bad)   11   0.2%   8         
+See help('pareto-k-diagnostic') for details.
