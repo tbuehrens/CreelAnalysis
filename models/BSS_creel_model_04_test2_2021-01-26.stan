@@ -185,7 +185,7 @@ model{
 		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
 		for(d in 1:D){
 			for(s in 1:S){
-			  p_sample[s][d,g] ~ beta(0.5,0.5);
+			  p_sample[s][d,g] ~ beta(0.25,0.75);
 				for(i in 1:H){
 					eps_E_H[s,i][d,g] ~ gamma(r_E,r_E); 
 				}
