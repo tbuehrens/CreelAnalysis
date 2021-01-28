@@ -316,7 +316,7 @@ ggplot(data=PAHdat_plan,aes(x=PAH_plan,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
   ylab("Probability of Exceedence")+
-  xlab("Pre-season Planned % of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  xlab("Pre-season Planned Sport Harvest as a % of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
@@ -406,7 +406,7 @@ ggplot(data=PAHdat,aes(x=PAH,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
   ylab("Probability of Exceedence")+
-  xlab("In-season % of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  xlab("In-season Sport Harvest as a % of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
