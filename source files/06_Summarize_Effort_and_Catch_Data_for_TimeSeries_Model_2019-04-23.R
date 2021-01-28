@@ -301,6 +301,11 @@
     a_samp$Gear[a_samp$Gear == 3] <- 1; a_samp$Gear[a_samp$Gear == 4] <- 2;
     gear.xwalk<-setNames(as.data.frame(matrix(c(c(1,2), as.character(all.Gear$Gear_Alpha[c(3:4)])),nrow=2, ncol=2, byrow=FALSE)), c("Gear_Num", "Gear_Name"))
 
+  #total hours creel and total catch sample a per day/gear/section to compare with effort
+    C_sample<-c_samp%>%
+      group_by(Day,Gear,Section.Num)%>%
+      summarise(Total_Hours=sum(Total_Hours),Total_Catch=sum((!!as.name(catch.group.of.interest))))%>%
+      filter(Total_Hours>0)
 #=====================================================================================================================
 # (6E) make stan data
 #=====================================================================================================================
@@ -354,6 +359,14 @@ standat<-list(
   section_IntC = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
   c=c_samp[, catch.group.of.interest[1]], # total catch of [spp.of.interest] for an individual group #c_samp$SH_NOR_R          
   h=abs(c_samp$Total_Hours),        # number of hours an individual angler/group spent fishing
+  
+  #interview data total creeled effort and catch
+  IntCreel = nrow(C_sample),
+  day_Creel = C_sample$Day,
+  gear_Creel = C_sample$Gear,
+  section_Creel = C_sample$Section.Num,
+  C_Creel = C_sample$Total_Catch,
+  H_Creel = C_sample$Total_Hours,
   
   #interview data - angler expansions
   IntA=nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
