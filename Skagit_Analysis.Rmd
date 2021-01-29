@@ -19,12 +19,13 @@ This document was generated on `r format(Sys.time(), '%m/%d/%Y')`.
 
 ***
 
-
 ```{r set_options, echo = FALSE, message = FALSE}
 options(width = 100)
 knitr::opts_chunk$set(message = FALSE)
 set.seed(123)
 ```
+![](https://user-images.githubusercontent.com/40445951/106297554-afe14000-6207-11eb-8b29-217650aed335.JPG)
+
 # Overview
 The purpose of this page is to:
   1) record the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021.
@@ -49,7 +50,7 @@ sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
 
 ### Packages
 In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
-```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE}
+```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
 #===============================================
 # Load packages, install and load if not already
 #===============================================
