@@ -132,19 +132,21 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #======================================================  
   catch.group.of.interest<-c("SH_W_R") 
 
-#======================================================
-# Identify dates when fishery was closed by section
-#======================================================     
-  total.closed.dates<-0 # Total number of dates that at least one section of the river was closed (i.e., there should not have been any effort or catch)
+#=========================
+# Denote fishery closures
+#=========================
+# NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
+# First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
+  total.closed.dates<-2 # Total number of dates that at least one section of the river was closed 
   
-# NOTE: if "total.closed.dates" >0, use the following format to enter closure dates and section, where :
-      # the first column is the list of individual dates (by row) the fishery was closed date 
-      # the number of additional columns equals the number of "final" sections based on "final.effort.section.xwalk" 
-      # the enter the following values below each section:
-      # Enter 1 if the section was open and enter 0 if the section was closed  
-    
+# Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
+    # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
+    # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
+    # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
+    # create a new line for each individual closure by date
                            #    Date   , Section-1, Section-2
-    closed.Dates.Sections<-c("2019-02-11",     0,         0 ) 
+    closed.Dates.Sections<-c("2019-02-11",     0,         0 
+                            ,"2019-02-12",     0,         0) 
 ```
 
 ### Data Preparation

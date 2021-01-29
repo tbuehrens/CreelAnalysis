@@ -56,6 +56,7 @@
               }
           }
       fishery.open.closed
+      fishery.open.closed[fishery.open.closed == 0] <- 1E-6
       fishery.open.closed$Date<-NULL
 
 #---------------------------------------------------------------------------------------------------------- - 
