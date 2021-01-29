@@ -53,7 +53,7 @@ In addition to purrr, we also need a few packages that are not included with the
 #===============================================
 # Load packages, install and load if not already
 #===============================================
-using("timeDate",
+packages_list<-c("timeDate",
       "plyr",
       "tidyverse",
       "rstan",
@@ -78,6 +78,7 @@ using("timeDate",
       "MASS", 
       "kableExtra"
       )
+install_or_load_pack(pack = packages_list)
 ```
 ### User inputs
 Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
@@ -167,16 +168,14 @@ Here we will load and format the data for the analysis using the chunk of code w
 
 ### Run Analysis
 Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-```{r run_analysis} 
-#results = "hide"
-#echo=FALSE
-#warning=FALSE
+```{r run_analysis,results = "hide",echo=FALSE,warning=FALSE} 
+
 #=======
 #note for editing: any ner priors need to go here, also in "prepare data" and in "summarize inputs"
 #=======
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
-  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
+  model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
   Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
@@ -273,7 +272,7 @@ runsize%>%
 The allowable harvest, according to the RMP, is the number of fish that may be killed by the combined sport and tribal fisheries. However, as seen above, this number depends on the run-size, which is not known until after the fishing season when escapement is estimated. However, based on the pre-season forecast run size, we can estimate what the allowable harvest will be by combining the forecast run size, including its uncertainty, with the harvest rate matrix prescribed by the RMP. We can then plot the probability that the true allowable harvest (once it is known after the season) will exceed a range of values. 
 
 For example, in 2021 there is a greater than 90% chance that the true allowable harvest based on the true run size and the harvest matrix, will exceed 100 fish. There is a 50% chance that the allowable harvest will exceed 430 fish (10% of the best estimate of the runsize from the forecast), and a very small chance the allowable harvest will be greater than 2000 fish:
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 2. Probability that the allowable harvest exceeds a particular number of fish based on the RMP"),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 2. Probability that the allowable harvest exceeds a particular number of fish based on the RMP. Note the log10 scale on the x-axis."),echo=FALSE}
 ER_func<-function(hcr,runsize){
   ER<-c(NULL)
   indexes<-c(NULL)
@@ -308,8 +307,9 @@ ggplot(data=AH,aes(x=AH,y=Exceedence))+
 
 Given the uncertainty in what the allowable harvest will turn out to be, managers must balance the risk of exceeding the allowable harvest with cost of erring so heavily on the side of conservation (to ensure the allowable harvest is not exceeded) that no fishery is allowed at all. To assist with this task, managers can plan a fishery to harvest a particular number of fish (which itself may be estimated with uncertainty) and then calculate the probability that the allowable harvest will turn out to have been exceeded if the planned fishery is implemented.
 
-In 2021, a 4-day a week fishery was planned with a total harvest (wild fish handled  * assumed 10% C&R mortality rate) of 76 fish. We will look at the probability that the allowable harvest based on the RMP will have been exceeded if this fishery plan is implemented:
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 3. Probability that the pre-season planned sport fishery harvest exceeds the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
+For example, in 2021, a 4-day a week fishery was planned with a total harvest (wild fish handled  * assumed 10% C&R mortality rate) of 76 fish. This would translate to 18% of the allowable (sport + tribal) harvest under the RMP if the true allowable harvest is 430, at which point the exceedence probability is 50%. The exceedence probability is greater than 50% when the percentage of allowable harvest used is less than 18%, indicating it is more probable than not that the planned sport fishery will harvest a greater perecentage of the allowable harvest. The exceedence probability is less than 50% when the percentage of allowable harvest used is greater than 18%, indicating it is more probable than not that the planned fishery will not use this much of the allowable harvest:
+
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 3. Probability that the pre-season planned sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
 preseason_planned_mortalities<-76
 H_plan<-rlnorm(1000,log(preseason_planned_mortalities),0.1)
 PAH_plan<-(sample(H_plan,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
@@ -318,7 +318,7 @@ ggplot(data=PAHdat_plan,aes(x=PAH_plan,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
   ylab("Probability of Exceedence")+
-  xlab("Pre-season Planned Sport Harvest as a % of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
@@ -336,7 +336,11 @@ box()
 
 # In-season Fishery Results
 
+In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). 
+
 ### Season Total Effort (hours) and Catch (fish)
+
+This table and the figures below it show the posterior distribution for season total catch and effort. The "best" estimate is the 50th percentile (median):
 ```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
 results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
   dplyr::rename(Variable=X1)%>%
@@ -344,6 +348,7 @@ results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Mode
   kable_classic(full_width = F, html_font = "Cambria")
 print(results)
 ```
+
 
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (hrs). Dashed lines show posterior medians 95% CI"),echo=FALSE}
 season_results<-data.frame(res$C_sum,res$E_sum)%>%
@@ -361,7 +366,8 @@ ggplot(season_results,aes(x=value,fill=Parameter))+
 
 ```
 
-### Daily Effort, Catch, and Catch Per Unit Effort (CPUE) (fish)
+### Daily Catch, Effort, and Catch Per Unit Effort (CPUE) (fish)
+He we estimate the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95% credible intervals.
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
 ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
@@ -399,8 +405,8 @@ ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
 ```
 
 ### Inseason Impact Monitoring: Fishery Impacts Relative to RMP Limits
-Here, we compare the actual in-season estimated sport fishery catch, assuming 10% C&R mortality, with the allowable harvest estimated from the forecasted run size and the RMP mortality limits, to estimate the probability that the allowable harvest has been exceeded by the actual fishery (as opposed to the pre-season plan that we looked at previously). Early in the season when little catch has occurred, the probability that the allowable harvest has been exceeded is low, but increases as the season goes on. Managers can use this to make a risk-based assessment of whether it is necessary to close the fishery earlier than planned, or keep it open later than planned:
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 9. Probability that the sport fishery harvest exceeds the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
+Here, we compare the actual in-season estimated sport fishery catch, assuming 10% C&R mortality, with the allowable harvest estimated from the forecasted run size and the RMP mortality limits, to estimate the probability that the allowable harvest has been exceeded by the actual fishery (as opposed to the pre-season plan that we looked at previously). Early in the season when little catch has occurred, the probability that the allowable harvest has been exceeded is low, but increases as the season goes on. This analyis enables an in-season quantification of risk by managers, which may be helpful in decision-making:
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 9. Probability that the actual in-season sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
 H<-res$C_sum*0.1
 PAH<-(sample(H,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
 PAHdat<-data.frame(PAH,percent_rank(-PAH))%>%rename(Exceedence="percent_rank..PAH.")
@@ -408,7 +414,7 @@ ggplot(data=PAHdat,aes(x=PAH,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
   ylab("Probability of Exceedence")+
-  xlab("In-season Sport Harvest as a % of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
