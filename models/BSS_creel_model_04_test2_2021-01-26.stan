@@ -276,17 +276,17 @@ generated quantities{
   		      if(day_Creel[i] == d){
   		        if(section_Creel[i] == s){
   		          //p_unsample[s][d,g] += -p_sample[i];
-  		          if(H_Creel[i]<lambda_E_S[s][d,g]){
+  		          //if(H_Creel[i]<lambda_E_S[s][d,g]){
   		            p_unsample[s][d,g] += -H_Creel[i]/lambda_E_S[s][d,g];
-  		          }else{
-  		            p_unsample[s][d,g] += -0.9999;
-  		          }
+  		          //}//else{
+  		          //   p_unsample[s][d,g] += -0.9999;
+  		          // }
   		        }
   		      }
 			    }
 			  }
-				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g] * p_unsample[s][d,g]; 
-				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]) + C_Creel_array[s][d,g]; 
+				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g];// * p_unsample[s][d,g]; 
+				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]);//+ C_Creel_array[s][d,g]; 
 				C_sum = C_sum + C[s][d,g];
 				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; 
 				E_sum = E_sum + E[s][d,g];
