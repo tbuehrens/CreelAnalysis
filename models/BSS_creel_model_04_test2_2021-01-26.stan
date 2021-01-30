@@ -49,7 +49,8 @@ data{
 	int<lower=0> day_Creel[IntCreel]; 	
 	int<lower=0> gear_Creel[IntCreel];   						
 	int<lower=0> section_Creel[IntCreel]; 					
-	int<lower=0> C_Creel[IntCreel];        						
+	int<lower=0> C_Creel[IntCreel];   
+	int<lower=0> E_Creel[IntCreel];   
 	vector<lower=0>[IntCreel] H_Creel; 
 	//interview data - angler expansion
 	int<lower=0> IntA; //total number of angler interviews conducted across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected                                         	
@@ -79,15 +80,18 @@ data{
 }
 transformed data{
   matrix<lower=0>[D,G] C_Creel_array[S]; //interviewed total daily catch
+  matrix<lower=0>[D,G] E_Creel_array[S]; //interviewed total daily catch
   for(g in 1:G){
     for(d in 1:D){
       for(s in 1:S){
         C_Creel_array[s][d,g] = 0;
+        E_Creel_array[s][d,g] = 0;
       }
     }
   }
 	for(i in 1:IntCreel){
 	  C_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += C_Creel[i];
+	  E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
 	}
 }
 parameters{
@@ -107,8 +111,10 @@ parameters{
 	real mu_mu_E[G]; //hyper-prior on mean of mu_E //TB 5/3/2019
 	real<lower=0>sigma_mu_E; //hyper-prior on SD of mu_E //TB 5/3/2019   
 	matrix[G,S] eps_mu_E;
+	
 	//total catch and effort creeled
 	//vector<lower=0,upper=1>[IntCreel] p_sample;//proportion of daily effort interviewed when sum(interview hours) >0 by D,G,S
+	
 	//Catch rates
 	real<lower=0> sigma_eps_C; //catch rate (CPUE) process error standard deviation
 	cholesky_factor_corr[G*S] Lcorr_C; //CPUE process error correlations     
@@ -119,7 +125,6 @@ parameters{
   real mu_mu_C[G] ; //hyper-prior on mean of mu_C //TB 5/3/2019
 	real<lower=0>sigma_mu_C; //hyper-prior on SD of mu_C
 	matrix[G,S] eps_mu_C;
-                        							
 }
 transformed parameters{
 	//effort
@@ -257,7 +262,10 @@ generated quantities{
   matrix[G*S,G*S] Omega_C; //reconstructed CPUE correlations
   matrix[G*S,G*S] Omega_E; //reconstructed efffort correlations
 	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //unsampled  daily catch
+	matrix[D,G]C_Creel_array_gen[S];
+	matrix[D,G]E_Creel_array_gen[S];
 	matrix[D,G]p_unsample[S];
+	matrix[D,G]p_sample[S];
 	matrix<lower=0>[D,G] C[S]; //realized total daily catch
 	matrix<lower=0>[D,G] E[S]; //realized total daily effort
 	real<lower=0> C_sum; //season-total catch
@@ -270,25 +278,20 @@ generated quantities{
 	for(g in 1:G){
 		for(d in 1:D){
 			for(s in 1:S){
-			  p_unsample[s][d,g] = 1;
-			  for(i in 1:IntCreel){
-			    if(gear_Creel[i] == g){
-  		      if(day_Creel[i] == d){
-  		        if(section_Creel[i] == s){
+			  C_Creel_array_gen[s][d,g] = C_Creel_array[s][d,g];
+			  E_Creel_array_gen[s][d,g] = E_Creel_array[s][d,g];
+			  p_sample[s][d,g] = 0;
   		          //p_unsample[s][d,g] += -p_sample[i];
   		          //if(H_Creel[i]<lambda_E_S[s][d,g]){
-  		            p_unsample[s][d,g] += -H_Creel[i]/lambda_E_S[s][d,g];
+  		  p_sample[s][d,g] +=  E_Creel_array_gen[s][d,g]/(lambda_E_S[s][d,g] * L[d]);
+  		  p_unsample[s][d,g] = 1 - p_sample[s][d,g];
   		          //}//else{
   		          //   p_unsample[s][d,g] += -0.9999;
   		          // }
-  		        }
-  		      }
-			    }
-			  }
 				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g];// * p_unsample[s][d,g]; 
 				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]);//+ C_Creel_array[s][d,g]; 
 				C_sum = C_sum + C[s][d,g];
-				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; 
+				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; // * p_unsample[s][d,g] + H_Creel_array[s][d,g];
 				E_sum = E_sum + E[s][d,g];
 			}							
 		}

@@ -307,6 +307,7 @@
       group_by(Day,Gear,Section.Num)%>%
       summarise(Total_Hours=sum(Total_Hours),Total_Catch=sum((!!as.name(catch.group.of.interest))))%>%
       filter(Total_Hours>0)
+    #sapply(as.data.frame(lapply(JS_stats_ALL, "[[", "ni")), function(x) as.numeric(as.character(x)))
 #=====================================================================================================================
 # (6E) make stan data
 #=====================================================================================================================
@@ -367,7 +368,7 @@ standat<-list(
   gear_Creel = C_sample$Gear,
   section_Creel = C_sample$Section.Num,
   C_Creel = C_sample$Total_Catch,
-  H_Creel = C_sample$Total_Hours,
+  E_Creel = C_sample$Total_Hours,
   
   #interview data - angler expansions
   IntA=nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
