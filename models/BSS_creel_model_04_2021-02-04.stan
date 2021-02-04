@@ -112,8 +112,9 @@ parameters{
 	matrix[G,S] eps_mu_E;
 	
 	//total catch and effort creeled
-	vector<lower=0,upper=1>[IntCreel] p_sample;//proportion of daily effort interviewed when sum(interview hours) >0 by D,G,S
-	real<lower=0> sigma_samp;
+	vector<lower=0,upper=1>[IntCreel] p_sample_C;//proportion of daily effort interviewed when sum(interview hours) >0 by D,G,S
+	vector<lower=0,upper=1>[IntCreel] p_sample_E;//proportion of daily effort interviewed when sum(interview hours) >0 by D,G,S
+	//real<lower=0> sigma_samp;
 	//Catch rates
 	real<lower=0> sigma_eps_C; //catch rate (CPUE) process error standard deviation
 	cholesky_factor_corr[G*S] Lcorr_C; //CPUE process error correlations     
@@ -183,7 +184,8 @@ model{
 	//hyperpriors for total effort and catch
 	//sigma_samp ~ cauchy(0,1);
 	//Priors
-	p_sample ~ beta(0.5,0.5);
+	//p_sample_C ~ beta(0.5,0.5);
+	//p_sample_E ~ beta(0.5,0.5);
 	to_vector(eps_C) ~ std_normal();
 	to_vector(eps_E) ~ std_normal();
 	for(g in 1:G){
@@ -238,11 +240,11 @@ model{
 		T_A[a] ~ binomial(A_A[a], R_T[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 	}
   //Total Angler hours and Catch creeled
-//   for(i in 1:IntCreel){
-//     E_Creel[i] ~ lognormal(log(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * p_sample[i]),sigma_samp);
-// 	}
+  for(i in 1:IntCreel){
+    E_Creel[i] ~ lognormal(log(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * p_sample_E[i]),0.05);//sigma_samp);
+	}
 	for(i in 1:IntCreel){
-    C_Creel[i] ~ poisson(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * lambda_C_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * p_sample[i]);
+    C_Creel[i] ~ poisson(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * lambda_C_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * p_sample_C[i]);
 	}
 
 }
@@ -252,7 +254,8 @@ generated quantities{
 	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //unsampled  daily catch
 	matrix[D,G]C_Creel_array_gen[S];
 	matrix[D,G]E_Creel_array_gen[S];
-	matrix[D,G]p_unsample[S];
+	matrix[D,G]p_unsample_C[S];
+	matrix[D,G]p_unsample_E[S];
 	//matrix[D,G]p_sample[S];
 	matrix<lower=0>[D,G] C[S]; //realized total daily catch
 	matrix<lower=0>[D,G] E[S]; //realized total daily effort
@@ -269,24 +272,22 @@ generated quantities{
 			  C_Creel_array_gen[s][d,g] = C_Creel_array[s][d,g];
 			  E_Creel_array_gen[s][d,g] = E_Creel_array[s][d,g];
 			  //p_sample[s][d,g] = 0;
-			  p_unsample[s][d,g] = 1;
+			  p_unsample_C[s][d,g] = 1;
+			  p_unsample_E[s][d,g] = 1;
 			  for(i in 1:IntCreel){
 			    if(day_Creel[i]==d){
 			      if(gear_Creel[i]==g){
 			        if(section_Creel[i]==s){
-			          p_unsample[s][d,g] = 1 - p_sample[i];
+			          p_unsample_C[s][d,g] = 1 - p_sample_C[i];
+			          p_unsample_E[s][d,g] = 1 - p_sample_E[i];
 			        }
 			      }
-			      
 			    }
 			  }
-  		  //if(H_Creel[i]<lambda_E_S[s][d,g]){
-  		  //p_sample[s][d,g] +=  E_Creel_array_gen[s][d,g]/(lambda_E_S[s][d,g] * L[d]);
-  		  //p_unsample[s][d,g] = 1 - p_sample[s][d,g];
-				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g] * p_unsample[s][d,g]; 
+				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * lambda_C_S[s][d,g] * p_unsample_C[s][d,g]; 
 				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]) + C_Creel_array[s][d,g]; 
 				C_sum = C_sum + C[s][d,g];
-				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; // * p_unsample[s][d,g] + E_Creel_array[s][d,g];
+				E[s][d,g] = lambda_E_S[s][d,g] * L[d] * p_unsample_E[s][d,g] + E_Creel_array[s][d,g];
 				E_sum = E_sum + E[s][d,g];
 			}							
 		}
