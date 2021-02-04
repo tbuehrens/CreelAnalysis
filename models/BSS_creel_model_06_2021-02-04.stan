@@ -78,9 +78,11 @@ data{
 	real value_cauchyDF_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 }
 transformed data{
+  vector<lower=0>[G] b; //bias in counts of vehicles and trailers per angler group from road counts
   matrix<lower=0>[D,G] C_Creel_array[S]; //interviewed total daily catch
   matrix<lower=0>[D,G] E_Creel_array[S]; //interviewed total daily catch
   for(g in 1:G){
+    b[g] = 1;
     for(d in 1:D){
       for(s in 1:S){
         C_Creel_array[s][d,g] = 0;
@@ -104,7 +106,6 @@ parameters{
 	matrix[G,S] omega_E_0; //effort residual for initial time step (p)
 	vector<lower=0,upper=1>[G] R_V; //true angler vehicles per angler
 	vector<lower=0,upper=1>[G] R_T; //true angler trailers per angler
-	vector<lower=0>[G] b; //bias in counts of vehicles and trailers per angler group from road counts
 	matrix<lower=0>[D,G] eps_E_H[S,H]; //gamma random variate accounting for overdispersion in the census effort counts due to within-day variability in angler pressure
 	matrix<lower=0,upper=1>[G,S] p_I; //fixed proportion of angler effort observed in an index area
 	real mu_mu_E[G]; //hyper-prior on mean of mu_E //TB 5/3/2019
@@ -169,13 +170,13 @@ model{
 	//Hyperpriors (effort hyperparameters)
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E); 
 	Lcorr_E ~ lkj_corr_cholesky(1);                             						
-  phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
+    phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
 	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E); 
 	B1 ~ normal(0,value_normal_sigma_B1);
 	//Hyperpriors (CPUE hyperparameters)
 	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C); 
-  Lcorr_C ~ lkj_corr_cholesky(1);                                						
-  phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
+    Lcorr_C ~ lkj_corr_cholesky(1);                                						
+    phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
 	sigma_r_C ~ cauchy(0,value_cauchyDF_sigma_r_C);
 	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
 	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);//TB 5/3/2019 
@@ -205,7 +206,6 @@ model{
 		}
 		R_V[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
 		R_T[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
-		b[g] ~ lognormal(0,value_lognormal_sigma_b); //Note: leaving constant among days AND sections...may need to tweak could go as low as 0.25 for sigma
 	}
 	//Likelihoods
 	//Index effort counts - vehicles

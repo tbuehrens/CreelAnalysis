@@ -1,0 +1,460 @@
+---
+title: Skagit Steelhead Fishery Management 2021
+author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
+output:
+  html_document:
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+***
+
+This document was generated on `r format(Sys.time(), '%m/%d/%Y')`.
+
+***
+
+```{r set_options, echo = FALSE, message = FALSE}
+options(width = 100)
+knitr::opts_chunk$set(message = FALSE)
+set.seed(123)
+```
+![](https://user-images.githubusercontent.com/40445951/106297554-afe14000-6207-11eb-8b29-217650aed335.JPG)
+
+# Overview
+The purpose of this page is to:
+  1) record the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021.
+  2) provide a pre-season comparison of planned Skagit steelhead sport fishery impacts with allowable impacts based on the Skagit Resource         Management Plan.
+  3) provide in-season tracking of Skagit steelhead sport fishery impacts relative to allowable impacts based on the Skagit Resource               Management Plan.
+
+# Disclaimer
+Contents of this document should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
+  
+# Running the analysis yourself
+To run the analysis yourself, download the repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions below. The following subsections detail reproducing the analysis and refer to code chunks in the .RMD file that created this page: [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis.Rmd). If only interested in results, the pre-season fishery plan and the inseason fishery results, skip down to pre-season fishery plan section. If interested in running the analysis, the subsections below provide brief descriptions of what these code chunks in the .RMD file do.
+
+### Requirements
+all analyses require R software [**(link)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
+
+### Functions
+We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
+```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
+wd_functions<-"functions"
+sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
+```
+
+### Packages
+In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
+```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
+#===============================================
+# Load packages, install and load if not already
+#===============================================
+packages_list<-c("timeDate",
+      "plyr",
+      "tidyverse",
+      "rstan",
+      "RColorBrewer",
+      "readxl",
+      "readr",
+      "ggplot2",
+      "tinytex",
+      "here", 
+      "lubridate", 
+      "devtools",
+      "xlsx",
+      "cowplot",
+      "ggpubr", 
+      "chron",
+      "suncalc", 
+      "shinystan",
+      "loo", 
+      "data.table",
+      "RColorBrewer",
+      "reshape2",
+      "MASS", 
+      "kableExtra"
+      )
+install_or_load_pack(pack = packages_list)
+```
+### User inputs
+Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
+```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
+#======================================================
+# Specify relative working directories for sub-folders
+#======================================================
+wd_LUTs <-"lookup tables"       # Location of look-up tables (maybe could be merged with data files??)
+wd_data   <-"data"              # Location where data files are stored
+wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
+wd_models  <-"models"           # Location of model files 
+wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
+
+#======================================================
+# Specify names of .csv data files
+#======================================================
+effort_file_name <-   "Effort_dat_2021_steelhead_02_04_2021.csv"
+interview_file_name <-"Interview_dat_2021_steelhead_02_04_2021.csv"
+effort_xwalk_filename<-"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv"
+river_loc_filename<-"02_River.Locations_2019-01-07.csv"
+creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
+
+#======================================================
+# Denote data of interest (used to filter data below)
+#======================================================
+# Specify filter type(s) to extract data by (Enter "Y" or "N")
+  by.Year<-      "N" # If "Y", will filter by full calendar year(s) (Jan. 1 - Dec. 31)
+  by.YearGroup<- "N" # If "Y", will filter by a "Year Group", which go from May 1st Yr1 - April 30 Yr2
+  by.Season<-    "N" # If "Y", will filter by "season", which is either Summer (May 1st - Oct 31st) or Winter (Nov. 1 - April 30)
+  by.StreamName<-"Y" # If "Y", will filter by stream name
+  by.Date<-      "N" # If "Y", will filter by a date range
+  
+# Specify date ranges for "Year Groups" and "Seasons"
+  YearBegin<-  121 # day of year a "YearGroup" begins (FYI - 121 = May 1st in a non-leap year)
+  summerBegin<-121 
+  summerEnd<-  304 # FYI - 304 = Oct. 31st (in a non-leap year)
+  winterBegin<-305 
+  winterEnd<-  120 
+
+# Specify filter unit(s)
+  # YearGroup.of.Interest<- c("2017-2018") 
+  # Season.of.Interest<-    c("Winter") 
+  # Year.of.Interest<-      c("2017") 
+  StreamName.of.Interest<-c("Skagit")
+  # Begin.Date<-            c("2016-05-01") #Format must be "yyyy-mm-dd"
+  # End.Date<-              c("2017-03-31") #Format must be "yyyy-mm-dd"
+  
+#======================================================
+# Denote catch group of interest (species_origin_fate) 
+#======================================================  
+  catch.group.of.interest<-c("SH_W_R") 
+
+#=========================
+# Denote fishery closures
+#=========================
+# NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
+# First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
+  total.closed.dates<-0 # Total number of dates that at least one section of the river was closed 
+  
+# Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
+    # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
+    # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
+    # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
+    # create a new line for each individual closure by date
+                           #    Date   , Section-1, Section-2
+    closed.Dates.Sections<-c("2021-02-03",     0,         0 
+                            ,"2021-02-04",     0,         0
+                            ,"2021-02-05",     0,         0
+                            ) 
+```
+
+### Data Preparation
+Here we will load and format the data for the analysis using the chunk of code with this heading in the RMD file.
+```{r data_prep,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+# Load LUTs
+  source(paste0(wd_source_files, "/Load_LUTs.R"))
+
+# Load creel data and format
+  source(paste0(wd_source_files, "/Import_Skagit_Creel_Data_and_Format.R"))
+
+# Extract data of interest and format 
+  ## add code that shows options for filtering data by date/year/season/location
+  source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))  
+
+#Run source summary file 
+  ## add code that shows options for "catch groups"
+  source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
+
+##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
+```
+
+### Run Analysis
+Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+```{r run_analysis} 
+#,results = "hide",echo=FALSE,warning=FALSE
+#=======
+#note for editing: any ner priors need to go here, also in "prepare data" and in "summarize inputs"
+#=======
+
+# Denote whether you want to run a new model or load "saved" results from a previous model run
+  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
+
+# Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
+  Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+
+# Denote which creel model you want to run
+  #creel_models[,1:3] #model summary table
+  model_number<-c(4)
+  
+# Specify time period to stratify data by - day vs. week 
+  model_period<-c("day") #enter "day" or "week"
+  
+# Specify parameter values for model priors
+  value_cauchyDF_sigma_eps_C = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C; default = 1  
+  value_cauchyDF_sigma_eps_E = 1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E; default = 1  
+  value_cauchyDF_sigma_r_E = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
+  value_cauchyDF_sigma_r_C = 1  # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1  
+  value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
+  value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
+  value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
+  value_normal_sigma_B1 = 5 # the SD hyperparameter in the prior distribution B1; default = 5  
+  value_normal_mu_mu_C = log(0.02) # the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_sigma_mu_C = 1.5 # the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
+  value_normal_mu_mu_E = log(5) # the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
+  value_normal_sigma_mu_E = 2  # the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
+  value_betashape_phi_E_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
+  value_betashape_phi_C_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
+  value_cauchyDF_sigma_mu_C = 1       # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+  value_cauchyDF_sigma_mu_E = 1       # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
+
+# Specific Stan model arguments
+  n_chain<-4        # set the number of Markov chains. The default is 4.
+  n_iter<-400        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
+  n_warmup<-300   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+  adapt_delta<-0.9995  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+
+# Create sub-folders for output (if they don't already exist)
+    source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
+
+# Run source code to prepare data for model
+    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))
+# Run source code to generate creel estimates
+  source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
+  
+# Generate summaries of model inputs and outputs
+  if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
+```
+
+### Summarize and Save Results
+Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+#convergence diagnostics
+  launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
+  if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
+
+# generate plots and tables of creel estimates 
+  source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates.R")) 
+    
+# KB note: update so table/plots of results are shown in PDF document
+```
+
+```{r, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+#we will quickly look at the estimated proportion of effort sampled vs estimated proportion of catch sampled
+# dat<-extract(res_Stan)
+# sample<-as.tibble(melt(apply(dat$E_Creel_array_gen,c(2:4),median))%>%
+#   rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
+#   mutate(type="sample",E=as.numeric(as.character(E))))
+# estimated<-as.tibble(melt(apply(dat$E,c(2:4),median)))%>%
+#   rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
+#   mutate(type="estimate",E=as.numeric(as.character(E)))
+# 
+# dat<-bind_rows(sample,estimated)
+# ggplot(dat,aes(x=as.numeric(day),y=E,color=type))+
+#   geom_line()+
+#   facet_wrap(~ as.factor(section) + as.factor(gear))
+# 
+# #compare psampled effort (observed) with psampled catch (estimated)
+# psamp_E_obs<-melt(apply(res$E_Creel_array_gen,c(2:4),median)/apply(res$E,c(2:4),median))
+# p_samp_C_est<-melt(apply(1-res$p_unsample_C,c(2:4),median))
+# 
+# plot(psamp_E_obs$value~p_samp_C_est$value)
+# abline(a=0,b=1)
+#catch sample rate is correlated with but unequal to effort sample rate!
+```
+
+
+# Pre-season Fishery Planning
+
+### Fishery Impacts Relative to RMP Limits: Preseason Plan
+Here we will compare the planned sport fishery catch, assuming 10% C&R mortality, with the forecasted run size and the RMP mortality limits. 
+
+First, the allowable harvest rates in the RMP are:
+```{r message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
+hcr<-read_csv(file.path("data","hcr.csv"))
+hcr%>%mutate(MaxRunsize=format(MaxRunsize, scientific = FALSE))%>%
+  rename(`Exploitation Rate` = ER)%>%
+  kbl(caption = "Table 1. Allowable Harvest Rates, Skagit RMP ",digits =3)%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+Second, the run size forecast is below. For more details on how this forecast was developed, see this GitHub repository, jointly developed by the Skagit Co-Managers & WDFW: [**(link)**](https://github.com/casruff/Skagit-River-Steelhead-Forecast). The final forecast document including testing of multiple models and development of an ensemble forecast is found in this pdf:[**(link)**](https://github.com/tbuehrens/Skagit-River-Steelhead-Forecast/blob/master/analysis/App_2_Model_fitting_forecast_2020_2021_step_head_fcst.pdf). A published scientific paper describing the methods may be found here [**(link)**](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2664.13789).
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run size Forecast"),echo=FALSE}
+runsize<-read_csv("https://raw.github.com/tbuehrens/Skagit-River-Steelhead-Forecast/master/analysis/cache/ensemble_forecast_posterior.csv")
+ggplot(data=runsize,aes(x=ensemble_forecast_posterior))+
+  geom_density(fill="forest green")+
+  theme_bw()
+runsize%>%
+  summarise(`Run Size` = quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975)), q = c(0.025,0.25, 0.5,0.75, 0.975))%>%
+  dplyr::rename(Quantile=q)%>%
+  kbl(caption = "Table 2. Runsize Forecast",digits =3)%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+
+The allowable harvest, according to the RMP, is the number of fish that may be killed by the combined sport and tribal fisheries. However, as seen above, this number depends on the run-size, which is not known until after the fishing season when escapement is estimated. However, based on the pre-season forecast run size, we can estimate what the allowable harvest will be by combining the forecast run size, including its uncertainty, with the harvest rate matrix prescribed by the RMP. We can then plot the probability that the true allowable harvest (once it is known after the season) will exceed a range of values. 
+
+For example, in 2021 there is a greater than 90% chance that the true allowable harvest based on the true run size and the harvest matrix, will exceed 100 fish. There is a 50% chance that the allowable harvest will exceed 430 fish (10% of the best estimate of the runsize from the forecast), and a very small chance the allowable harvest will be greater than 2000 fish:
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 2. Probability that the allowable harvest exceeds a particular number of fish based on the RMP. Note the log10 scale on the x-axis."),echo=FALSE}
+ER_func<-function(hcr,runsize){
+  ER<-c(NULL)
+  indexes<-c(NULL)
+  for(i in 1:nrow(hcr)){
+    runsize=round(runsize)
+    min<-hcr$MinRunsize[i]
+    max<-hcr$MaxRunsize[i]
+    ind<-which(min <= runsize & runsize <= max)
+    indexes<-c(indexes,ind)
+    ER<-c(ER,rep(hcr$ER[i],length(ind)))
+    ERdat<-data.frame(indexes,ER)
+  }
+ return(ERdat)
+}
+ER<-ER_func(hcr=hcr,runsize=runsize)
+AH<-data.frame(ER$ER,runsize)
+AH$AH<-AH$ER.ER*AH$ensemble_forecast_posterior
+AH$Exceedence<-rev(sort(percent_rank(AH$AH)))
+#hist(AH$AH,breaks=seq(0,max(AH$AH)*1.1,100))
+
+breaks <- 10^(-10:10)
+minor_breaks <- rep(1:9, 21)*(10^rep(-10:10, each=9))
+ggplot(data=AH,aes(x=AH,y=Exceedence))+
+  geom_line(size=1.25)+
+  theme_bw()+
+  scale_x_log10(breaks = breaks, minor_breaks = minor_breaks)+
+  annotation_logticks(base = 10,sides = "b")+
+  coord_equal() +
+  ylab("Probability of Exceedance")+
+  xlab("Allowable (State + Tribal) Co-manager Harvest (fish)")
+```
+
+Given the uncertainty in what the allowable harvest will turn out to be, managers must balance the risk of exceeding the allowable harvest with cost of erring so heavily on the side of conservation (to ensure the allowable harvest is not exceeded) that no fishery is allowed at all. To assist with this task, managers can plan a fishery to harvest a particular number of fish (which itself may be estimated with uncertainty) and then calculate the probability that the allowable harvest will turn out to have been exceeded if the planned fishery is implemented.
+
+For example, in 2021, a 4-day a week fishery was planned with a total harvest (wild fish handled  * assumed 10% C&R mortality rate) of 76 fish. This would translate to 18% of the allowable (sport + tribal) harvest under the RMP if the true allowable harvest is 430, at which point the exceedence probability is 50%. The exceedence probability is greater than 50% when the percentage of allowable harvest used is less than 18%, indicating it is more probable than not that the planned sport fishery will harvest a greater perecentage of the allowable harvest. The exceedence probability is less than 50% when the percentage of allowable harvest used is greater than 18%, indicating it is more probable than not that the planned fishery will not use this much of the allowable harvest:
+
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 3. Probability that the pre-season planned sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
+preseason_planned_mortalities<-76
+H_plan<-rlnorm(1000,log(preseason_planned_mortalities),0.1)
+PAH_plan<-(sample(H_plan,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
+PAHdat_plan<-data.frame(PAH_plan,percent_rank(-PAH_plan))%>%rename(Exceedence="percent_rank..PAH_plan.")
+ggplot(data=PAHdat_plan,aes(x=PAH_plan,y=Exceedence))+
+  geom_line(size=1.25)+
+  theme_bw()+
+  ylab("Probability of Exceedence")+
+  xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  geom_vline(xintercept=50)+
+  geom_vline(xintercept=100,col="red")
+```
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 4. Pre-season Planned Probability that the sport fishery harvest exceeds 50 and 100 % of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use"),echo=FALSE}
+probs<-c(PAHdat_plan$PAH_plan[which(abs(PAHdat_plan$Exceedence - 0.5)==min(abs(PAHdat_plan$Exceedence - 0.5)))],
+  PAHdat_plan$Exceedence[which(abs(PAHdat_plan$PAH - 50)==min(abs(PAHdat_plan$PAH - 50)))]*100,
+  PAHdat_plan$Exceedence[which(abs(PAHdat_plan$PAH - 100)==min(abs(PAHdat_plan$PAH - 100)))]*100
+  )
+par(mar=c(5,15,5,5))
+names(probs)<-c("best estimate of sport \nfishery impacts as \n % of total (sport + tribal) \n allowable","probability sport fishery \n impacts > 50% of total \n (sport + tribal) allowable","probability sport fishery \n impacts > 100% of total \n (sport + tribal) allowable")
+barplot(probs,horiz = T,xlim=c(0,100),las=2,yaxs="i",col="forest green",main="Pre-season Plan"
+        )
+box()
+```
+
+# In-season Fishery Results
+
+In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). 
+
+### Season Total Effort (hours) and Catch (fish)
+
+This table and the figures below it show the posterior distribution for season total catch and effort. The "best" estimate is the 50th percentile (median):
+```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
+results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
+  dplyr::rename(Variable=X1)%>%
+  kbl(caption = "Table 3. Total Catch and Effort ",digits =1)%>%
+  kable_classic(full_width = F, html_font = "Cambria")
+print(results)
+```
+
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (hrs). Dashed lines show posterior medians 95% CI"),echo=FALSE}
+season_results<-data.frame(res$C_sum,res$E_sum)%>%
+  mutate(iter=row_number())%>%
+  rename(`Season Total Catch`=res.C_sum,`Season Total Effort`=res.E_sum)%>%
+  pivot_longer(names_to = "Parameter",values_to="value",cols=c(`Season Total Catch`,`Season Total Effort`))
+
+ggplot(season_results,aes(x=value,fill=Parameter))+
+  facet_wrap(~Parameter,ncol=1,  scales = 'free')+
+  theme_bw()+
+  geom_density()+
+  ylab(NULL)+
+  geom_vline(season_results%>%group_by(Parameter)%>%summarise(value = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975)),mapping=aes(xintercept=value,group=Parameter),linetype="dashed")+
+  theme(legend.title = element_blank())
+
+```
+
+### Daily Catch, Effort, and Catch Per Unit Effort (CPUE) (fish)
+He we estimate the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95% credible intervals.
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
+ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab(paste0("Catch - ",catch.group.of.interest," (fish)"))+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 7. Daily effort. Lines are posterior medians and shading shows 95% CI"), echo=FALSE}
+ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab("Angling Effort (hrs)")+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```
+
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 8. Daily CPUE. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
+ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
+  facet_wrap(~Section,ncol=1)+
+  geom_line(size=1.2)+
+  ylab("Catch Per Unit Effort (fish/hrs)")+
+  xlab("")+
+  scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
+  geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
+```
+
+### Inseason Impact Monitoring: Fishery Impacts Relative to RMP Limits
+Here, we compare the actual in-season estimated sport fishery catch, assuming 10% C&R mortality, with the allowable harvest estimated from the forecasted run size and the RMP mortality limits, to estimate the probability that the allowable harvest has been exceeded by the actual fishery (as opposed to the pre-season plan that we looked at previously). Early in the season when little catch has occurred, the probability that the allowable harvest has been exceeded is low, but increases as the season goes on. This analyis enables an in-season quantification of risk by managers, which may be helpful in decision-making:
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 9. Probability that the actual in-season sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
+H<-res$C_sum*0.1
+PAH<-(sample(H,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
+PAHdat<-data.frame(PAH,percent_rank(-PAH))%>%rename(Exceedence="percent_rank..PAH.")
+ggplot(data=PAHdat,aes(x=PAH,y=Exceedence))+
+  geom_line(size=1.25)+
+  theme_bw()+
+  ylab("Probability of Exceedence")+
+  xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
+  geom_vline(xintercept=50)+
+  geom_vline(xintercept=100,col="red")
+```
+
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 10. Probability that the sport fishery harvest exceeds 50 and 100 % of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use"),echo=FALSE}
+probs<-c(PAHdat$PAH[which(abs(PAHdat$Exceedence - 0.5)==min(abs(PAHdat$Exceedence - 0.5)))],
+  PAHdat$Exceedence[which(abs(PAHdat$PAH - 50)==min(abs(PAHdat$PAH - 50)))]*100,
+  PAHdat$Exceedence[which(abs(PAHdat$PAH - 100)==min(abs(PAHdat$PAH - 100)))]*100
+  )
+par(mar=c(5,15,5,5))
+names(probs)<-c("best estimate of sport \nfishery impacts as \n % of total (sport + tribal) \n allowable","probability sport fishery \n impacts > 50% of total \n (sport + tribal) allowable","probability sport fishery \n impacts > 100% of total \n (sport + tribal) allowable")
+barplot(probs,horiz = T,xlim=c(0,100),las=2,yaxs="i",col="forest green", main="In-season Estimate"
+        )
+box()
+```
