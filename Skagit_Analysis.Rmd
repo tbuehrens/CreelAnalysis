@@ -171,21 +171,20 @@ Here we will load and format the data for the analysis using the chunk of code w
 
 ### Run Analysis
 Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-```{r run_analysis} 
-#,results = "hide",echo=FALSE,warning=FALSE
+```{r run_analysis,,results = "hide",echo=FALSE,warning=FALSE} 
 #=======
 #note for editing: any ner priors need to go here, also in "prepare data" and in "summarize inputs"
 #=======
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
-  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
+  model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
   Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
 
 # Denote which creel model you want to run
   creel_models[,1:3] #model summary table
-  model_number<-c(5)
+  model_number<-c(4)
   
 # Specify time period to stratify data by - day vs. week 
   model_period<-c("day") #enter "day" or "week"
@@ -227,33 +226,11 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
   
 # Generate summaries of model inputs and outputs
   if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
-  
-dat<-extract(res_Stan)
-sample<-as.tibble(melt(apply(dat$E_Creel_array_gen,c(2:4),median))%>%
-  rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
-  mutate(type="sample",E=as.numeric(as.character(E))))
-estimated<-as.tibble(melt(apply(dat$E,c(2:4),median)))%>%
-  rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
-  mutate(type="estimate",E=as.numeric(as.character(E)))
-
-dat<-bind_rows(sample,estimated)
-ggplot(dat,aes(x=as.numeric(day),y=E,color=type))+
-  geom_line()+
-  facet_wrap(~ as.factor(section) + as.factor(gear))
-
-#compare psampled effort (observed) with psampled catch (estimated)
-psamp_E_obs<-melt(apply(res$E_Creel_array_gen,c(2:4),median)/apply(res$E,c(2:4),median))
-p_samp_C_est<-melt(apply(1-res$p_unsample,c(2:4),median))
-
-plot(psamp_E_obs$value~p_samp_C_est$value)
-abline(a=0,b=1)
-#catch sample rate is correlated with but unequal to effort sample rate!
 ```
 
 ### Summarize and Save Results
 Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
 ```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
-
 #convergence diagnostics
   launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
   if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
@@ -262,6 +239,30 @@ Here we will summarize and save results of the in-season analysis of creel data 
   source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates.R")) 
     
 # KB note: update so table/plots of results are shown in PDF document
+```
+
+```{r, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+#we will quickly look at the estimated proportion of effort sampled vs estimated proportion of catch sampled
+# dat<-extract(res_Stan)
+# sample<-as.tibble(melt(apply(dat$E_Creel_array_gen,c(2:4),median))%>%
+#   rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
+#   mutate(type="sample",E=as.numeric(as.character(E))))
+# estimated<-as.tibble(melt(apply(dat$E,c(2:4),median)))%>%
+#   rename(section=Var1,day=Var2,gear=Var3,E=value)%>%
+#   mutate(type="estimate",E=as.numeric(as.character(E)))
+# 
+# dat<-bind_rows(sample,estimated)
+# ggplot(dat,aes(x=as.numeric(day),y=E,color=type))+
+#   geom_line()+
+#   facet_wrap(~ as.factor(section) + as.factor(gear))
+# 
+# #compare psampled effort (observed) with psampled catch (estimated)
+# psamp_E_obs<-melt(apply(res$E_Creel_array_gen,c(2:4),median)/apply(res$E,c(2:4),median))
+# p_samp_C_est<-melt(apply(1-res$p_unsample_C,c(2:4),median))
+# 
+# plot(psamp_E_obs$value~p_samp_C_est$value)
+# abline(a=0,b=1)
+#catch sample rate is correlated with but unequal to effort sample rate!
 ```
 
 
