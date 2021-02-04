@@ -137,7 +137,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #=========================
 # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
 # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
-  total.closed.dates<-2 # Total number of dates that at least one section of the river was closed 
+  total.closed.dates<-0 # Total number of dates that at least one section of the river was closed 
   
 # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
     # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
@@ -171,8 +171,8 @@ Here we will load and format the data for the analysis using the chunk of code w
 
 ### Run Analysis
 Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-```{r run_analysis,results = "hide",echo=FALSE,warning=FALSE} 
-
+```{r run_analysis} 
+#,results = "hide",echo=FALSE,warning=FALSE
 #=======
 #note for editing: any ner priors need to go here, also in "prepare data" and in "summarize inputs"
 #=======
@@ -185,7 +185,7 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
 
 # Denote which creel model you want to run
   creel_models[,1:3] #model summary table
-  model_number<-c(4)
+  model_number<-c(5)
   
 # Specify time period to stratify data by - day vs. week 
   model_period<-c("day") #enter "day" or "week"
@@ -210,11 +210,11 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
 
 # Specific Stan model arguments
   n_chain<-4        # set the number of Markov chains. The default is 4.
-  n_iter<-300        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_iter<-400        # set the number of iterations for each chain (including warmup). The default is 2000.
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
-  n_warmup<-200   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_warmup<-300   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.995  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.95  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
@@ -240,10 +240,6 @@ dat<-bind_rows(sample,estimated)
 ggplot(dat,aes(x=as.numeric(day),y=E,color=type))+
   geom_line()+
   facet_wrap(~ as.factor(section) + as.factor(gear))
-
-
-  
-
 ```
 
 ### Summarize and Save Results

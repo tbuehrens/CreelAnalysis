@@ -167,15 +167,6 @@ transformed parameters{
 	}
 }
 model{
-  //local variables to vectorize likelihoods
-  vector[V_n] v1;
-  vector[T_n] v2;
-  vector[A_n] v3;
-  vector[E_n] v4;
-  vector[IntC] v5;
-  //vector[IntCreel] v6;
-  vector[IntA] v7;
-  vector[IntA] v8;
 	//Hyperpriors (effort hyperparameters)
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E); 
 	Lcorr_E ~ lkj_corr_cholesky(1);                             						
@@ -217,45 +208,39 @@ model{
 	//Likelihoods
 	//Index effort counts - vehicles
 	for(i in 1:V_n){
-	  v1[i] = (lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
-						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1];
+		V_I[i] ~ poisson((lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
+						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);  //Note: leaving ratio of cars per angler and bias constant among days since was invariant!
 	}
-	V_I ~ poisson(v1);//Note: leaving ratio of cars per angler and bias constant among days since was invariant!
   //Index effort counts - trailers
 	for(i in 1:T_n){
-	  v2[i] = (lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TI[1,section_T[i]] * R_T[1] +
-						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TI[2,section_T[i]] * R_T[2]) * b[2];
+		T_I[i] ~ poisson((lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],1] * p_TI[1,section_T[i]] * R_T[1] +
+						 lambda_E_S_I[section_T[i],countnum_T[i]][day_T[i],2] * p_TI[2,section_T[i]] * R_T[2]) * b[2]); 
 	}
-	T_I ~ poisson(v2); 
   //Index effort counts - anglers
 	for(i in 1:A_n){ //KB edit
-	  v3[i] = lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TI[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]];
+		A_I[i] ~ poisson(lambda_E_S_I[section_A[i],countnum_A[i]][day_A[i],gear_A[i]] * p_TI[gear_A[i],section_A[i]] * p_I[gear_A[i],section_A[i]]);
 	}
-	A_I ~ poisson(v3);
 	//Census (tie-in) effort counts - anglers
 	for(e in 1:E_n){
-	  v4[e] = lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TI[gear_E[e],section_E[e]];
+		E_s[e] ~ poisson(lambda_E_S_I[section_E[e],countnum_E[e]][day_E[e],gear_E[e]] * p_TI[gear_E[e],section_E[e]]);				
 	}
-	E_s ~ poisson(v4);				
 	//Angler interviews - CPUE
 	for(a in 1:IntC){
-	  v5[a] = lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * h[a];
+		c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * h[a] , r_C);
 	}
-	c ~ neg_binomial_2(v5, r_C);
-	//Total Angler hours and Catch creeled
+	//Angler interviews - Angler expansions
+	for(a in 1:IntA){
+		//vehicles
+		V_A[a] ~ binomial(A_A[a], R_V[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
+		//trailers
+		T_A[a] ~ binomial(A_A[a], R_T[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
+	}
+  //Total Angler hours and Catch creeled
 //   for(i in 1:IntCreel){
 //     v6[i] = log(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * p_sample[i]);
 // 	}
 // 	H_Creel ~ lognormal(v6,0.02);
 	//Angler interviews - Angler expansions
-	for(a in 1:IntA){
-		v7[a] = R_V[gear_IntA[a]];
-		v8[a] = R_T[gear_IntA[a]];
-	}
-	//vehicles
-	V_A ~ binomial(A_A,v7);  //Note: leaving ratio of cars per angler constant among days since was invariant!
-	//trailers
-	T_A ~ binomial(A_A,v8);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 }
 generated quantities{
   matrix[G*S,G*S] Omega_C; //reconstructed CPUE correlations
