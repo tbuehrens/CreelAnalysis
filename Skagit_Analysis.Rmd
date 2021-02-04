@@ -240,6 +240,14 @@ dat<-bind_rows(sample,estimated)
 ggplot(dat,aes(x=as.numeric(day),y=E,color=type))+
   geom_line()+
   facet_wrap(~ as.factor(section) + as.factor(gear))
+
+#compare psampled effort (observed) with psampled catch (estimated)
+psamp_E_obs<-melt(apply(res$E_Creel_array_gen,c(2:4),median)/apply(res$E,c(2:4),median))
+p_samp_C_est<-melt(apply(1-res$p_unsample,c(2:4),median))
+
+plot(psamp_E_obs$value~p_samp_C_est$value)
+abline(a=0,b=1)
+#catch sample rate is correlated with but unequal to effort sample rate!
 ```
 
 ### Summarize and Save Results
