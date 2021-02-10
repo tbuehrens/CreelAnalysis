@@ -37,9 +37,9 @@ The purpose of this page is to document the monitoring of Skagit steelhead sport
   
   3) provides links to a GitHub code repository that records the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
   
-For those only interested in the pre-season fishery plan and the in-season fishery results, we recommend skipping down to pre-season fishery plan section. If you are interested in running the analysis yourself, the "Reproducing the analysis" section below provides links to the code repository.
+For those only interested in the pre-season fishery plan and the in-season fishery results, we recommend skipping down to pre-season fishery plan section. If you are interested in running the analysis yourself, the "Reproducing the Analysis" section below provides links to the code repository.
 
-# Reproducing the analysis
+# Reproducing the Analysis
 To run the analysis yourself, you can find the code repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions contained within the Skagit_Analysis_2021.Rmd file [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). Excecuting the code in the this .Rmd file will reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(link)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed and the C++ toolchain must be configured correctly: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
 
 
