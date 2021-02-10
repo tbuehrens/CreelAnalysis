@@ -64,8 +64,8 @@
     }
   
   #Extract by Date (Range)?
-    sub.Date.Range<-seq(as.Date(Begin.Date), as.Date(End.Date), 1)
     if(by.Date == "Y"){
+      sub.Date.Range<-seq(as.Date(Begin.Date), as.Date(End.Date), 1)
       sub.effort.dat<-sub.effort.dat[sub.effort.dat$Date %in% sub.Date.Range,]
       sub.group.dat<-sub.group.dat[sub.group.dat$Date %in% sub.Date.Range,]
       # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Date %in% sub.Date.Range,]

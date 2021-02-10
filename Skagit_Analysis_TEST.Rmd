@@ -1,5 +1,5 @@
 ---
-title: Skagit Creel Analysis
+title: Skagit Creel Analysis TEST PAGE
 author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
 output:
   html_document:
@@ -27,30 +27,32 @@ set.seed(123)
 ![](https://user-images.githubusercontent.com/40445951/106297554-afe14000-6207-11eb-8b29-217650aed335.JPG)
 
 # Overview
-The purpose of this page is to:
-  1) record the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021.
-  2) provide a pre-season comparison of planned Skagit steelhead sport fishery impacts with allowable impacts based on the Skagit Resource         Management Plan.
-  3) provide in-season tracking of Skagit steelhead sport fishery impacts relative to allowable impacts based on the Skagit Resource               Management Plan.
+A popular sport fishery for winter steelhead was re-opened on the Skagit River after a decade-long closure following the Endangered Species Act (ESA) listing of Puget Sound steelhead as Threatened in 2007. Administration of the fishery is governed by a Resource Management Plan adopted by NOAA Fisheries that was jointly submitted by WDFW and tribal co-managers [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/background/final_skagit_rmp_erd_04-10-2018.pdf). The plan ensures that impacts to wild steelhead populations resulting from sport and tribal fisheries will not prevent the population from achieving conservation and recovery goals. To achieve this objective, the plan calls for careful monitoring of fishery impacts relative to limits specified in the plan. Although current sport fishery regulations require release of wild steelhead, mortality does occur as a result of fish being caught and released, and these impacts must be quantified.
 
-# Disclaimer
-Contents of this document should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
+The purpose of this page is to document the monitoring of Skagit steelhead sport fishery impacts. Specifically, this page:
+
+  1) provides a pre-season comparison of planned Skagit steelhead sport fishery impacts with allowable impacts based on the Skagit Resource Management Plan.
   
-# Running the analysis yourself
-To run the analysis yourself, download the repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions below. The following subsections detail reproducing the analysis and refer to code chunks in the .RMD file that created this page: [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis.Rmd). If only interested in results, the pre-season fishery plan and the inseason fishery results, skip down to pre-season fishery plan section. If interested in running the analysis, the subsections below provide brief descriptions of what these code chunks in the .RMD file do.
+  3) provides in-season tracking of Skagit steelhead sport fishery impacts relative to allowable impacts based on the Skagit Resource Management Plan.
+  
+  3) provides links to a GitHub code repository that records the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
+  
+For those only interested in the pre-season fishery plan and the in-season fishery results, we recommend skipping down to pre-season fishery plan section. If you are interested in running the analysis yourself, the "Reproducing the analysis" section below provides links to the code repository.
 
-### Requirements
-all analyses require R software [**(link)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
+# Reproducing the analysis
+To run the analysis yourself, you can find the code repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions contained within the Skagit_Analysis_2021.Rmd file [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). Excecuting the code in the this .Rmd file will reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(link)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed and the C++ toolchain must be configured correctly: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
 
-### Functions
-We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
+
 ```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
+### Functions
+#We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
 wd_functions<-"functions"
 sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
 ```
 
-### Packages
-In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
 ```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
+### Packages
+#In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
 #===============================================
 # Load packages, install and load if not already
 #===============================================
@@ -81,9 +83,10 @@ packages_list<-c("timeDate",
       )
 install_or_load_pack(pack = packages_list)
 ```
-### User inputs
-Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
+
 ```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
+### User inputs
+#Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
 #======================================================
 # Specify relative working directories for sub-folders
 #======================================================
@@ -120,12 +123,12 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   winterEnd<-  120 
 
 # Specify filter unit(s)
-  YearGroup.of.Interest<- c("2017-2018") 
-  Season.of.Interest<-    c("Winter") 
-  Year.of.Interest<-      c("2017") 
+  # YearGroup.of.Interest<- c("2017-2018") 
+  # Season.of.Interest<-    c("Winter") 
+  # Year.of.Interest<-      c("2017") 
   StreamName.of.Interest<-c("Skagit")
-  Begin.Date<-            c("2016-05-01") #Format must be "yyyy-mm-dd"
-  End.Date<-              c("2017-03-31") #Format must be "yyyy-mm-dd"
+  #Begin.Date<-            c("2019-02-01") #Format must be "yyyy-mm-dd"
+  #End.Date<-              c("2019-04-30") #Format must be "yyyy-mm-dd"
   
 #======================================================
 # Denote catch group of interest (species_origin_fate) 
@@ -137,6 +140,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #=========================
 # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
 # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
+  
   total.closed.dates<-0 # Total number of dates that at least one section of the river was closed 
   
 # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
@@ -149,9 +153,10 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
                             ,"2019-02-12",     0,         0) 
 ```
 
-### Data Preparation
-Here we will load and format the data for the analysis using the chunk of code with this heading in the RMD file.
 ```{r data_prep,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+### Data Preparation
+#Here we will load and format the data for the analysis using the chunk of code with this heading in the RMD file.
+#====================================================
 # Load LUTs
   source(paste0(wd_source_files, "/Load_LUTs.R"))
 
@@ -169,11 +174,13 @@ Here we will load and format the data for the analysis using the chunk of code w
 ##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
 ```
 
+
+```{r run_analysis,,results = "hide",echo=FALSE,warning=FALSE}
 ### Run Analysis
-Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-```{r run_analysis,,results = "hide",echo=FALSE,warning=FALSE} 
+#Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+#================================================================
 #=======
-#note for editing: any ner priors need to go here, also in "prepare data" and in "summarize inputs"
+#note for editing: any new priors need to go here, also in "prepare data" and in "summarize inputs"
 #=======
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
@@ -183,7 +190,7 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
   Model_Run<-1 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
 
 # Denote which creel model you want to run
-  creel_models[,1:3] #model summary table
+  #creel_models[,1:3] #model summary table
   model_number<-c(4)
   
 # Specify time period to stratify data by - day vs. week 
@@ -213,7 +220,7 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
   n_warmup<-300   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.95  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.9995  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
@@ -228,9 +235,11 @@ Here we will run the in-season analysis of creel data to estimate CPUE, effort, 
   if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
 ```
 
-### Summarize and Save Results
-Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+
 ```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+### Summarize and Save Results
+#Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+#=============================================
 #convergence diagnostics
   launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
   if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
@@ -264,7 +273,6 @@ Here we will summarize and save results of the in-season analysis of creel data 
 # abline(a=0,b=1)
 #catch sample rate is correlated with but unequal to effort sample rate!
 ```
-
 
 # Pre-season Fishery Planning
 
@@ -362,6 +370,9 @@ box()
 # In-season Fishery Results
 
 In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). 
+
+### Disclaimer
+Contents on this page should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
 
 ### Season Total Effort (hours) and Catch (fish)
 
