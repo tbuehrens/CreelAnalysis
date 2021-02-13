@@ -26,8 +26,8 @@ set.seed(123)
 ```
 ![](https://user-images.githubusercontent.com/40445951/106297554-afe14000-6207-11eb-8b29-217650aed335.JPG)
 
-# Overview
-A popular sport fishery for winter steelhead was re-opened on the Skagit River after a decade-long closure following the Endangered Species Act (ESA) listing of Puget Sound steelhead as Threatened in 2007. Administration of the fishery is governed by a Resource Management Plan adopted by NOAA Fisheries that was jointly submitted by WDFW and tribal co-managers [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/background/final_skagit_rmp_erd_04-10-2018.pdf). The plan ensures that impacts to wild steelhead populations resulting from sport and tribal fisheries will not prevent the population from achieving conservation and recovery goals. To achieve this objective, the plan calls for careful monitoring of fishery impacts relative to limits specified in the plan. Although current sport fishery regulations require release of wild steelhead, mortality does occur as a result of fish being caught and released, and these impacts must be quantified.
+## Overview
+A popular sport fishery for winter steelhead was re-opened on the Skagit River after a decade-long closure following the Endangered Species Act (ESA) listing of Puget Sound steelhead as Threatened in 2007. Administration of the fishery is governed by a Resource Management Plan adopted by NOAA Fisheries that was jointly submitted by WDFW and tribal co-managers [**(Resource Management Plan)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/background/final_skagit_rmp_erd_04-10-2018.pdf). The plan ensures that impacts to wild steelhead populations resulting from sport and tribal fisheries will not prevent the population from achieving conservation and recovery goals. To achieve this objective, the plan calls for careful monitoring of fishery impacts relative to limits specified in the plan. Although current sport fishery regulations require release of wild steelhead, mortality does occur as a result of fish being caught and released, and these impacts must be quantified.
 
 The purpose of this page is to document the monitoring of Skagit steelhead sport fishery impacts. Specifically, this page:
 
@@ -39,8 +39,8 @@ The purpose of this page is to document the monitoring of Skagit steelhead sport
   
 For those only interested in the pre-season fishery plan and the in-season fishery results, we recommend skipping down to pre-season fishery plan section. If you are interested in running the analysis yourself, the "Reproducing the Analysis" section below provides links to the code repository.
 
-# Reproducing the Analysis
-To run the analysis yourself, you can find the code repository here [**(link)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions contained within the Skagit_Analysis_2021.Rmd file [**(link)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). Excecuting the code in the this .Rmd file will reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(link)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(link)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed and the C++ toolchain must be configured correctly: [**(link)**](https://cran.r-project.org/bin/windows/Rtools/).
+## Reproducing the Analysis
+To run the analysis yourself, you can find the code repository here [**(code repository)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions contained within the Skagit_Analysis_2021.Rmd file [**(R Markdown file)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). Excecuting the code in the this .Rmd file will reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(install R)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(install Stan)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed and the C++ toolchain must be configured correctly: [**(install R tools)**](https://cran.r-project.org/bin/windows/Rtools/).
 
 
 ```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
@@ -274,7 +274,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #catch sample rate is correlated with but unequal to effort sample rate!
 ```
 
-# Pre-season Fishery Planning
+## Pre-season Fishery Planning
 
 ### Fishery Impacts Relative to RMP Limits: Preseason Plan
 Here we will compare the planned sport fishery catch, assuming 10% C&R mortality, with the forecasted run size and the RMP mortality limits. 
@@ -288,7 +288,7 @@ hcr%>%mutate(MaxRunsize=format(MaxRunsize, scientific = FALSE))%>%
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-Second, the run size forecast is below. For more details on how this forecast was developed, see this GitHub repository, jointly developed by the Skagit Co-Managers & WDFW: [**(link)**](https://github.com/casruff/Skagit-River-Steelhead-Forecast). The final forecast document including testing of multiple models and development of an ensemble forecast is found in this pdf:[**(link)**](https://github.com/tbuehrens/Skagit-River-Steelhead-Forecast/blob/master/analysis/App_2_Model_fitting_forecast_2020_2021_step_head_fcst.pdf). A published scientific paper describing the methods may be found here [**(link)**](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2664.13789).
+Second, the run size forecast is below. For more details on how this forecast was developed, see this GitHub repository, jointly developed by the Skagit Co-Managers & WDFW: [**(preseason forecast code)**](https://github.com/casruff/Skagit-River-Steelhead-Forecast). The final forecast document including testing of multiple models and development of an ensemble forecast is found in this pdf:[**(final preason forecast)**](https://github.com/tbuehrens/Skagit-River-Steelhead-Forecast/blob/master/analysis/App_2_Model_fitting_forecast_2020_2021_step_head_fcst.pdf). A published scientific paper describing the methods may be found here [**(preseason forecast publication)**](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2664.13789).
 ```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run size Forecast"),echo=FALSE}
 runsize<-read_csv("https://raw.github.com/tbuehrens/Skagit-River-Steelhead-Forecast/master/analysis/cache/ensemble_forecast_posterior.csv")
 ggplot(data=runsize,aes(x=ensemble_forecast_posterior))+
@@ -367,7 +367,7 @@ barplot(probs,horiz = T,xlim=c(0,100),las=2,yaxs="i",col="forest green",main="Pr
 box()
 ```
 
-# In-season Fishery Results
+## In-season Fishery Results
 
 In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). 
 
