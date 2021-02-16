@@ -90,7 +90,7 @@ transformed data{
   }
   for(i in 1:IntCreel){
     C_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += C_Creel[i];
-	E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
+	  E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
   }
 }
 parameters{

@@ -190,7 +190,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
-  Model_Run<-2 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+  Model_Run<-3 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
 
 # Denote which creel model you want to run
   #creel_models[,1:3] #model summary table
@@ -223,7 +223,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
   n_warmup<-3000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.9995  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.99  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
@@ -372,7 +372,7 @@ box()
 
 ## In-season Fishery Results
 
-In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). 
+In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). Results presented below include data collected through: **`r format(as.Date(all.Dates$Date[nrow(all.Dates)]), '%m/%d/%Y')`**
 
 ### Disclaimer
 Contents on this page should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
@@ -389,13 +389,18 @@ print(results)
 ```
 
 
-```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (hrs). Dashed lines show posterior medians 95% CI"),echo=FALSE}
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (hrs). Dashed lines show posterior medians and 95% CI"),echo=FALSE}
 season_results<-data.frame(res$C_sum,res$E_sum)%>%
   mutate(iter=row_number())%>%
   rename(`Season Total Catch`=res.C_sum,`Season Total Effort`=res.E_sum)%>%
   pivot_longer(names_to = "Parameter",values_to="value",cols=c(`Season Total Catch`,`Season Total Effort`))
 
-ggplot(season_results,aes(x=value,fill=Parameter))+
+#elimiminate very very extreme quantiles to pretty up plots
+lims<-season_results%>%group_by(Parameter)%>%summarise(value = quantile(value, c(0, 0.995)), q = c(0,0.995))%>%pivot_wider(names_from = q,values_from=value)
+
+season_results_trunc=season_results%>%left_join(lims,by="Parameter")%>%filter(value>as.numeric(`0`) & value < as.numeric(`0.995`))
+
+ggplot(season_results_trunc,aes(x=value,fill=Parameter))+
   facet_wrap(~Parameter,ncol=1,  scales = 'free')+
   theme_bw()+
   geom_density()+
