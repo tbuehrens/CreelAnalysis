@@ -411,7 +411,7 @@ ggplot(season_results_trunc,aes(x=value,fill=Parameter))+
 ```
 
 ### Daily Catch, Effort, and Catch Per Unit Effort (CPUE) (fish)
-He we estimate the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95% credible intervals.
+Here we estimate the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95% credible intervals.
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
 ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
