@@ -28,7 +28,7 @@ This page provides documentation of WDFW's efforts to plan and administer a fish
   
   2) in-season tracking of Skagit steelhead sport fishery fishery-induced wild steelhead mortality relative to allowable exploitation rates designated in the Skagit steelhead RMP.
   
-Want to see the data and analysis for yourself? If you are interested in running the analysis yourself, jump to the ["Reproducing the Analysis"](#Reproducing-the-Analysis) section below which overview the GitHub code repository that contains the code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
+Want to see the data and analysis for yourself? If you are interested in running the analysis yourself, jump to the ["Reproducing the Analysis"](#Reproducing-the-Analysis) section below, which overviews the GitHub code repository that contains the code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
 ```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
 ### Functions
 #We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
@@ -264,7 +264,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 ```
 
 ## Pre-season Fishery Planning
-This section displays the pre-season Skagit wild winter steelhead run-size forecast, the exploitation rate matrix prescribed by the Resource Management Plan, and uses the two to calculate the allowable harvest. It then compares the planned harvest (sport fishery catch * assumed catch and release mortality rate) to estimate the percent of the allowable impacts the sport fishery will use and the probability that the sport fishery will exceed various percentages of the allowable impacts.
+This section displays the pre-season Skagit wild winter steelhead run-size forecast, the exploitation rate matrix prescribed by the Resource Management Plan, and uses the two to calculate the allowable harvest. It then compares the planned harvest (sport fishery catch * assumed catch and release mortality rate) with the allowable harvest to estimate the percent of the allowable harvest the sport fishery will use as well as the probability that the sport fishery will exceed various percentages of the allowable impacts.
 
 First, the allowable harvest rates in the RMP are:
 ```{r message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
@@ -330,7 +330,7 @@ ggplot(data=AH,aes(x=AH,y=Exceedence))+
   xlab("Allowable (State + Tribal) Co-manager Harvest (fish)")
 ```
 
-Given the uncertainty in what the allowable harvest will turn out to be, managers must balance the risk of exceeding the allowable harvest with cost of erring so heavily on the side of conservation (to ensure the allowable harvest is not exceeded) that no fishery is allowed at all. To assist with this task, managers can plan a fishery to harvest a particular number of fish (which itself may be estimated with uncertainty) and then calculate the probability that the allowable harvest will turn out to have been exceeded if the planned fishery is implemented.
+Given the uncertainty in what the allowable harvest will turn out to be, managers must balance the risk of exceeding the allowable harvest with the cost of erring so heavily on the side of conservation (to ensure the allowable harvest is not exceeded) that no fishery is allowed at all. To assist with this task, managers can plan a fishery to harvest a particular number of fish (which itself may be estimated with uncertainty) and then calculate the probability that the allowable harvest will turn out to have been exceeded if the planned fishery is implemented.
 
 For example, in 2021, a four-day a week fishery was planned with a total harvest of 76 fish (760 wild fish handled * assumed 10 percent catch and release mortality rate). This would translate to 18 percent of the allowable (sport and tribal) harvest under the RMP if the true allowable harvest is 430, at which point the exceedance probability is 50 percent. The exceedance probability is greater than 50 percent when the percentage of allowable harvest used is less than 18 percent, indicating it is more probable than not that the planned sport fishery will harvest a greater percentage of the allowable harvest. The exceedance probability is less than 50 percent when the percentage of allowable harvest used is greater than 18 percent, indicating it is more probable than not that the planned fishery will not use this much of the allowable harvest:
 
