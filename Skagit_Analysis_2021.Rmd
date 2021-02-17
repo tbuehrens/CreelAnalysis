@@ -464,6 +464,8 @@ barplot(probs,horiz = T,xlim=c(0,100),las=2,yaxs="i",col="forest green", main="I
 box()
 ```
 
+<a name="Reproducing-the-Analysis"></a>
+
 ## Reproducing the Analysis
 To run the analysis yourself, you can visit the code repository here [**(code repository)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions in this [**(R Markdown file)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). This file and accompanying repository contain the code necessary to reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(install R)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(install Stan)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) parameter estimation. Additionally, for Stan to work, Rtools must also be installed and the C++ toolchain must be configured correctly: [**(install Rtools)**](https://cran.r-project.org/bin/windows/Rtools/).
 
