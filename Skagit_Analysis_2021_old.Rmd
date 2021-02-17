@@ -1,5 +1,6 @@
 ---
 title: Skagit Steelhead Fishery Management 2021
+author: Thomas Buehrens, Kale Bentley, Andrew Fowler & Amy Edwards
 output:
   html_document:
     fig_caption: yes
@@ -12,6 +13,12 @@ output:
     toc_depth: '3'
 ---
 
+***
+
+This document was generated on `r format(Sys.time(), '%m/%d/%Y')`.
+
+***
+
 ```{r set_options, echo = FALSE, message = FALSE}
 options(width = 100)
 knitr::opts_chunk$set(message = FALSE)
@@ -20,15 +27,22 @@ set.seed(123)
 ![](https://user-images.githubusercontent.com/40445951/106297554-afe14000-6207-11eb-8b29-217650aed335.JPG)
 
 ## Overview
-WDFW re-opened a popular sport fishery for winter steelhead on the Skagit River after a decade-long closure following the Endangered Species Act (ESA) listing of Puget Sound steelhead as Threatened in 2007. A Resource Management Plan (RMP) that was jointly developed by WDFW and tribal co-managers, and adopted by NOAA Fisheries, provides the legal basis for this fishery under the ESA [**(Resource Management Plan)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/background/final_skagit_rmp_erd_04-10-2018.pdf). The plan ensures that impacts to wild steelhead populations from sport and tribal fisheries will not prevent the population from achieving conservation and recovery goals. The plan calls for careful monitoring of fisheries-induced wild steelhead mortality relative to exploitation rate limits specified in the plan. Although current sport fishery regulations require release of wild steelhead, mortality does occur as a result of fish being caught and released, and these impacts must be quantified.
+A popular sport fishery for winter steelhead was re-opened on the Skagit River after a decade-long closure following the Endangered Species Act (ESA) listing of Puget Sound steelhead as Threatened in 2007. Administration of the fishery is governed by a Resource Management Plan adopted by NOAA Fisheries that was jointly submitted by WDFW and tribal co-managers [**(Resource Management Plan)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/background/final_skagit_rmp_erd_04-10-2018.pdf). The plan ensures that impacts to wild steelhead populations resulting from sport and tribal fisheries will not prevent the population from achieving conservation and recovery goals. To achieve this objective, the plan calls for careful monitoring of fishery impacts relative to limits specified in the plan. Although current sport fishery regulations require release of wild steelhead, mortality does occur as a result of fish being caught and released, and these impacts must be quantified.
 
-This page provides documentation of WDFW's efforts to plan and administer a fishery for Skagit steelhead that is consistent with the RMP, including:
+The purpose of this page is to document the monitoring of Skagit steelhead sport fishery impacts. Specifically, this page:
 
-  1) a comparison of the pre-season planned Skagit steelhead sport fishery-induced wild steelhead mortality with allowable exploitation rates designated in the Skagit steelhead RMP.
+  1) provides a pre-season comparison of planned Skagit steelhead sport fishery impacts with allowable impacts based on the Skagit Resource Management Plan.
   
-  2) in-season tracking of Skagit steelhead sport fishery fishery-induced wild steelhead mortality relative to allowable exploitation rates designated in the Skagit steelhead RMP.
+  3) provides in-season tracking of Skagit steelhead sport fishery impacts relative to allowable impacts based on the Skagit Resource Management Plan.
   
-Want to see the data and analysis for yourself? If you are interested in running the analysis yourself, jump to the ["Reproducing the Analysis"](#Reproducing-the-Analysis) section below which overview the GitHub code repository that contains the code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
+  3) provides links to a GitHub code repository that records the steps and code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
+  
+For those only interested in the pre-season fishery plan and the in-season fishery results, we recommend skipping down to pre-season fishery plan section. If you are interested in running the analysis yourself, the "Reproducing the Analysis" section below provides links to the code repository.
+
+## Reproducing the Analysis
+To run the analysis yourself, you can find the code repository here [**(code repository)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions contained within the Skagit_Analysis_2021.Rmd file [**(R Markdown file)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). Excecuting the code in the this .Rmd file will reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(install R)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(install Stan)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) for Hamiltonian Monte Carlo (HMC) simulation. Additionally, for Stan to work, rtools must also be installed and the C++ toolchain must be configured correctly: [**(install R tools)**](https://cran.r-project.org/bin/windows/Rtools/).
+
+
 ```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
 ### Functions
 #We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
@@ -264,39 +278,36 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 ```
 
 ## Pre-season Fishery Planning
-This section displays the pre-season Skagit wild winter steelhead run-size forecast, the exploitation rate matrix prescribed by the Resource Management Plan, and uses the two to calculate the allowable harvest. It then compares the planned harvest (sport fishery catch * assumed catch and release mortality rate) to estimate the percent of the allowable impacts the sport fishery will use and the probability that the sport fishery will exceed various percentages of the allowable impacts.
+
+### Fishery Impacts Relative to RMP Limits: Preseason Plan
+Here we will compare the planned sport fishery catch, assuming 10% C&R mortality, with the forecasted run size and the RMP mortality limits. 
 
 First, the allowable harvest rates in the RMP are:
 ```{r message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
 hcr<-read_csv(file.path("data","hcr.csv"))
 hcr%>%mutate(MaxRunsize=format(MaxRunsize, scientific = FALSE))%>%
-  rename(`Exploitation Rate` = ER, `Minimum Run Size` = MinRunsize,`Maximum Run Size` = MaxRunsize)%>%
+  rename(`Exploitation Rate` = ER)%>%
   kbl(caption = "Table 1. Allowable Harvest Rates, Skagit RMP ",digits =3)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-The run size forecast is below, and is reprinted from the co-manager agreed-to pre-season forecasts:[**(final pre-season forecast)**](https://github.com/tbuehrens/Skagit-River-Steelhead-Forecast/blob/master/analysis/App_2_Model_fitting_forecast_2020_2021_step_head_fcst.pdf). A published scientific paper describing the methods may be found here [**(preseason forecast publication)**](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2664.13789). 
-
-For more details on how this forecast was developed, see this [**(GitHub repository)**](https://github.com/casruff/Skagit-River-Steelhead-Forecast), which is collaboratively maintained by tribal Co-Managers & WDFW.
-
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run-size Forecast. The 'best' estimate is the median or 50th percentile. The table shows the forecast percentiles, which represent the probability that the true run-size will fall below a particular value. For example, there is a 50% probability the true run size will be below the 50th percentile of the forecast."),echo=FALSE}
+Second, the run size forecast is below. For more details on how this forecast was developed, see this GitHub repository, jointly developed by the Skagit Co-Managers & WDFW: [**(preseason forecast code)**](https://github.com/casruff/Skagit-River-Steelhead-Forecast). The final forecast document including testing of multiple models and development of an ensemble forecast is found in this pdf:[**(final preason forecast)**](https://github.com/tbuehrens/Skagit-River-Steelhead-Forecast/blob/master/analysis/App_2_Model_fitting_forecast_2020_2021_step_head_fcst.pdf). A published scientific paper describing the methods may be found here [**(preseason forecast publication)**](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2664.13789).
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run size Forecast"),echo=FALSE}
 runsize<-read_csv("https://raw.github.com/tbuehrens/Skagit-River-Steelhead-Forecast/master/analysis/cache/ensemble_forecast_posterior.csv")
 ggplot(data=runsize,aes(x=ensemble_forecast_posterior))+
   geom_density(fill="forest green")+
   theme_bw()
 runsize%>%
-  summarise(`Run Size` = quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975)), q = c(0.025,0.25, 0.5,0.75, 0.975)*100)%>%
-  dplyr::rename(Percentile=q)%>%
+  summarise(`Run Size` = quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975)), q = c(0.025,0.25, 0.5,0.75, 0.975))%>%
+  dplyr::rename(Quantile=q)%>%
   kbl(caption = "Table 2. Runsize Forecast",digits =3)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-### Fishery Impacts Relative to Resource Management Plan Limits: Preseason Plan
-Below you will find a comparison of the the planned sport fishery catch, assuming 10 percent catch and release mortality, with the allowable harvest based on the run size forecast and the RMP mortality limits.
 
-The allowable harvest, according to the RMP, is the number of fish that may be killed by the combined sport and tribal fisheries. However, as seen above, this number depends on the run-size, which fishery managers will not know until after the fishing season when they estimate escapement. However, based on the pre-season forecast run size, we can estimate what the true allowable harvest will be by combining the forecast run size, including its uncertainty, with the harvest rate matrix prescribed by the RMP. We can then plot the probability that the true allowable harvest will exceed a range of values. The true allowable harvest will be known with more certainty after the season when the actual run-size is known and the appropriate harvest rate from the matrix can be multiplied by the actual run size.
+The allowable harvest, according to the RMP, is the number of fish that may be killed by the combined sport and tribal fisheries. However, as seen above, this number depends on the run-size, which is not known until after the fishing season when escapement is estimated. However, based on the pre-season forecast run size, we can estimate what the allowable harvest will be by combining the forecast run size, including its uncertainty, with the harvest rate matrix prescribed by the RMP. We can then plot the probability that the true allowable harvest (once it is known after the season) will exceed a range of values. 
 
-For example, in 2021 there is a greater than 90 percent chance that the true allowable harvest based on the true run size and the harvest matrix, will exceed 100 fish. There is a 50% chance that the allowable harvest will exceed 430 fish (10 percent of the best estimate of the run-size from the forecast), and a very small chance the allowable harvest will be greater than 2,000 fish:
+For example, in 2021 there is a greater than 90% chance that the true allowable harvest based on the true run size and the harvest matrix, will exceed 100 fish. There is a 50% chance that the allowable harvest will exceed 430 fish (10% of the best estimate of the runsize from the forecast), and a very small chance the allowable harvest will be greater than 2000 fish:
 ```{r include=TRUE, fig.align="center", fig.cap=c("Figure 2. Probability that the allowable harvest exceeds a particular number of fish based on the RMP. Note the log10 scale on the x-axis."),echo=FALSE}
 ER_func<-function(hcr,runsize){
   ER<-c(NULL)
@@ -332,9 +343,9 @@ ggplot(data=AH,aes(x=AH,y=Exceedence))+
 
 Given the uncertainty in what the allowable harvest will turn out to be, managers must balance the risk of exceeding the allowable harvest with cost of erring so heavily on the side of conservation (to ensure the allowable harvest is not exceeded) that no fishery is allowed at all. To assist with this task, managers can plan a fishery to harvest a particular number of fish (which itself may be estimated with uncertainty) and then calculate the probability that the allowable harvest will turn out to have been exceeded if the planned fishery is implemented.
 
-For example, in 2021, a four-day a week fishery was planned with a total harvest of 76 fish (760 wild fish handled * assumed 10 percent catch and release mortality rate). This would translate to 18 percent of the allowable (sport and tribal) harvest under the RMP if the true allowable harvest is 430, at which point the exceedance probability is 50 percent. The exceedance probability is greater than 50 percent when the percentage of allowable harvest used is less than 18 percent, indicating it is more probable than not that the planned sport fishery will harvest a greater percentage of the allowable harvest. The exceedance probability is less than 50 percent when the percentage of allowable harvest used is greater than 18 percent, indicating it is more probable than not that the planned fishery will not use this much of the allowable harvest:
+For example, in 2021, a 4-day a week fishery was planned with a total harvest (wild fish handled  * assumed 10% C&R mortality rate) of 76 fish. This would translate to 18% of the allowable (sport + tribal) harvest under the RMP if the true allowable harvest is 430, at which point the exceedence probability is 50%. The exceedence probability is greater than 50% when the percentage of allowable harvest used is less than 18%, indicating it is more probable than not that the planned sport fishery will harvest a greater perecentage of the allowable harvest. The exceedence probability is less than 50% when the percentage of allowable harvest used is greater than 18%, indicating it is more probable than not that the planned fishery will not use this much of the allowable harvest:
 
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 3. Probability that the pre-season planned sport fishery harvest exceeds the allowable harvest (expressed as percentages) under the RMP. Vertical lines denote 50 percent of the allowable harvest, which is shared between the state and tribes, and 100 percent of the allowable harvest. The best estimate of the percent of the allowable harvest that will be used by the sport fishery is located on the graph where the probability of exceedance is 50 percent."),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 3. Probability that the pre-season planned sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
 preseason_planned_mortalities<-76
 H_plan<-rlnorm(1000,log(preseason_planned_mortalities),0.1)
 PAH_plan<-(sample(H_plan,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
@@ -342,12 +353,12 @@ PAHdat_plan<-data.frame(PAH_plan,percent_rank(-PAH_plan))%>%rename(Exceedence="p
 ggplot(data=PAHdat_plan,aes(x=PAH_plan,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
-  ylab("Probability of Exceedance")+
+  ylab("Probability of Exceedence")+
   xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 4. Pre-season Planned Probability that the sport fishery harvest exceeds 50 and 100 percent of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use"),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 4. Pre-season Planned Probability that the sport fishery harvest exceeds 50 and 100 % of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use"),echo=FALSE}
 probs<-c(PAHdat_plan$PAH_plan[which(abs(PAHdat_plan$Exceedence - 0.5)==min(abs(PAHdat_plan$Exceedence - 0.5)))],
   PAHdat_plan$Exceedence[which(abs(PAHdat_plan$PAH - 50)==min(abs(PAHdat_plan$PAH - 50)))]*100,
   PAHdat_plan$Exceedence[which(abs(PAHdat_plan$PAH - 100)==min(abs(PAHdat_plan$PAH - 100)))]*100
@@ -361,24 +372,24 @@ box()
 
 ## In-season Fishery Results
 
-WDFW fishery managers use data from creel surveys to estimate the season total and daily catch and effort, and the daily catch per unit effort (CPUE). Results presented below include data collected through: **`r format(as.Date(all.Dates$Date[nrow(all.Dates)]), '%m/%d/%Y')`**
+In this section we will use data coming in from the creel survey to estimate the season total as well as daily catch and effort, and the daily catch per unit effort (CPUE). Results presented below include data collected through: **`r format(as.Date(all.Dates$Date[nrow(all.Dates)]), '%m/%d/%Y')`**
 
 ### Disclaimer
 Contents on this page should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
 
 ### Season Total Effort (hours) and Catch (fish)
 
-This table and the figures below it show estimates of the season total catch and effort. Estimates are shown as 'bell curves' (though not symmetric), where the height of the curve is proportional to the probability that the true value (catch or effort) is equal to a particular value on the x-axis. The "best" estimate is the 50th percentile (median) in the table, and is denoted by the middle dashed line in the graphs:
+This table and the figures below it show the posterior distribution for season total catch and effort. The "best" estimate is the 50th percentile (median):
 ```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
 results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
   dplyr::rename(Variable=X1)%>%
-  kbl(caption = "Table 3. Total Catch and Effort. The 'best' estimate is the median or 50th percentile. The table shows the percentiles of estimated catch and effort, which represent the probability that the true catch or effort is below a particular value. For example, there is a 50% probability the true catch is below the 50th percentile of the estimated.",digits =1)%>%
+  kbl(caption = "Table 3. Total Catch and Effort ",digits =1)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 print(results)
 ```
 
 
-```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (angler hours). The middle dashed line shows the posterior median or 'best' estimate. Outer dashed lines show 95 percent credible intervals."),echo=FALSE}
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (hrs). Dashed lines show posterior medians and 95% CI"),echo=FALSE}
 season_results<-data.frame(res$C_sum,res$E_sum)%>%
   mutate(iter=row_number())%>%
   rename(`Season Total Catch`=res.C_sum,`Season Total Effort`=res.E_sum)%>%
@@ -400,8 +411,8 @@ ggplot(season_results_trunc,aes(x=value,fill=Parameter))+
 ```
 
 ### Daily Catch, Effort, and Catch Per Unit Effort (CPUE) (fish)
-Below, you will find an estimate of the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95 percent credible intervals (which are obtained from the statistical model used to estimate catch).
-```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."),echo=FALSE}
+Here we estimate the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95% credible intervals.
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
 ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
   geom_line(size=1.2)+
@@ -413,7 +424,7 @@ ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
 
-```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 7. Daily effort. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."), echo=FALSE}
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 7. Daily effort. Lines are posterior medians and shading shows 95% CI"), echo=FALSE}
 ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
   geom_line(size=1.2)+
@@ -425,7 +436,7 @@ ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
 
-```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 8. Daily CPUE. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."),echo=FALSE}
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 8. Daily CPUE. Lines are posterior medians and shading shows 95% CI"),echo=FALSE}
 ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
   geom_line(size=1.2)+
@@ -437,22 +448,22 @@ ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
 
-### In-season Impact Monitoring: Fishery Impacts Relative to Resource Management Plan Limits
+### Inseason Impact Monitoring: Fishery Impacts Relative to RMP Limits
 Here, we compare the actual in-season estimated sport fishery catch, assuming 10% C&R mortality, with the allowable harvest estimated from the forecasted run size and the RMP mortality limits, to estimate the probability that the allowable harvest has been exceeded by the actual fishery (as opposed to the pre-season plan that we looked at previously). Early in the season when little catch has occurred, the probability that the allowable harvest has been exceeded is low, but increases as the season goes on. This analyis enables an in-season quantification of risk by managers, which may be helpful in decision-making:
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 9. Probability that the actual in-season estimated sport fishery harvest exceeds the allowable harvest (expressed as percentages) under the RMP. Vertical lines denote 50 percent of the allowable harvest, which is shared between the state and tribes, and 100 percent of the allowable harvest. The best in-season estimate of the percent of the allowable harvest that has been used by the sport fishery is located on the graph where the probability of exceedance is 50 percent."),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 9. Probability that the actual in-season sport fishery harvest exceeds X % of the allowable harvest under the RMP. Vertical lines denote 50% of the allowable harvest, which is shared between the state and tribes, and 100% of the allowable harvest"),echo=FALSE}
 H<-res$C_sum*0.1
 PAH<-(sample(H,10000,replace = T)/sample(AH$AH,10000,replace = T))*100
 PAHdat<-data.frame(PAH,percent_rank(-PAH))%>%rename(Exceedence="percent_rank..PAH.")
 ggplot(data=PAHdat,aes(x=PAH,y=Exceedence))+
   geom_line(size=1.25)+
   theme_bw()+
-  ylab("Probability of Exceedance")+
+  ylab("Probability of Exceedence")+
   xlab("% of Allowable (Sport + Tribal) Co-Manager Harvest")+
   geom_vline(xintercept=50)+
   geom_vline(xintercept=100,col="red")
 ```
 
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 10. Probability that the sport fishery harvest exceeds 50 and 100 percent of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use."),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 10. Probability that the sport fishery harvest exceeds 50 and 100 % of the allowable harvest under the RMP, as well as the best estimate of the percentage of allowable impacts the sport fishery will use"),echo=FALSE}
 probs<-c(PAHdat$PAH[which(abs(PAHdat$Exceedence - 0.5)==min(abs(PAHdat$Exceedence - 0.5)))],
   PAHdat$Exceedence[which(abs(PAHdat$PAH - 50)==min(abs(PAHdat$PAH - 50)))]*100,
   PAHdat$Exceedence[which(abs(PAHdat$PAH - 100)==min(abs(PAHdat$PAH - 100)))]*100
@@ -463,12 +474,3 @@ barplot(probs,horiz = T,xlim=c(0,100),las=2,yaxs="i",col="forest green", main="I
         )
 box()
 ```
-
-## Reproducing the Analysis
-To run the analysis yourself, you can visit the code repository here [**(code repository)**](https://github.com/tbuehrens/CreelAnalysis/) and follow instructions in this [**(R Markdown file)**](https://github.com/tbuehrens/CreelAnalysis/blob/main/Skagit_Analysis_2021.Rmd). This file and accompanying repository contain the code necessary to reproduce the entire analysis found on this page as well as the page itself. All analyses require R software [**(install R)**](https://cran.r-project.org/) (v4.0+) for data retrieval, data processing, and summarizing model results, and Stan software [**(install Stan)**](https://github.com/stan-dev/rstan/wiki/RStan-Getting-Started/) parameter estimation. Additionally, for Stan to work, Rtools must also be installed and the C++ toolchain must be configured correctly: [**(install Rtools)**](https://cran.r-project.org/bin/windows/Rtools/).
-
-***
-
-Page Last Updated: `r format(Sys.time(), '%m/%d/%Y')`.
-
-***
