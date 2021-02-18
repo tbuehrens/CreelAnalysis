@@ -279,15 +279,17 @@ The run size forecast is below, and is reprinted from the co-manager agreed-to [
 
 For more details on how this forecast was developed, see this [**GitHub repository**](https://github.com/casruff/Skagit-River-Steelhead-Forecast), which is collaboratively maintained by tribal Co-Managers & WDFW.
 
-```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run-size Forecast. The 'best' estimate is the median or 50th percentile. The table shows the forecast percentiles, which represent the probability that the true run-size will fall below a particular value. For example, there is a 50% probability the true run size will be below the 50th percentile of the forecast."),echo=FALSE}
+```{r include=TRUE, fig.align="center", fig.cap=c("Figure 1. Skagit Steelhead Run-size Forecast. The forecast is shown as a 'bell curve' (though not symmetric), where the height of the curve is proportional to the probability that the true value (catch or effort) is equal to a particular value on the x-axis. The 'best' value is the 50th percentile, shown as a dashed line."),echo=FALSE}
 runsize<-read_csv("https://raw.github.com/tbuehrens/Skagit-River-Steelhead-Forecast/master/analysis/cache/ensemble_forecast_posterior.csv")
 ggplot(data=runsize,aes(x=ensemble_forecast_posterior))+
   geom_density(fill="forest green")+
+  geom_vline(data=runsize,mapping=aes(xintercept=median(ensemble_forecast_posterior)),linetype="dashed")+
+  xlab("Forecasted Run-Size")+
   theme_bw()
 runsize%>%
   summarise(`Run Size` = quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975)), q = c(0.025,0.25, 0.5,0.75, 0.975)*100)%>%
   dplyr::rename(Percentile=q)%>%
-  kbl(caption = "Table 2. Runsize Forecast",digits =3)%>%
+  kbl(caption = "Table 2. Runsize Forecast.The 'best' estimate is the median or 50th percentile. The table shows the forecast percentiles, which represent the probability that the true run-size will fall below a particular value. For example, there is a 50% probability the true run size will be below the 50th percentile of the forecast.",digits =3)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 ```
 
