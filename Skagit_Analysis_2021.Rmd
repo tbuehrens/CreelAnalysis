@@ -368,14 +368,14 @@ WDFW fishery managers use data from creel surveys to estimate the season total a
 ### Disclaimer
 Contents on this page should be treated as preliminary and are subject to change. While every effort has been made to ensure the accuracy of data and modeling here, some numbers may change. Particularly in-season catch and effort estimates may change as additional data becomes available, and as data errors are corrected.
 
-### Season Total Effort (hours) and Catch (fish)
+### Season Total Effort and Catch 
 
 This table and the figures below it show estimates of the season total catch and effort. Estimates are shown as 'bell curves' (though not symmetric), where the height of the curve is proportional to the probability that the true value (catch or effort) is equal to a particular value on the x-axis. The "best" estimate is the 50th percentile (median) in the table, and is denoted by the middle dashed line in the graphs:
 ```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
 results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
   dplyr::rename(Variable=X1, `CV (%)` = CV)%>%
   mutate(`CV (%)`=`CV (%)`* 100)%>%
-  kbl(caption = "Table 3. Total Catch and Effort. The 'best' estimate is the median or 50th percentile. The table shows the percentiles of estimated catch and effort, which represent the probability that the true catch or effort is below a particular value. For example, there is a 50% probability the true catch is below the 50th percentile of the estimated catch in this table.",digits =1)%>%
+  kbl(caption = "Table 3. Total Catch (fish) and Effort (hours). The 'best' estimate is the median or 50th percentile. The table shows the percentiles of estimated catch and effort, which represent the probability that the true catch or effort is below a particular value. For example, there is a 50% probability the true catch is below the 50th percentile of the estimated catch in this table.",digits =1)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 print(results)
 ```
@@ -402,8 +402,8 @@ ggplot(season_results_trunc,aes(x=value,fill=Parameter))+
 
 ```
 
-### Daily Catch, Effort, and Catch Per Unit Effort (CPUE) (fish)
-Below, you will find an estimate of the daily catch, effort, and CPUE. The lines are the "best" estimates and the shading shows the 95 percent credible intervals (which are obtained from the statistical model used to estimate catch).
+### Daily Catch, Effort, and Catch Per Unit Effort 
+Below, you will find an estimate of the daily catch (fish), effort (hours), and catch per unit effort (fish/hr). The lines are the "best" estimates and the shading shows the 95 percent credible intervals (which are obtained from the statistical model used to estimate catch).
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 6. Daily catch. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."),echo=FALSE}
 ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
