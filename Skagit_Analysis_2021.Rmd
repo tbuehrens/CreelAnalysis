@@ -287,10 +287,10 @@ ggplot(data=runsize,aes(x=ensemble_forecast_posterior))+
   xlab("Forecasted Run-Size")+
   theme_bw()
 runsize%>%
-  summarise(`Run Size` = quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975)), q = c(0.025,0.25, 0.5,0.75, 0.975)*100)%>%
+  summarise(`Run Size` = round(quantile(ensemble_forecast_posterior, c(0.025, 0.25, 0.5,0.75, 0.975))), q = c(0.025,0.25, 0.5,0.75, 0.975)*100)%>%
   dplyr::rename(Percentile=q)%>%
-  kbl(caption = "Table 2. Runsize Forecast.The 'best' estimate is the median or 50th percentile. The table shows the forecast percentiles, which represent the probability that the true run-size will fall below a particular value. For example, there is a 50% probability the true run size will be below the 50th percentile of the forecast.",digits =3)%>%
-  kable_classic(full_width = F, html_font = "Cambria")
+  kbl(caption = "Table 2. Runsize Forecast. The 'best' estimate is the median or 50th percentile. The table shows the forecast percentiles, which represent the probability that the true run-size will fall below a particular value. For example, there is a 50% probability the true run size will be below the 50th percentile of the forecast.",digits =3,format = "html", table.attr = "style='width:40%;'")%>%
+  kable_classic(html_font = "Cambria")
 ```
 
 ### Fishery Impacts Relative to Resource Management Plan Limits: Preseason Plan
@@ -373,7 +373,8 @@ Contents on this page should be treated as preliminary and are subject to change
 This table and the figures below it show estimates of the season total catch and effort. Estimates are shown as 'bell curves' (though not symmetric), where the height of the curve is proportional to the probability that the true value (catch or effort) is equal to a particular value on the x-axis. The "best" estimate is the 50th percentile (median) in the table, and is denoted by the middle dashed line in the graphs:
 ```{r run_resid_analysis, message = FALSE, warning = FALSE,results = "asis",include=TRUE, echo=FALSE}
 results<-read_csv(file.path("results",catch.group.of.interest,paste0("Run_",Model_Run),"summarized_estimates",paste("Summary_Total_Catch_and_Effort",catch.group.of.interest,paste0("Run_",Model_Run),".csv",sep="_")))%>%
-  dplyr::rename(Variable=X1)%>%
+  dplyr::rename(Variable=X1, `CV (%)` = CV)%>%
+  mutate(`CV (%)`=`CV (%)`* 100)%>%
   kbl(caption = "Table 3. Total Catch and Effort. The 'best' estimate is the median or 50th percentile. The table shows the percentiles of estimated catch and effort, which represent the probability that the true catch or effort is below a particular value. For example, there is a 50% probability the true catch is below the 50th percentile of the estimated catch in this table.",digits =1)%>%
   kable_classic(full_width = F, html_font = "Cambria")
 print(results)
