@@ -28,7 +28,7 @@ This page provides documentation of WDFW's efforts to plan and administer a fish
   
   2) in-season tracking of Skagit steelhead sport fishery fishery-induced wild steelhead mortality relative to allowable exploitation rates designated in the Skagit steelhead RMP.
   
-Want to see the data and analysis for yourself? If you are interested in running the analysis yourself, jump to the ["Reproducing the Analysis"](#Reproducing-the-Analysis) section below, which overviews the GitHub code repository that contains the code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
+Want to see the data and analysis for yourself? If you are interested in running the analysis yourself, jump to the ["reproducing the analysis"](#Reproducing-the-Analysis) section below, which overviews the GitHub code repository that contains the code necessary to reproduce the Skagit steelhead fishery creel analysis and fishery impact monitoring for 2021, and to reproduce this page.
 ```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
 ### Functions
 #We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
