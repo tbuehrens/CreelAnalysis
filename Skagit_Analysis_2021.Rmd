@@ -413,7 +413,7 @@ Below, you will find an estimate of the daily catch (fish), effort (hours), and 
 closed.Dates.DF<-closed.Dates.DF%>%pivot_longer(cols=c("Skagit","Sauk"))%>%rename(Section=name,closure=value)
 Catch.summary<-Catch.summary%>%
   left_join(closed.Dates.DF,by=c("Date","Section"))%>%
-  mutate(closure=ifelse(is.na(closure),"Open","Closed"))
+  mutate(closure=ifelse(is.na(closure),"Open","Closed"))#%>%
   #mutate(Median=ifelse(closure=="Open",Median,NA),Mean=ifelse(closure=="Open",Mean,NA),l95=ifelse(closure=="Open",l95,NA),u95=ifelse(closure=="Open",u95,NA))
 ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
@@ -422,9 +422,7 @@ ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   xlab("")+
   scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
   geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
-  #geom_rect(Catch.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-1, xmax = as.Date(Date)+1, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 1,fill="grey90")+
-  #scale_fill_manual(values = c("red","blue","grey90",NA )) +
-  #scale_color_manual(values = c("red","blue")) +
+  #geom_rect(Catch.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-0.5, xmax = as.Date(Date)+0.5, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 1,fill="grey90")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
@@ -432,7 +430,7 @@ ggplot(Catch.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 7. Daily effort. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."), echo=FALSE,warning=F}
 Effort.summary<-Effort.summary%>%
   left_join(closed.Dates.DF,by=c("Date","Section"))%>%
-  mutate(closure=ifelse(is.na(closure),"Open","Closed"))
+  mutate(closure=ifelse(is.na(closure),"Open","Closed"))#%>%
   #mutate(Median=ifelse(closure=="Open",Median,NA),Mean=ifelse(closure=="Open",Mean,NA),l95=ifelse(closure=="Open",l95,NA),u95=ifelse(closure=="Open",u95,NA))
 ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
@@ -441,9 +439,7 @@ ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   xlab("")+
   scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
   geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
-  #geom_rect(Effort.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-1, xmax = as.Date(Date)+1, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 1,fill="grey90")+
-  #scale_fill_manual(values = c("red","blue","grey90",NA )) +
-  #scale_color_manual(values = c("red","blue")) +
+  #geom_rect(Effort.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-0.5, xmax = as.Date(Date)+0.5, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 0.2,fill="grey80")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
@@ -451,7 +447,7 @@ ggplot(Effort.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
 ```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 8. Daily CPUE. Lines are posterior medians or 'best' estimates, while shading shows 95% credible intervals."),echo=FALSE,warning=F}
 CPUE.summary<-CPUE.summary%>%
   left_join(closed.Dates.DF,by=c("Date","Section"))%>%
-  mutate(closure=ifelse(is.na(closure),"Open","Closed"))
+  mutate(closure=ifelse(is.na(closure),"Open","Closed"))#%>%
   #mutate(Median=ifelse(closure=="Open",Median,NA),Mean=ifelse(closure=="Open",Mean,NA),l95=ifelse(closure=="Open",l95,NA),u95=ifelse(closure=="Open",u95,NA))
 ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   facet_wrap(~Section,ncol=1)+
@@ -460,9 +456,7 @@ ggplot(CPUE.summary,aes(x=as.Date(Date),y=Median,col=as.factor(Gear)))+
   xlab("")+
   scale_x_date(date_labels = "%b-%d",date_breaks = "weeks")+
   geom_ribbon(aes(ymin=l95, ymax=u95,fill=as.factor(Gear)),alpha=0.2,col=NA)+
-  #geom_rect(CPUE.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-1, xmax = as.Date(Date)+1, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 1,fill="grey90")+
-  #scale_fill_manual(values = c("red","blue","grey90",NA )) +
-  #scale_color_manual(values = c("red","blue")) +
+  #geom_rect(CPUE.summary%>%filter(closure=="Closed"),mapping=aes(xmin = as.Date(Date)-0.5, xmax = as.Date(Date)+0.5, fill = as.factor(closure)),color=NA, ymin = -Inf, ymax = Inf, alpha = 0.2,fill="grey80")+
   theme_bw()+
   theme(axis.text.x = element_text(angle = 90),legend.title = element_blank())
 ```
