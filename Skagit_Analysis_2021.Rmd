@@ -85,8 +85,8 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
 #======================================================
 # Specify names of .csv data files
 #======================================================
-effort_file_name <-   "Effort_dat_2021_steelhead_02162021.csv"
-interview_file_name <-"Interview_dat_2021_steelhead_cleaned_02162021.csv"
+effort_file_name <-   "Effort_dat_2021_steelhead_03232021.csv"
+interview_file_name <-"Interview_dat_2021_steelhead_cleaned_03232021.csv"
 effort_xwalk_filename<-"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv"
 river_loc_filename<-"02_River.Locations_2019-01-07.csv"
 creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
@@ -127,7 +127,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
 # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
   
-  total.closed.dates<-6 # Total number of dates that at least one section of the river was closed 
+  total.closed.dates<-21 # Total number of dates that at least one section of the river was closed 
   
 # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
     # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
@@ -141,6 +141,21 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
                             ,"2021-02-10",     0,         0 
                             ,"2021-02-11",     0,         0
                             ,"2021-02-12",     0,         0
+                            ,"2021-02-17",     0,         0
+                            ,"2021-02-18",     0,         0
+                            ,"2021-02-19",     0,         0
+                            ,"2021-02-24",     0,         0
+                            ,"2021-02-25",     0,         0
+                            ,"2021-02-26",     0,         0
+                            ,"2021-03-03",     0,         0
+                            ,"2021-03-04",     0,         0
+                            ,"2021-03-05",     0,         0
+                            ,"2021-03-10",     0,         0
+                            ,"2021-03-11",     0,         0
+                            ,"2021-03-12",     0,         0
+                            ,"2021-03-17",     0,         0
+                            ,"2021-03-18",     0,         0
+                            ,"2021-03-19",     0,         0
                             ) 
 ```
 
@@ -212,7 +227,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
   n_warmup<-3000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.995  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
