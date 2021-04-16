@@ -85,8 +85,8 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
 #======================================================
 # Specify names of .csv data files
 #======================================================
-effort_file_name <-   "Effort_dat_2021_steelhead_04062021.csv"
-interview_file_name <-"Interview_dat_2021_steelhead_cleaned_04062021.csv"
+effort_file_name <-   "Effort_dat_2021_steelhead_04132021.csv"
+interview_file_name <-"Interview_dat_2021_steelhead_cleaned_04132021.csv"
 effort_xwalk_filename<-"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv"
 river_loc_filename<-"02_River.Locations_2019-01-07.csv"
 creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
@@ -127,7 +127,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
 # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
   
-  total.closed.dates<-27 # Total number of dates that at least one section of the river was closed 
+  total.closed.dates<-30 # Total number of dates that at least one section of the river was closed 
   
 # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
     # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
@@ -162,6 +162,9 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
                             ,"2021-03-31",     0,         0
                             ,"2021-04-01",     0,         0
                             ,"2021-04-02",     0,         0
+                            ,"2021-04-07",     0,         0
+                            ,"2021-04-08",     0,         0
+                            ,"2021-04-09",     0,         0
                             ) 
 ```
 
