@@ -232,7 +232,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 
 # Specific Stan model arguments
   n_chain<-4        # set the number of Markov chains. The default is 4.
-  n_iter<-4000        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_iter<-6000        # set the number of iterations for each chain (including warmup). The default is 2000.
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
   n_warmup<-3000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
