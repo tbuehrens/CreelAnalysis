@@ -20,28 +20,48 @@ knitr::opts_chunk$set(message = FALSE)
 set.seed(123)
 ```
 
-```{r GetHolidays}
-#appears based on timeDate...
-GetHolidays <- function(x) { 
-  years = as.POSIXlt(x)$year+1900 
-  years = unique(years) 
-  holidays <- NULL 
-  for (y in years) { 
-    holidays <- c(holidays, as.character(USNewYearsDay(y))) 
-    holidays <- c(holidays, as.character(USMLKingsBirthday(y)))
-    holidays <- c(holidays, as.character(USPresidentsDay(y)))
-    holidays <- c(holidays, as.character(USMemorialDay(y))) 
-    holidays <- c(holidays, as.character(USIndependenceDay(y))) 
-    holidays <- c(holidays, as.character(USLaborDay(y))) 
-    holidays <- c(holidays, as.character(USVeteransDay(y))) 
-    holidays <- c(holidays, as.character(USThanksgivingDay(y))) 
-    holidays <- c(holidays, as.character(timeDate(as.character(.nth.of.nday(y, 11, 5, 4))))) #Black Friday
-    holidays <- c(holidays, as.character(USChristmasDay(y))) 
-  } 
-  holidays = as.Date(holidays,format="%Y-%m-%d") 
-  #ans = x %in% holidays 
-  return(holidays) 
-} 
+```{r all_holidays}
+all_holidays <- 2016:2024 %>%
+  map(~c(
+  timeDate::USNewYearsDay(.x), 
+  timeDate::USMLKingsBirthday(.x),
+  timeDate::USPresidentsDay(.x),
+  timeDate::USMemorialDay(.x), 
+  timeDate::USIndependenceDay(.x), 
+  timeDate::USLaborDay(.x),
+  timeDate::USVeteransDay(.x), 
+  timeDate::USThanksgivingDay(.x), 
+  timeDate::timeDate(
+    as.character(
+      timeDate::.nth.of.nday(.x, 11, 5, 4))), #Black Friday
+  timeDate::USChristmasDay(.x)
+  ) %>% as.character()) %>% unlist() %>% as.Date(format="%Y-%m-%d")
+
+## can delete...
+# # #Identify holidays
+# # all.holidays<-GetHolidays(unique(effort.dat$Survey_Date.Formatted))
+# # #appears based on timeDate...
+# GetHolidays <- function(x) { 
+#   years = as.POSIXlt(x)$year+1900 
+#   years = unique(years) 
+#   holidays <- NULL 
+#   for (y in years) { 
+#     holidays <- c(holidays, as.character(USNewYearsDay(y))) 
+#     holidays <- c(holidays, as.character(USMLKingsBirthday(y)))
+#     holidays <- c(holidays, as.character(USPresidentsDay(y)))
+#     holidays <- c(holidays, as.character(USMemorialDay(y))) 
+#     holidays <- c(holidays, as.character(USIndependenceDay(y))) 
+#     holidays <- c(holidays, as.character(USLaborDay(y))) 
+#     holidays <- c(holidays, as.character(USVeteransDay(y))) 
+#     holidays <- c(holidays, as.character(USThanksgivingDay(y))) 
+#     holidays <- c(holidays, as.character(timeDate(as.character(.nth.of.nday(y, 11, 5, 4))))) #Black Friday
+#     holidays <- c(holidays, as.character(USChristmasDay(y))) 
+#   } 
+#   holidays = as.Date(holidays,format="%Y-%m-%d") 
+#   #ans = x %in% holidays 
+#   return(holidays) 
+# } 
+
 ```
 
 ```{r not_in}
@@ -121,125 +141,60 @@ creel_models<-read.csv(file.path(wd_LUTs,creel_models_filename))#Creel model fil
 
 ```{r data_prep_effort}
 #source(paste0(wd_source_files, "/Import_Skagit_Creel_Data_and_Format.R"))
-wd_data   <-"data"              # Location where data files are stored
-
-effort_file_name <- "03_Effort_dat - 2019_Skagit_creel_JSH_thru_4-30-19.csv"   #"Effort_dat_2021_steelhead_04132021.csv"
-interview_file_name <- "03_Interview-dat_2019-Skagit_JSH_thru_4-30-2019.csv" #"Interview_dat_2021_steelhead_cleaned_04132021.csv"
-
-
-effort.dat<-read.csv(paste(wd_data, effort_file_name, sep="/"), header=TRUE)
-effort.dat<-effort.dat[is.na(effort.dat$StreamName)==FALSE,]
-effort.dat$Effort.Index<-0
-for(i in 1:nrow(effort.dat)){effort.dat$Effort.Index[i]<-i}
-
-#Format Date and Time data
-effort.dat$Survey_Date.Formatted<-as.Date(effort.dat$Survey_Date, format="%m/%d/%Y")
-effort.dat$Effort_StartTime.Formatted<-format(strptime(paste(effort.dat$Survey_Date.Formatted, effort.dat$Effort_StartTime, sep=" "), "%Y-%m-%d %I:%M %p"), '%H:%M:%S')
-effort.dat$Decimal_Effort_Start_Time<-round(as.numeric(chron::times(effort.dat$Effort_StartTime.Formatted))*24, 3)
-effort.dat$Effort_EndTime.Formatted<-format(strptime(paste(effort.dat$Survey_Date.Formatted, effort.dat$Effort_EndTime, sep=" "), "%Y-%m-%d %I:%M %p"), '%H:%M:%S')
-effort.dat$Decimal_Effort_End_Time<-round(as.numeric(chron::times(effort.dat$Effort_EndTime.Formatted))*24, 3)
-
-effort.dat %>% select(starts_with("Effort"), starts_with("Decimal")) %>% tibble()
-
-#Calculate total shore and total bank anglers from the tie-in survey data 
-effort.dat$Floating_Angler_Count<-as.numeric(effort.dat$Shore_Boat_Motor + effort.dat$Shore_Drift_Raft + effort.dat$Boat_Boat_Motor + effort.dat$Boat_Drift_Raft)
-effort.dat$Shore_Angler_Count<-as.numeric(effort.dat$Shore_No_Craft + effort.dat$Shore_Pontoon)
-
-# #Identify holidays
-# all.holidays<-GetHolidays(unique(effort.dat$Survey_Date.Formatted))
-# #DA: need to rebuild this, just a Date vector of holidays given year(s)
-
-y=2020
-c(
-  timeDate::USNewYearsDay(y), 
-  timeDate::USMLKingsBirthday(y),
-  timeDate::USPresidentsDay(y),
-  timeDate::USMemorialDay(y), 
-  timeDate::USIndependenceDay(y), 
-  timeDate::USLaborDay(y),
-  timeDate::USVeteransDay(y), 
-  timeDate::USThanksgivingDay(y), 
-  timeDate::timeDate(as.character(timeDate::.nth.of.nday(y, 11, 5, 4))), #Black Friday
-  timeDate::USChristmasDay(y)
-) %>% as.character() %>% as.Date(format="%Y-%m-%d")
-    
 
 dir_data <- "data"
+
+effort_file_name <- "03_Effort_dat - 2019_Skagit_creel_JSH_thru_4-30-19.csv"   #"Effort_dat_2021_steelhead_04132021.csv"
+
 fn_data_effort <- "03_Effort_dat - 2019_Skagit_creel_JSH_thru_4-30-19.csv"
+
+#dropping apparently redundant class coercion of "count columns",
+#if expecting malformatted data? could add back something like across(c(count_cols), as.numeric(as.character(.)))
 effort <- readr::read_csv(file.path(dir_data, fn_data_effort)) %>%
   filter(!is.na(StreamName)) %>%
-  rowid_to_column(var = "Effort.Index") 
-
-effort %>%
+  rowid_to_column(var = "Effort.Index") %>%
   mutate(
     Date = as.Date(effort.dat$Survey_Date, format="%m/%d/%Y"),
     across(c(Effort_StartTime, Effort_EndTime), as.character),
     across(c(Effort_StartTime, Effort_EndTime), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
     Boat = Shore_Boat_Motor + Shore_Drift_Raft + Boat_Boat_Motor + Boat_Drift_Raft,
-    Bank = Shore_No_Craft + Shore_Pontoon
+    Bank = Shore_No_Craft + Shore_Pontoon,
+    
+    Day = weekdays(Date),
+    DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+    Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
+    Year = as.numeric(format(Date, "%Y")),
+    Weeknum = as.numeric(format(Date, "%V")),
+    j.date =  as.numeric(format(Date, "%j"))
+    # ,
+    # YearGroup = if_else(
+    #   as.numeric(format(Date, "%j")) >= YearBegin,
+    #   paste(as.numeric(format(Date, "%Y")), as.numeric(format(Date, "%Y"))+1, sep="-"),
+    #   paste(as.numeric(format(Date, "%Y"))-1, as.numeric(format(Date, "%Y")), sep="-")),
+    # Season = if_else(as.numeric(format(Date, "%j")) >= summerBegin & as.numeric(format(Date, "%j"))<=summerEnd, "Summer", "Winter"),
   ) %>%
-  #select(Survey_Date, Date, starts_with("Eff"))
-
-#dropping apparently redundant class coercion of "count columns",
-#if expecting malformatted data? could add back something like across(c(count_cols), as.numeric(as.character(.)))
-
-
-
-  
-#Create new columns for day, month, week, YearGroup, and Season 
-effort.dat<-effort.dat %>% mutate(
-  Day = weekdays(Survey_Date.Formatted) 
-  , DayType = if_else(weekdays(Survey_Date.Formatted)=="Saturday" | weekdays(Survey_Date.Formatted)=="Sunday" | Survey_Date.Formatted%in%all.holidays, "Weekend", "Weekday")
-  , Month = format(Survey_Date.Formatted,"%b")
-  , Month.no = as.numeric(format(Survey_Date.Formatted, "%m"))
-  , Year = as.numeric(format(Survey_Date.Formatted, "%Y"))
-  , Weeknum = as.numeric(format(Survey_Date.Formatted, "%V"))
-  , j.date =  as.numeric(format(Survey_Date.Formatted, "%j"))
-  , YearGroup = if_else(as.numeric(format(Survey_Date.Formatted, "%j")) >= YearBegin, paste(as.numeric(format(Survey_Date.Formatted, "%Y")), as.numeric(format(Survey_Date.Formatted, "%Y"))+1, sep="-"), paste(as.numeric(format(Survey_Date.Formatted, "%Y"))-1, as.numeric(format(Survey_Date.Formatted, "%Y")), sep="-"))
-  , Season = if_else(as.numeric(format(Survey_Date.Formatted, "%j")) >= summerBegin & as.numeric(format(Survey_Date.Formatted, "%j"))<=summerEnd, "Summer", "Winter")
-)
-
-#Remove unnecessary columns and rename  
-effort.dat$Survey_Date<-NULL; 
-effort.dat$Survey_Start_Time<-NULL; effort.dat$Survey_End_Time<-NULL;
-effort.dat$Effort_StartTime<-NULL; effort.dat$Effort_EndTime<-NULL;
-effort.dat$Shore_No_Craft<-NULL;
-effort.dat$Shore_Boat_Motor<-NULL;
-effort.dat$Shore_Drift_Raft<-NULL;
-effort.dat$Shore_Pontoon<-NULL;
-effort.dat$Boat_Boat_Motor<-NULL;
-effort.dat$Boat_Drift_Raft<-NULL;
-
-#Rename column headers
-names(effort.dat)[names(effort.dat) == 'Survey_Date.Formatted'] <- 'Date'
-names(effort.dat)[names(effort.dat) == 'Effort_StartTime.Formatted'] <- 'Effort_StartTime'
-names(effort.dat)[names(effort.dat) == 'Decimal_Effort_Start_Time'] <- 'Effort_StartTime_Dec'
-names(effort.dat)[names(effort.dat) == 'Effort_EndTime.Formatted'] <- 'Effort_EndTime'
-names(effort.dat)[names(effort.dat) == 'Decimal_Effort_End_Time'] <- 'Effort_EndTime_Dec'
-names(effort.dat)[names(effort.dat) == 'Car_Count'] <- 'Vehicles'
-names(effort.dat)[names(effort.dat) == 'Trailer_Count'] <- 'Trailers'
-names(effort.dat)[names(effort.dat) == 'Floating_Angler_Count'] <- 'Boat'
-names(effort.dat)[names(effort.dat) == 'Shore_Angler_Count'] <- 'Bank'
-
+  rename(Vehicles = Car_Count, Trailers = Trailer_Count) %>%
+  arrange(Date, Survey.Type, Effort_StartTime)
 #Create a "HeaderID" column that denotes each unique survey date
-effort.dat<-effort.dat[order(effort.dat$Date, effort.dat$Survey.Type, effort.dat$Effort_StartTime),]
-HeaderID<-c()
-for(date in 1:length(unique(effort.dat$Date))){
-  sub.date<-effort.dat[effort.dat$Date == unique(effort.dat$Date)[date],]
-  sub.HeaderID<-rep(date, nrow(sub.date))
-  HeaderID<-c(HeaderID, sub.HeaderID)
-}
-effort.dat$HeaderID<-HeaderID
+effort <- effort %>% 
+  left_join(
+    effort %>% distinct(Date, Survey.Type, Effort_StartTime) %>% rowid_to_column(var = "HeaderID"),
+    by = c("Date", "Survey.Type", "Effort_StartTime")
+  ) %>%
+  select(
+    Effort.Index, HeaderID, 
+    StreamName, Date, Surveyor, Year, YearGroup, Season, Month, Month.no, Weeknum, j.date, Day, DayType,
+    Survey.Type, SectionName, CountNum, Effort_StartTime, Effort_StartTime_Dec, Effort_EndTime, Effort_EndTime_Dec,
+    Vehicles, Trailers, Boat, Bank
+  )
 
-#Order columns  
-effort.dat<-effort.dat[, c( "Effort.Index", "HeaderID", "StreamName",  "Date", "Surveyor", "Year", "YearGroup", "Season", "Month", "Month.no"
-                            , "Weeknum", "j.date", "Day", "DayType"
-                            , "Survey.Type", "SectionName", "CountNum", "Effort_StartTime", "Effort_StartTime_Dec", "Effort_EndTime", "Effort_EndTime_Dec"
-                            , "Vehicles", "Trailers", "Boat", "Bank")]
 ```
 
 
 ```{r data_prep_group}
+
+interview_file_name <- "03_Interview-dat_2019-Skagit_JSH_thru_4-30-2019.csv" #"Interview_dat_2021_steelhead_cleaned_04132021.csv"
+
 group.dat<-read.csv(paste(wd_data, interview_file_name, sep="/"), header=TRUE)
 group.dat<-group.dat[is.na(group.dat$StreamName)==FALSE,]
 group.dat$Group.Index<-0
