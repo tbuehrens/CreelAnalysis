@@ -18,44 +18,82 @@ knitr::opts_chunk$set(message = FALSE)
 set.seed(123)
 ```
 
-```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
-### Functions
-#We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
-wd_functions<-"functions"
-sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
+```{r GetHolidays}
+GetHolidays <- function(x) { 
+  years = as.POSIXlt(x)$year+1900 
+  years = unique(years) 
+  holidays <- NULL 
+  for (y in years) { 
+    holidays <- c(holidays, as.character(USNewYearsDay(y))) 
+    holidays <- c(holidays, as.character(USMLKingsBirthday(y)))
+    holidays <- c(holidays, as.character(USPresidentsDay(y)))
+    holidays <- c(holidays, as.character(USMemorialDay(y))) 
+    holidays <- c(holidays, as.character(USIndependenceDay(y))) 
+    holidays <- c(holidays, as.character(USLaborDay(y))) 
+    holidays <- c(holidays, as.character(USVeteransDay(y))) 
+    holidays <- c(holidays, as.character(USThanksgivingDay(y))) 
+    holidays <- c(holidays, as.character(timeDate(as.character(.nth.of.nday(y, 11, 5, 4))))) #Black Friday
+    holidays <- c(holidays, as.character(USChristmasDay(y))) 
+  } 
+  holidays = as.Date(holidays,format="%Y-%m-%d") 
+  #ans = x %in% holidays 
+  return(holidays) 
+} 
+```
+
+```{r not_in}
+"%!in%" <- function(x,table) match(x,table, nomatch = 0) == 0
+#DA: if declaring rather than just '!', why not '%!in%' <- function(x,y) {!('%in%'(x,y))} ?
+```
+
+```{r using}
+#this function appears unused (ironically enough)?
+using <- function(...) {
+    libs <- unlist(list(...))
+    req <- unlist(lapply(libs, require, character.only=TRUE, quietly=TRUE))
+    need <- libs[req==FALSE]
+    if(length(need) > 0){ 
+        install.packages(need)
+        lapply(need, require, character.only=TRUE, quietly=TRUE)
+    }
+}  
+```
+
+```{r install_or_load_pack}
+install_or_load_pack <- function(pack){
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  if (length(create.pkg))
+    install.packages(create.pkg, dependencies = TRUE)
+  sapply(pack, require, character.only = TRUE)
+}
 ```
 
 ```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
-### Packages
-#In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
-#===============================================
 # Load packages, install and load if not already
-#===============================================
-packages_list<-c("timeDate",
-      "plyr",
-      "tidyverse",
-      "rstan",
-      "RColorBrewer",
-      "readxl",
-      "readr",
-      "ggplot2",
-      "tinytex",
-      "here", 
-      "lubridate", 
-      "devtools",
-      "xlsx",
-      "cowplot",
-      "ggpubr", 
-      "chron",
-      "suncalc", 
-      "shinystan",
-      "loo", 
-      "data.table",
-      "RColorBrewer",
-      "reshape2",
-      "MASS", 
-      "kableExtra"
-      )
+packages_list<-c(
+  "tidyverse", "lubridate", 
+  "plyr", "reshape2", #really needed?
+
+  "devtools", "here", 
+
+  "timeDate", #check conflicts with lubridate?
+  "rstan", "shinystan",
+  "loo", 
+
+  "readxl",
+  "xlsx", #really needed?
+  
+  "tinytex",
+  "kableExtra",
+  "cowplot",
+  "ggpubr", 
+  "RColorBrewer",
+
+  "chron",
+  "suncalc", 
+  "data.table", #really needed?
+  "MASS"
+)
 install_or_load_pack(pack = packages_list)
 ```
 
