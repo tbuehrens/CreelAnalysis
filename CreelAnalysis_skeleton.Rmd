@@ -55,7 +55,8 @@ packages_list<-c(
 
   "devtools", "here", 
 
-  "timeDate", #check conflicts with lubridate?
+  "timeDate", #used for holidays, maybe other? check conflicts with lubridate?
+  "suncalc", #used for daylight/length getSunlightTimes()
   "rstan", "shinystan",
   "loo", 
 
@@ -69,7 +70,6 @@ packages_list<-c(
   "RColorBrewer",
 
   "chron",
-  "suncalc", 
   "data.table", #really needed?
   "MASS"
 )
@@ -80,7 +80,7 @@ install_or_load_pack(pack = packages_list)
 
 Modify to accommodate creel database and/or older loose files? Seems preferable to get older loose data into the database - is that likely?
 
-```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
+```{r user_inputs, message=FALSE, warning=FALSE, echo = FALSE}
 #======================================================
 # Specify relative working directories for sub-folders
 #======================================================
@@ -88,13 +88,12 @@ wd_source_files<-"source files" # Location of source file (code working "behind 
 wd_models  <-"models"           # Location of model files 
 wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
 
-#======================================================
 # Denote catch group of interest (species_origin_fate) 
-#======================================================  
-  catch.group.of.interest<-c("SH_W_R") 
+catch.group.of.interest<-c("SH_W_R")
+```
 
+```{r closure_dates, message=FALSE, warning=FALSE, echo = FALSE}
 # Denote fishery closures
-
 #total closed should be responsive rather than declared
 #and date declaration can/should be much more concise
 #for example something like this...
@@ -211,7 +210,9 @@ all_holidays <- 2016:2024 %>%
 
 #dropping apparently redundant class coercion of "count columns",
 #if expecting malformatted data? could add back something like across(c(count_cols), as.numeric(as.character(.)))
-d_effort <- readr::read_csv(file.path(dir_input_files, fn$data_effort)) %>%
+
+#d_effort <- readr::read_csv(file.path(dir_input_files, fn$data_effort)) %>%
+d_effort <- readr::read_csv("C:/Users/auerbdaa/Downloads/Effort_dat_2021_steelhead_04132021.csv") %>%
   filter(!is.na(StreamName)) %>%
   rowid_to_column(var = "Effort.Index") %>%
   mutate(
@@ -260,7 +261,8 @@ d_header <- d_effort %>%
 ```{r data_prep_group}
 #left as mostly duplicative with d_effort for now but needs confer with KB
 
-d_group <- readr::read_csv(file.path(dir_input_files, fn$data_group)) %>%
+#d_group <- readr::read_csv(file.path(dir_input_files, fn$data_group)) %>%
+d_group <- readr::read_csv("C:/Users/auerbdaa/Downloads/Interview_dat_2021_steelhead_cleaned_04132021.csv") %>%
   filter(!is.na(StreamName)) %>%
   rowid_to_column(var = "Group.Index") %>%
   mutate(
@@ -604,22 +606,18 @@ final.effort.section.xwalk
 
 ```
 
+## stan prep
 
-```{r ready_for_stan, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+### 6A "all.Dates" x-walk table and create vector for open/closed fishery dates
+
+```{r stan_6a, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
 # source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
 
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This file summarizes creel effort and catch data that will then be fed directly into time-series model
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Denote date range of dataset
   Date_Begin<-min(sub.effort.dat$Date) #c("2018-04-01") #Define date as the first day for which you want to make an estimate for the fishery (not necessarily first survey date)
   Date_End<-  max(sub.effort.dat$Date) #c("2018-04-30")    
 
-#---------------------------------------------------------------------------------------------------------- - 
-# (6A) Create "all.Dates" x-walk table and create vector for open/closed fishery dates                   ####
-#---------------------------------------------------------------------------------------------------------- - 
+#6A
   #Create cross-walk table "all.Dates" that defines the relative "day" and "week" number based on "Date_Begin" and "Date_End"
       all.Dates<-setNames(as.data.frame(cbind(seq(1, as.numeric(as.Date(Date_End)-as.Date(Date_Begin)+1), 1) , as.character(seq(as.Date(Date_Begin), as.Date(Date_End), 1)))), c("Day", "Date"))
       all.Dates$Year<-as.numeric(format(as.Date(all.Dates$Date), "%Y"))
@@ -670,11 +668,12 @@ final.effort.section.xwalk
       fishery.open.closed
       fishery.open.closed[fishery.open.closed == 0] <- 1E-6
       fishery.open.closed$Date<-NULL
+```
 
-#---------------------------------------------------------------------------------------------------------- - 
-# (6B) SUMMARIZE EFFORT DATA                                                                     ####
-#---------------------------------------------------------------------------------------------------------- -         
-  # Sub-set effort data based on defined "Date_Begin" and "Date_End"
+### 6B SUMMARIZE EFFORT DATA
+
+```{r stan_6b, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+# Sub-set effort data based on defined "Date_Begin" and "Date_End"
     final_effort.dat<-sub.effort.dat[as.Date(sub.effort.dat$Date) %in% as.Date(all.Dates$Date),]
     length(unique(final_effort.dat$Date))
 
@@ -797,11 +796,12 @@ final.effort.section.xwalk
   #Re-index gear-types for tie-in counts (bank(3) == 1; boat(4) ==2)  
     E_s_samp$Gear[E_s_samp$Gear == 3] <- 1; 
     E_s_samp$Gear[E_s_samp$Gear == 4] <- 2;
-    
-#---------------------------------------------------------------------------------------------------------- - 
-# (6C) SUMMARIZE cATCH DATA                                                                     ####
-#---------------------------------------------------------------------------------------------------------- - 
-    head(sub.group.dat)
+```
+
+### 6C SUMMARIZE cATCH DATA
+
+```{r ready_for_stan, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+head(sub.group.dat)
     #head(sub.gearfish.dat)
   
   # Sub-set group (interview) data based on defined "Date_Begin" and "Date_End"
@@ -920,9 +920,139 @@ final.effort.section.xwalk
       summarise(Total_Hours=sum(Total_Hours),Total_Catch=sum((!!as.name(catch.group.of.interest))))%>%
       filter(Total_Hours>0)
     #sapply(as.data.frame(lapply(JS_stats_ALL, "[[", "ni")), function(x) as.numeric(as.character(x)))
-#=====================================================================================================================
-# (6E) make stan data
-#=====================================================================================================================
+```
+
+### 6E make stan data
+
+big single level list
+
+```{r data_to_stan}
+
+#A_samp
+#C_sample
+#c_samp
+#E_s_samp
+#I_samp
+#T_samp; trailers
+#V_samp; vehicles
+
+
+standat <- list(
+  D = nrow(all.Dates),                                               # total number of days in the fishery we are estimating catch for
+  w = all.Dates$DayType,                                             # an indexing column with length equal to total number of days in the fishery
+  L = DayL$DayL,                                                     # decimal daylength in hrs for each day in 1 : D
+  # # #can/should build here off common object
+  # # str(all.Dates)   #all.Dates; df of date-related fields as chr & num
+  # # #only using DayType (0|1 ~ wkday|wkend/holiday)
+  # # str(DayL) #df dusk-dawn
+  # # #could work from something like this, maybe needs bind of closure_dates/fishery.open.closed
+  # tibble(Date = seq(min(d_header$Date), max(d_header$Date), by = "day")) %>%
+  #   mutate(
+  #     Day = weekdays(Date),
+  #     DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+  #     DayType_num = if_else(str_detect(DayType, "end"),1,0),
+  #     DayL = suncalc::getSunlightTimes(
+  #       date = Date,
+  #       tz = "America/Los_Angeles",
+  #       lat = lut$lut_river_loc$Lat,
+  #       lon = lut$lut_river_loc$Long,
+  #       keep=c("dawn", "dusk")
+  #       ) %>%
+  #       mutate(DayL = as.numeric(dusk - dawn)) %>%
+  #       .$DayL
+  #   )
+  O = as.matrix(fishery.open.closed),                                # matrix denoting whether the fishery was open (1) or closed (1E-9) for each individual "D" (row) and section 1:S (column)
+  # str(fishery.open.closed)
+  # #appears this could derive from closure_dates (i.e., shown above)
+  # #in conjuction with date handling via d_header or finalized d_effort
+
+  G = length(unique(I_samp$Gear)),                                   # total number of unique gear types (#previously G=n_gear.types)
+  #see I_samp below
+
+  S = n_sections,                                                    # total number of census/tie in Sections
+  # str(n_sections) #scalar int
+  # #appears based on lut effort section number
+  # lut$lut_effort_xwalk %>% distinct(Section.Name, Section.Summ)
+  # #currently re-derived from joined version on final effort data
+  # #so various options depending on how it gets used in modeling
+  # left_join(d_effort, lut$lut_effort_xwalk, by = c("SectionName" = "Section.Field")) %>% select(contains("ection")) %>% distinct(Section.Name, Section.Summ)
+  
+  H = max(as.numeric(V_samp$CountNum), as.numeric(T_samp$CountNum)), # max. number of index effort counts completed on a single survey day
+  #see V_samp, T_samp below
+
+# str(A_samp) #empty? CountNum
+# C_sample #grouped tibble, Total_Catch, Total_Hours
+# str(c_samp) #1828, SH_W_R, Total_Hours 
+# str(a_samp) #1828, NumAnglers, Vehicles, Trailers
+# str(E_s_samp) # also empty?
+# str(I_samp) #484, Gear
+# str(T_samp) #242, CountNum (used), but also Count
+# str(V_samp) #242, CountNum
+
+  #Angler counts
+  A_n = nrow(A_samp),
+  A_I = A_samp$Count,
+  day_A = A_samp$Day,
+  gear_A = A_samp$Gear,
+  section_A = A_samp$Section,
+  countnum_A = as.numeric(A_samp$CountNum),
+  
+  #interview data total creeled effort and catch
+  IntCreel = nrow(C_sample),
+  day_Creel = C_sample$Day,
+  gear_Creel = C_sample$Gear,
+  section_Creel = C_sample$Section.Num,
+  C_Creel = C_sample$Total_Catch,
+  E_Creel = C_sample$Total_Hours,
+
+  #interview data - CPUE
+  IntC = nrow(c_samp),              # total number of interviews conducted across all surveys dates where CPUE data (c & h) were collected 
+  gear_IntC = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
+  day_IntC = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
+  section_IntC = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
+  c = c_samp[, catch.group.of.interest[1]], # total catch of [spp.of.interest] for an individual group #c_samp$SH_NOR_R          
+  h = abs(c_samp$Total_Hours),        # number of hours an individual angler/group spent fishing
+
+  #interview data - angler expansions
+  IntA = nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
+  gear_IntA = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
+  day_IntA = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
+  section_IntA = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
+  V_A = a_samp$Vehicles,        # Total number of vehicles an individual angler group brought to the river
+  T_A = a_samp$Trailers,        # Total number of Trailers an individual angler group brought to the river
+  A_A = a_samp$NumAnglers,      #Total number of anglers in each group interviewed
+  
+  #tie ins
+  E_n = nrow(E_s_samp),          # the total number of census effort counts 
+  E_s = E_s_samp$Count,          # the effort count in a tie-in section
+  day_E = E_s_samp$Day,          # an indexing column with length equal to count of Census effort counts with the day of the fishery listed starting at 1 and going to the last day n.
+  gear_E = E_s_samp$Gear,        # an indexing column with length equal to count of Census effort counts with a 1 or 2 depending on whether the interview was a boat or bank 	fisherman
+  section_E = E_s_samp$Section,  # an indexing column with length equal to count of Census effort counts 	with the section number starting at 1 
+  countnum_E = as.numeric(E_s_samp$CountNum),
+  
+  #Trailers
+  T_n = nrow(T_samp),            # the total number of index effort counts  (n = index survey dates X sections X # of index count for each day)
+  T_I = T_samp$Count,            # sum of the index effort counts (of vehicles & trailers) within a section during an effort count
+  day_T = T_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
+  gear_T = T_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
+  section_T = T_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
+  countnum_T = as.numeric(T_samp$CountNum),
+  
+  #Vehicles
+  V_n = nrow(V_samp),            # the total number of index effort counts  (n = index survey dates X sections X counts X angler types)
+  V_I = V_samp$Count,            # sum of the index effort vehicle count within a section during an effort count
+  day_V = V_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
+  gear_V = V_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
+  section_V = V_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
+  countnum_V = as.numeric(V_samp$CountNum),
+
+)
+#standat$p_TE<-matrix(1,nrow=standat$G,ncol=standat$S)   # proportion of section covered by tie in counts: Option 1:usually 1.0, Option 2: miles of tie-in divided by total miles in section, Option 3:Best guess or something else.
+
+```
+
+
+```{r stan_6e_orig, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
 standat<-list(
   D=nrow(all.Dates),                                               # total number of days in the fishery we are estimating catch for
   G=length(unique(I_samp$Gear)),                                   # total number of unique gear types (#previously G=n_gear.types)
