@@ -78,6 +78,85 @@ install_or_load_pack(pack = packages_list)
 
 # data prep
 
+Modify to accommodate creel database and/or older loose files? Seems preferable to get older loose data into the database - is that likely?
+
+```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
+#======================================================
+# Specify relative working directories for sub-folders
+#======================================================
+wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
+wd_models  <-"models"           # Location of model files 
+wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
+
+#======================================================
+# Denote catch group of interest (species_origin_fate) 
+#======================================================  
+  catch.group.of.interest<-c("SH_W_R") 
+
+# Denote fishery closures
+
+#total closed should be responsive rather than declared
+#and date declaration can/should be much more concise
+#for example something like this...
+(closure_dates <- bind_rows(
+  tibble(closure_begin = "2021-02-03", closure_end = "2021-02-05", section = "1,2"),
+  tibble(closure_begin = "2021-02-10", closure_end = "2021-02-11", section = "1,2")
+  ) %>%
+  rowwise() %>%
+  mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) %>%
+  separate_rows(closure_date, sep = ",") %>%
+  separate_rows(section, sep = ","))
+#then easy to..
+closure_dates %>% select(closure_date, section) %>% mutate(closure_code = 0) %>% pivot_wider(names_from = section, values_from = closure_code)
+#and total is
+nrow(distinct(closure_dates, closure_date)) #or: length(unique(closure_dates$closure_date))
+
+
+# # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
+# # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
+# total.closed.dates<-30 # Total number of dates that at least one section of the river was closed 
+# # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
+# # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
+# # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
+# # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
+# # create a new line for each individual closure by date
+# #    Date   , Section-1, Section-2
+#     closed.Dates.Sections<-c("2021-02-03",     0,         0 
+#                             ,"2021-02-04",     0,         0
+#                             ,"2021-02-05",     0,         0
+#                             ,"2021-02-10",     0,         0 
+#                             ,"2021-02-11",     0,         0
+#                             ,"2021-02-12",     0,         0
+#                             ,"2021-02-17",     0,         0
+#                             ,"2021-02-18",     0,         0
+#                             ,"2021-02-19",     0,         0
+#                             ,"2021-02-24",     0,         0
+#                             ,"2021-02-25",     0,         0
+#                             ,"2021-02-26",     0,         0
+#                             ,"2021-03-03",     0,         0
+#                             ,"2021-03-04",     0,         0
+#                             ,"2021-03-05",     0,         0
+#                             ,"2021-03-10",     0,         0
+#                             ,"2021-03-11",     0,         0
+#                             ,"2021-03-12",     0,         0
+#                             ,"2021-03-17",     0,         0
+#                             ,"2021-03-18",     0,         0
+#                             ,"2021-03-19",     0,         0
+#                             ,"2021-03-24",     0,         0
+#                             ,"2021-03-25",     0,         0
+#                             ,"2021-03-26",     0,         0
+#                             ,"2021-03-31",     0,         0
+#                             ,"2021-04-01",     0,         0
+#                             ,"2021-04-02",     0,         0
+#                             ,"2021-04-07",     0,         0
+#                             ,"2021-04-08",     0,         0
+#                             ,"2021-04-09",     0,         0
+#                             ) 
+    
+```
+
+## load
+
 ```{r input_files, message=FALSE, warning=FALSE, results = "hide", echo=FALSE}
 
 dir_input_files <- "input_files"
@@ -139,6 +218,7 @@ d_effort <- readr::read_csv(file.path(dir_input_files, fn$data_effort)) %>%
     Date = as.Date(Survey_Date, format="%m/%d/%Y"),
     across(c(Effort_StartTime, Effort_EndTime), as.character),
     across(c(Effort_StartTime, Effort_EndTime), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
+    
     Boat = Shore_Boat_Motor + Shore_Drift_Raft + Boat_Boat_Motor + Boat_Drift_Raft,
     Bank = Shore_No_Craft + Shore_Pontoon,
     
@@ -148,12 +228,6 @@ d_effort <- readr::read_csv(file.path(dir_input_files, fn$data_effort)) %>%
     Year = as.numeric(format(Date, "%Y")),
     Weeknum = as.numeric(format(Date, "%V")),
     j.date =  as.numeric(format(Date, "%j"))
-    # ,
-    # YearGroup = if_else(
-    #   as.numeric(format(Date, "%j")) >= YearBegin,
-    #   paste(as.numeric(format(Date, "%Y")), as.numeric(format(Date, "%Y"))+1, sep="-"),
-    #   paste(as.numeric(format(Date, "%Y"))-1, as.numeric(format(Date, "%Y")), sep="-")),
-    # Season = if_else(as.numeric(format(Date, "%j")) >= summerBegin & as.numeric(format(Date, "%j"))<=summerEnd, "Summer", "Winter"),
   ) %>%
   rename(Vehicles = Car_Count, Trailers = Trailer_Count) %>%
   arrange(Date, Survey.Type, Effort_StartTime)
@@ -172,21 +246,16 @@ d_effort <- d_effort %>%
     Vehicles, Trailers, Boat, Bank
   )
 
-#DAA: TO DO
-# Create a "header.dat"                                                                                    
-#Extract pertenate columns from "effort.dat" to create "header.dat" DF
-    effort.dat.for.header<-effort.dat[, c( "StreamName", "Date", "Year", "YearGroup", "Season", "Month", "Month.no"
-                               , "Weeknum", "j.date", "Day", "DayType"
-                               #, "Survey_StartTime", "Survey_StartTime_Dec", "Survey_EndTime", "Survey_EndTime_Dec" 
-                               , "Survey.Type", "Surveyor"
-                               #, "NoSurveyCode",  "Comments"
-                               , "HeaderID"
-                              )]
+#depending on how this is used, could make readable alphanum (since not unary UID?)
+d_effort %>% unite(hid, c(Date, Survey.Type, Effort_StartTime)) %>% count(hid, HeaderID)
 
-    header.dat<-effort.dat.for.header[!duplicated(effort.dat.for.header$HeaderID),]
+d_header <- d_effort %>%
+  select(StreamName, Date, Year, 
+         #YearGroup, Season, 
+         Month, Month.no, Weeknum, j.date, Day, DayType, Survey.Type, Surveyor, HeaderID) %>%
+  distinct(HeaderID, .keep_all = T)
 
 ```
-
 
 ```{r data_prep_group}
 #left as mostly duplicative with d_effort for now but needs confer with KB
@@ -291,20 +360,9 @@ group.dat<-group.dat[, c("Group.Index", "StreamName", "SectionName", "Date", "Ye
 
 ```
 
+## filter
 
-```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
-### User inputs
-#Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
-#======================================================
-# Specify relative working directories for sub-folders
-#======================================================
-wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
-wd_models  <-"models"           # Location of model files 
-wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
-
-#======================================================
-# Denote data of interest (used to filter data below)
-#======================================================
+```{r filter_options}
 # Specify filter type(s) to extract data by (Enter "Y" or "N")
   by.Year<-      "N" # If "Y", will filter by full calendar year(s) (Jan. 1 - Dec. 31)
   by.YearGroup<- "N" # If "Y", will filter by a "Year Group", which go from May 1st Yr1 - April 30 Yr2
@@ -326,68 +384,43 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
   StreamName.of.Interest<-c("Skagit")
   # Begin.Date<-            c("2016-05-01") #Format must be "yyyy-mm-dd"
   # End.Date<-              c("2017-03-31") #Format must be "yyyy-mm-dd"
-  
-#======================================================
-# Denote catch group of interest (species_origin_fate) 
-#======================================================  
-  catch.group.of.interest<-c("SH_W_R") 
 
-#=========================
-# Denote fishery closures
-#=========================
-# NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
-# First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
   
-  total.closed.dates<-30 # Total number of dates that at least one section of the river was closed 
+# YearGroup = if_else(
+#   as.numeric(format(Date, "%j")) >= YearBegin,
+#   paste(as.numeric(format(Date, "%Y")), as.numeric(format(Date, "%Y"))+1, sep="-"),
+#   paste(as.numeric(format(Date, "%Y"))-1, as.numeric(format(Date, "%Y")), sep="-")),
+# Season = if_else(as.numeric(format(Date, "%j")) >= summerBegin & as.numeric(format(Date, "%j"))<=summerEnd, "Summer", "Winter"),
   
-# Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
-    # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
-    # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
-    # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
-    # create a new line for each individual closure by date
-                           #    Date   , Section-1, Section-2
-    closed.Dates.Sections<-c("2021-02-03",     0,         0 
-                            ,"2021-02-04",     0,         0
-                            ,"2021-02-05",     0,         0
-                            ,"2021-02-10",     0,         0 
-                            ,"2021-02-11",     0,         0
-                            ,"2021-02-12",     0,         0
-                            ,"2021-02-17",     0,         0
-                            ,"2021-02-18",     0,         0
-                            ,"2021-02-19",     0,         0
-                            ,"2021-02-24",     0,         0
-                            ,"2021-02-25",     0,         0
-                            ,"2021-02-26",     0,         0
-                            ,"2021-03-03",     0,         0
-                            ,"2021-03-04",     0,         0
-                            ,"2021-03-05",     0,         0
-                            ,"2021-03-10",     0,         0
-                            ,"2021-03-11",     0,         0
-                            ,"2021-03-12",     0,         0
-                            ,"2021-03-17",     0,         0
-                            ,"2021-03-18",     0,         0
-                            ,"2021-03-19",     0,         0
-                            ,"2021-03-24",     0,         0
-                            ,"2021-03-25",     0,         0
-                            ,"2021-03-26",     0,         0
-                            ,"2021-03-31",     0,         0
-                            ,"2021-04-01",     0,         0
-                            ,"2021-04-02",     0,         0
-                            ,"2021-04-07",     0,         0
-                            ,"2021-04-08",     0,         0
-                            ,"2021-04-09",     0,         0
-                            ) 
 ```
 
+Alternative row subsets. Couple of easy options to streamline, depending on whether repeat re-runs with alternative subsets are realistically going to happen.
+
+  1. just map all plausible splits
+  2. pass all condition arg(s) to ensure explicit specification (NA or missing field problems?)
+
+```{r filter_atl2}
+#it is necessary to filter 3 objects separately or
+#can/should/will they be joined to allow a single pass filter (that also ensures no mismatches)?
+#or a single filter on a master object with control fields to which data are then joined?
+
+filter_args <- list(year = 2019, stream = "Skagit", month = 2)
+
+filter(
+  d_header,
+  Year == filter_args$year,
+  StreamName == filter_args$stream,
+  Month.no == 2
+  )
+
+```
+
+DA will delete this chunk
+
 ```{r extract, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
-# Extract data of interest and format 
-  ## add code that shows options for filtering data by date/year/season/location
-  source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))
+# # Extract data of interest and format, code that shows options for filtering data by date/year/season/location
+#   source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))
 
-
-#---------------------------------------------------------------------------------------------------------- -
-# (5A) EXTRACT DATA OF INTEREST                                                                            ----
-#---------------------------------------------------------------------------------------------------------- - 
   # create new DFs for each data group that will represent subsetted data set 
     effort.dat.formatted<-effort.dat
     group.dat.formatted<-group.dat
@@ -439,55 +472,55 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
       # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Date %in% sub.Date.Range,]
       sub.header.dat<-sub.header.dat[sub.header.dat$Date %in% sub.Date.Range,]
     }  
-
-
-#------------------------------------------------------------------------------------------------------------   
-  
-#---------------------------------------------------------------------------------------------------------- - 
-# (5B) CALCULATE FIELDS                                                                                    ####
-#---------------------------------------------------------------------------------------------------------- -    
-    #Julian to Calendar Date Table
-        month.one<-as.data.frame(matrix(as.character(seq.Date(as.Date(paste(as.numeric(format(min(sub.header.dat$Date), "%Y")), format(min(sub.header.dat$Date), "%m"), "01", sep="-"))
-                                                              , as.Date(paste(as.numeric(format(max(sub.header.dat$Date), "%Y")), format(max(sub.header.dat$Date)+30, "%m"), "01", sep="-")),
-                                                              by="month"))))
-        names(month.one)<-c("Date")
-        month.one$j.date<-(as.numeric(format(as.Date(month.one$Date), "%j")))
-        month.one$month.day<-format(as.Date(month.one$Date), "%b-%d")
-        month.one$month<-format(as.Date(month.one$Date), "%b")
-        month.one  
     
-    #Define "Section.Name" and "Section.Num" based on cross-walk table
-      #Effort data  
-        sub.effort.dat$final.Section.Name<-NA; sub.effort.dat$Section.Num<-NA; 
-        for(row in 1:nrow(sub.effort.dat)){
-          sub.effort.dat$final.Section.Name[row]<-as.character(effort_xwalk$Section.Name[as.character(effort_xwalk$Section.Field) == as.character(sub.effort.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.effort.dat$YearGroup[row])])
-          sub.effort.dat$Section.Num[row]<-effort_xwalk$Section.Summ[as.character(effort_xwalk$Section.Field) == as.character(sub.effort.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.effort.dat$YearGroup[row])]
-        }  
+```
 
-      #Interview data
-        unique(sub.group.dat$SectionName); table(sub.group.dat$SectionName)
-        #NOTE: 14 groups had their fishing section denoted as "Both".  Since this is not an option in the lookup table and we want to define as either Skagit or Sauk, I arbitrarily defined the section for these groups as being Skagit
-        sub.group.dat[sub.group.dat$SectionName == "Both",]
-        sub.group.dat$SectionName[sub.group.dat$SectionName == "Both"]<-"Dalles bridge to Marblemount bridge"
-        sub.group.dat$final.Section.Name<-NA; sub.group.dat$Section.Num<-NA
-        for(row in 1:nrow(sub.group.dat)){
-          sub.group.dat$final.Section.Name[row]<-as.character(effort_xwalk$Section.Name[as.character(effort_xwalk$Section.Field) == as.character(sub.group.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.group.dat$YearGroup[row])])
-          sub.group.dat$Section.Num[row]<-effort_xwalk$Section.Summ[as.character(effort_xwalk$Section.Field) == as.character(sub.group.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.group.dat$YearGroup[row])]
-        }  
+## calc fields
 
-    #Create index effort x-walk table (that will help define "outage" dates by section in "master" creel analysis file)
-          sub.river.effort.xwalk<-effort_xwalk[effort_xwalk$StreamName %in% unique(sub.effort.dat$StreamName), ]
-          final.effort.section.xwalk<-setNames(as.data.frame(matrix(NA, nrow=length(unique(sub.river.effort.xwalk$Section.Name)), ncol=2)), c("Section.Name", "Section.Num"))
-          for(section in 1:length(unique(sub.river.effort.xwalk$Section.Name))){
-            final.effort.section.xwalk[section, "Section.Name"]<-as.character(unique(sub.river.effort.xwalk$Section.Name[sub.river.effort.xwalk$Section.Name == unique(sub.river.effort.xwalk$Section.Name)[section]]))
-            final.effort.section.xwalk[section, "Section.Num"] <-unique(sub.river.effort.xwalk$Section.Summ[sub.river.effort.xwalk$Section.Name == unique(sub.river.effort.xwalk$Section.Name)[section]])
-          }
-          final.effort.section.xwalk
-              
-    # #Calculate time to complete effort count by section
-    #     sub.effort.dat$Count.Time.Minutes<-NA
-    #     for(row in 1:nrow(sub.effort.dat)){as.numeric(ifelse(is.na(sub.effort.dat$Effort_EndTime_Dec[row])==FALSE & is.na(sub.effort.dat$Effort_StartTime_Dec[row])==FALSE ,sub.effort.dat$Count.Time.Minutes[row]<-round((sub.effort.dat$Effort_EndTime_Dec[row] - sub.effort.dat$Effort_StartTime_Dec[row])*60, 0), NA))}  
-      
+Need to circle back to this. Looks easier/faster to just figure out a tidy route to what will eventually be needed than try to refactor linewise as-is.
+
+```{r calc_fields, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+#Julian to Calendar Date Table
+month.one<-as.data.frame(matrix(as.character(seq.Date(as.Date(paste(as.numeric(format(min(sub.header.dat$Date), "%Y")), format(min(sub.header.dat$Date), "%m"), "01", sep="-"))
+                                                      , as.Date(paste(as.numeric(format(max(sub.header.dat$Date), "%Y")), format(max(sub.header.dat$Date)+30, "%m"), "01", sep="-")),
+                                                      by="month"))))
+names(month.one)<-c("Date")
+month.one$j.date<-(as.numeric(format(as.Date(month.one$Date), "%j")))
+month.one$month.day<-format(as.Date(month.one$Date), "%b-%d")
+month.one$month<-format(as.Date(month.one$Date), "%b")
+
+#Define "Section.Name" and "Section.Num" based on cross-walk table
+#Effort data  
+sub.effort.dat$final.Section.Name<-NA; sub.effort.dat$Section.Num<-NA; 
+for(row in 1:nrow(sub.effort.dat)){
+  sub.effort.dat$final.Section.Name[row]<-as.character(effort_xwalk$Section.Name[as.character(effort_xwalk$Section.Field) == as.character(sub.effort.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.effort.dat$YearGroup[row])])
+  sub.effort.dat$Section.Num[row]<-effort_xwalk$Section.Summ[as.character(effort_xwalk$Section.Field) == as.character(sub.effort.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.effort.dat$YearGroup[row])]
+}  
+
+#Interview data
+unique(sub.group.dat$SectionName); table(sub.group.dat$SectionName)
+#NOTE: 14 groups had their fishing section denoted as "Both".  Since this is not an option in the lookup table and we want to define as either Skagit or Sauk, I arbitrarily defined the section for these groups as being Skagit
+sub.group.dat[sub.group.dat$SectionName == "Both",]
+sub.group.dat$SectionName[sub.group.dat$SectionName == "Both"]<-"Dalles bridge to Marblemount bridge"
+sub.group.dat$final.Section.Name<-NA; sub.group.dat$Section.Num<-NA
+for(row in 1:nrow(sub.group.dat)){
+  sub.group.dat$final.Section.Name[row]<-as.character(effort_xwalk$Section.Name[as.character(effort_xwalk$Section.Field) == as.character(sub.group.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.group.dat$YearGroup[row])])
+  sub.group.dat$Section.Num[row]<-effort_xwalk$Section.Summ[as.character(effort_xwalk$Section.Field) == as.character(sub.group.dat$SectionName[row]) & as.character(effort_xwalk$YearGroup) == as.character(sub.group.dat$YearGroup[row])]
+}  
+
+#Create index effort x-walk table (that will help define "outage" dates by section in "master" creel analysis file)
+sub.river.effort.xwalk<-effort_xwalk[effort_xwalk$StreamName %in% unique(sub.effort.dat$StreamName), ]
+final.effort.section.xwalk<-setNames(as.data.frame(matrix(NA, nrow=length(unique(sub.river.effort.xwalk$Section.Name)), ncol=2)), c("Section.Name", "Section.Num"))
+for(section in 1:length(unique(sub.river.effort.xwalk$Section.Name))){
+  final.effort.section.xwalk[section, "Section.Name"]<-as.character(unique(sub.river.effort.xwalk$Section.Name[sub.river.effort.xwalk$Section.Name == unique(sub.river.effort.xwalk$Section.Name)[section]]))
+  final.effort.section.xwalk[section, "Section.Num"] <-unique(sub.river.effort.xwalk$Section.Summ[sub.river.effort.xwalk$Section.Name == unique(sub.river.effort.xwalk$Section.Name)[section]])
+}
+final.effort.section.xwalk
+
+# #Calculate time to complete effort count by section
+#     sub.effort.dat$Count.Time.Minutes<-NA
+#     for(row in 1:nrow(sub.effort.dat)){as.numeric(ifelse(is.na(sub.effort.dat$Effort_EndTime_Dec[row])==FALSE & is.na(sub.effort.dat$Effort_StartTime_Dec[row])==FALSE ,sub.effort.dat$Count.Time.Minutes[row]<-round((sub.effort.dat$Effort_EndTime_Dec[row] - sub.effort.dat$Effort_StartTime_Dec[row])*60, 0), NA))}  
+
     #Identify dates when both index and tie-in surveys were completed on same day 
         index.dates<-unique(sub.effort.dat$Date[sub.effort.dat$Survey.Type == "Creel" ])
         tie.dates<-unique(sub.effort.dat$Date[sub.effort.dat$Survey.Type == "TieIn" ])
@@ -571,12 +604,11 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
 
 ```
 
-```{r ready_for_stan, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
-#Run source summary file 
-  ## add code that shows options for "catch groups"
-  source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
 
-##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
+```{r ready_for_stan, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+# source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
+
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This file summarizes creel effort and catch data that will then be fed directly into time-series model
