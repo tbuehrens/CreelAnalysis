@@ -402,66 +402,6 @@ filter(
 
 ```
 
-DA will delete this chunk
-
-```{r extract, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
-# # Extract data of interest and format, code that shows options for filtering data by date/year/season/location
-#   source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))
-
-  # create new DFs for each data group that will represent subsetted data set 
-    effort.dat.formatted<-effort.dat
-    group.dat.formatted<-group.dat
-    # gearfish.dat.formatted<-gearfish.dat
-    header.dat.formatted<-header.dat
-    
-  #Extract by "YearGroup"?
-    if(by.YearGroup == "Y"){
-        sub.effort.dat<-effort.dat.formatted[effort.dat.formatted$YearGroup %in% YearGroup.of.Interest,]
-        sub.group.dat<-group.dat.formatted[group.dat.formatted$YearGroup %in% YearGroup.of.Interest,]
-        # sub.gearfish.dat<-gearfish.dat.formatted[gearfish.dat.formatted$YearGroup %in% YearGroup.of.Interest,]
-        sub.header.dat<-header.dat.formatted[header.dat.formatted$YearGroup %in% YearGroup.of.Interest,]
-    }else{
-        sub.effort.dat<-effort.dat.formatted
-        sub.group.dat<-group.dat.formatted
-        # sub.gearfish.dat<-gearfish.dat.formatted
-        sub.header.dat<-header.dat.formatted
-    }
-
-  #Extract by "Season"? (Summer vs. Winter)
-    if(by.Season == "Y"){
-      sub.effort.dat<-sub.effort.dat[sub.effort.dat$Season %in% Season.of.Interest,]
-      sub.group.dat<-sub.group.dat[sub.group.dat$Season %in% Season.of.Interest,]
-      # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Season %in% Season.of.Interest,]
-      sub.header.dat<-sub.header.dat[sub.header.dat$Season %in% Season.of.Interest,]
-    }  
-    
-  #Extract by "Year"?
-    if(by.Year == "Y"){
-      sub.effort.dat<-sub.effort.dat[sub.effort.dat$Year %in% as.numeric(Year.of.Interest),]
-      sub.group.dat<-sub.group.dat[sub.group.dat$Year %in% as.numeric(Year.of.Interest),]
-      # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Year %in% as.numeric(Year.of.Interest),]
-      sub.header.dat<-sub.header.dat[sub.header.dat$Year %in% as.numeric(Year.of.Interest),]
-    }
-    
-  #Extract by "StreamName"?
-    if(by.StreamName == "Y"){
-      sub.effort.dat<-sub.effort.dat[sub.effort.dat$StreamName %in% StreamName.of.Interest,]
-      sub.group.dat<-sub.group.dat[sub.group.dat$StreamName %in% StreamName.of.Interest,]
-      # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$StreamName %in% StreamName.of.Interest,]
-      sub.header.dat<-sub.header.dat[sub.header.dat$StreamName %in% StreamName.of.Interest,]
-    }
-  
-  #Extract by Date (Range)?
-    if(by.Date == "Y"){
-      sub.Date.Range<-seq(as.Date(Begin.Date), as.Date(End.Date), 1)
-      sub.effort.dat<-sub.effort.dat[sub.effort.dat$Date %in% sub.Date.Range,]
-      sub.group.dat<-sub.group.dat[sub.group.dat$Date %in% sub.Date.Range,]
-      # sub.gearfish.dat<-sub.gearfish.dat[sub.gearfish.dat$Date %in% sub.Date.Range,]
-      sub.header.dat<-sub.header.dat[sub.header.dat$Date %in% sub.Date.Range,]
-    }  
-    
-```
-
 ## calc fields
 
 Need to circle back to this. Looks easier/faster to just figure out a tidy route to what will eventually be needed than try to refactor linewise as-is.
