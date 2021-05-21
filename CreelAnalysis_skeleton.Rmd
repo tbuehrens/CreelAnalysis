@@ -38,15 +38,6 @@ using <- function(...) {
 }  
 ```
 
-```{r install_or_load_pack}
-install_or_load_pack <- function(pack){
-  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
-  if (length(create.pkg))
-    install.packages(create.pkg, dependencies = TRUE)
-  sapply(pack, require, character.only = TRUE)
-}
-```
-
 ```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
 # Load packages, install and load if not already
 packages_list<-c(
@@ -57,7 +48,7 @@ packages_list<-c(
 
   "timeDate", #used for holidays, maybe other? check conflicts with lubridate?
   "suncalc", #used for daylight/length getSunlightTimes()
-  "rstan", "shinystan",
+  "rstan", "shinystan", #will autoload dependencies
   "loo", 
 
   "readxl",
@@ -74,6 +65,13 @@ packages_list<-c(
   "MASS"
 )
 install_or_load_pack(pack = packages_list)
+install_or_load_pack <- function(pack){
+  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+  if (length(create.pkg))
+    install.packages(create.pkg, dependencies = TRUE)
+  sapply(pack, require, character.only = TRUE)
+}
+
 ```
 
 # data prep
@@ -205,7 +203,41 @@ all_holidays <- 2016:2024 %>%
 
 ```
 
-```{r data_prep_effort}
+```{r d_days}
+#can think about different ways to do this, 
+#illustrating an example of building an "expanded dates lattice"
+#to which any/all observations are attached
+#also will need to bring in closures (closure_dates) here
+date_start <- as.Date("2021-02-01")
+date_end <- as.Date("2021-04-13")
+
+(d_days <- tibble(Date = seq(min(date_start), max(date_end), by = "day")) %>%
+    mutate(
+      Day = weekdays(Date),
+      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+      DayType_num = if_else(str_detect(DayType, "end"),1,0),
+      DayL = suncalc::getSunlightTimes(
+        date = Date,
+        tz = "America/Los_Angeles",
+        lat = lut$lut_river_loc$Lat,
+        lon = lut$lut_river_loc$Long,
+        keep=c("dawn", "dusk")
+        ) %>%
+        mutate(DayL = as.numeric(dusk - dawn)) %>%
+        .$DayL
+    ))
+
+#other possibly useful/needed fields that had been created with effort and group/interview data objects
+    # Day = weekdays(Date),
+    # DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+    # Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
+    # Year = as.numeric(format(Date, "%Y")),
+    # Weeknum = as.numeric(format(Date, "%V")),
+    # j.date =  as.numeric(format(Date, "%j"))
+
+```
+
+```{r d_effort}
 #port of first portion of: source(paste0(wd_source_files, "/Import_Skagit_Creel_Data_and_Format.R"))
 
 #dropping apparently redundant class coercion of "count columns",
@@ -215,68 +247,64 @@ all_holidays <- 2016:2024 %>%
 d_effort <- readr::read_csv("C:/Users/auerbdaa/Downloads/Effort_dat_2021_steelhead_04132021.csv") %>%
   filter(!is.na(StreamName)) %>%
   rowid_to_column(var = "Effort.Index") %>%
+  rename(Vehicles = Car_Count, Trailers = Trailer_Count) %>%
   mutate(
     Date = as.Date(Survey_Date, format="%m/%d/%Y"),
     across(c(Effort_StartTime, Effort_EndTime), as.character),
     across(c(Effort_StartTime, Effort_EndTime), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
     
     Boat = Shore_Boat_Motor + Shore_Drift_Raft + Boat_Boat_Motor + Boat_Drift_Raft,
-    Bank = Shore_No_Craft + Shore_Pontoon,
-    
-    Day = weekdays(Date),
-    DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
-    Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
-    Year = as.numeric(format(Date, "%Y")),
-    Weeknum = as.numeric(format(Date, "%V")),
-    j.date =  as.numeric(format(Date, "%j"))
+    Bank = Shore_No_Craft + Shore_Pontoon
   ) %>%
-  rename(Vehicles = Car_Count, Trailers = Trailer_Count) %>%
   arrange(Date, Survey.Type, Effort_StartTime)
+
 #Create a "HeaderID" column that denotes each unique survey date
 d_effort <- d_effort %>% 
   left_join(
-    d_effort %>% distinct(Date, Survey.Type, Effort_StartTime) %>% rowid_to_column(var = "HeaderID"),
-    by = c("Date", "Survey.Type", "Effort_StartTime")
+    d_effort %>% distinct(Date) %>% rowid_to_column(var = "HeaderID"),
+    by = c("Date")
   ) %>%
   select(
     Effort.Index, HeaderID, 
-    StreamName, Date, Surveyor, Year, 
+    StreamName, Date, Surveyor,
+    #Year, 
     #YearGroup, Season,
-    Month, Month.no, Weeknum, j.date, Day, DayType,
+    #Month, Month.no, Weeknum, j.date, Day, DayType,
     Survey.Type, SectionName, CountNum, Effort_StartTime, Effort_StartTime_Dec, Effort_EndTime, Effort_EndTime_Dec,
     Vehicles, Trailers, Boat, Bank
   )
 
-#depending on how this is used, could make readable alphanum (since not unary UID?)
-d_effort %>% unite(hid, c(Date, Survey.Type, Effort_StartTime)) %>% count(hid, HeaderID)
+# #depending on how this is used, could make readable alphanum (since not unary UID?)
+# d_effort %>% unite(hid, c(Date, Survey.Type, Effort_StartTime)) %>% count(hid, HeaderID)
 
 d_header <- d_effort %>%
-  select(StreamName, Date, Year, 
+  select(StreamName, Date, 
+         #Year, 
          #YearGroup, Season, 
-         Month, Month.no, Weeknum, j.date, Day, DayType, Survey.Type, Surveyor, HeaderID) %>%
+         #Month, Month.no, Weeknum, j.date, Day, DayType, 
+         Survey.Type, Surveyor, HeaderID) %>%
   distinct(HeaderID, .keep_all = T)
 
 ```
 
-```{r data_prep_group}
-#left as mostly duplicative with d_effort for now but needs confer with KB
-
+```{r d_group}
 #d_group <- readr::read_csv(file.path(dir_input_files, fn$data_group)) %>%
 d_group <- readr::read_csv("C:/Users/auerbdaa/Downloads/Interview_dat_2021_steelhead_cleaned_04132021.csv") %>%
   filter(!is.na(StreamName)) %>%
   rowid_to_column(var = "Group.Index") %>%
+  rename(Vehicles = Num_Cars, Trailers = Num_Trailers) %>%
   mutate(
     Date = as.Date(Survey_Date, format="%m/%d/%Y"),
     #DAA: 2019 data has Fishing_time_corrected but that's removed...?
-    across(c(Fishing_Start_Time, Interview_Start_Time), as.character),
-    across(c(Fishing_Start_Time, Interview_Start_Time), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
+    across(c(Fishing_Start_Time, Fishing_End_Time_Corrected, Interview_Start_Time), as.character),
+    across(c(Fishing_Start_Time, Fishing_End_Time_Corrected, Interview_Start_Time), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
 
-    Day = weekdays(Date),
-    DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
-    Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
-    Year = as.numeric(format(Date, "%Y")),
-    Weeknum = as.numeric(format(Date, "%V")),
-    j.date =  as.numeric(format(Date, "%j")),
+    # Day = weekdays(Date),
+    # DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+    # Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
+    # Year = as.numeric(format(Date, "%Y")),
+    # Weeknum = as.numeric(format(Date, "%V")),
+    # j.date =  as.numeric(format(Date, "%j")),
     # YearGroup = if_else(
     #   as.numeric(format(Date, "%j")) >= YearBegin,
     #   paste(as.numeric(format(Date, "%Y")), as.numeric(format(Date, "%Y"))+1, sep="-"),
@@ -289,77 +317,34 @@ d_group <- readr::read_csv("C:/Users/auerbdaa/Downloads/Interview_dat_2021_steel
         Trip.Status == "yes" ~ "C",
         Trip.Status == "unk" ~ "I"
       ), #marginally unstable but should return NA
+    Total_Hours = NumAnglers * if_else(Trip.Status == "C",
+                          Fishing_End_Time_Corrected_Dec - Fishing_Start_Time_Dec,
+                          Interview_Start_Time_Dec - Fishing_Start_Time_Dec
+                          ),
     Angler.Type = stringr::str_sub(toupper(AnglerCategory), 1, 1), #should take S/B/NA
     Count = replace_na(Qty, replace = 0)
+  ) 
+#add GroupNum, select cols
+d_group <- d_group %>%
+  left_join(
+    d_group %>% distinct(Date, `Page #`, Row) %>% rowid_to_column(var = "GroupNum"),
+    by = c("Date", "Page #", "Row")
   ) %>%
-  rename(Vehicles = Num_Cars, Trailers = Num_Trailers)
+  select(
+    Group.Index, StreamName, SectionName, Date,
+    #Year, YearGroup, Season, Month, Month.no, Weeknum, j.date, Day, DayType,
+    GroupNum, Angler.Type, NumAnglers, Vehicles, Trailers,
+    Fishing_Start_Time, Fishing_Start_Time_Dec, 
+    Interview_Start_Time, Interview_Start_Time_Dec, Percent_time_fished,
+    Trip.Status, Species, Origin, Fate, Count, Total_Hours 
+  )
 
-# #DAA: this is a little unclear...need to confer with KB
-# #Create temporary "GroupNum" column
-# for(row in 1:nrow(group.dat)){group.dat$temp.GroupNum[row]<-paste(group.dat$Page..[row], group.dat$Row[row], sep = "-")}
-# 
-# #Create x-walk table for "GroupNum" 
-# group.num_xwalk<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=3)), c("Date", "temp.GroupNum", "GroupNum"))    
-# for(date in 1:length(unique(group.dat$Survey_Date.Formatted))){
-#   sub.date<-group.dat[group.dat$Survey_Date.Formatted == unique(group.dat$Survey_Date.Formatted)[date],]
-#   
-#   temp.GroupNum<-unique(sub.date$temp.GroupNum)
-#   new.GroupNum<-seq(1, length(temp.GroupNum),1)
-#   sub.date<-as.character(rep(unique(group.dat$Survey_Date.Formatted)[date], length(temp.GroupNum)))
-#   sub.group.num_xwalk<-setNames(as.data.frame(cbind(sub.date, temp.GroupNum, new.GroupNum)), c("Date", "temp.GroupNum", "GroupNum"))
-#   
-#   group.num_xwalk<-rbind(group.num_xwalk, sub.group.num_xwalk)
-# }
-# 
-# #Create "GroupNum" column
-# group.dat$GroupNum<-NA
-# for(row in 1:nrow(group.dat)){
-#   group.dat$GroupNum[row]<-as.character(group.num_xwalk$GroupNum[as.Date(group.num_xwalk$Date) == as.Date(group.dat$Survey_Date.Formatted)[row] & as.character(group.num_xwalk$temp.GroupNum) == as.character(group.dat$temp.GroupNum)[row]])
-# }
+```
 
+```{r maybe_d_days_joins}
+d_days %>% left_join(d_effort, by = "Date") #fields missing/NA for days without data collection
 
-
-# #Remove unnecessary columns and rename  
-# group.dat$Surveyor<-NULL; group.dat$Survey_Date<-NULL; group.dat$Page..<-NULL; group.dat$Row<-NULL; 
-# group.dat$temp.GroupNum<-NULL
-# group.dat$County1<-NULL; 
-# group.dat$Comments<-NULL; 
-# group.dat$Fishing_Start_Time<-NULL; group.dat$Interview_Start_Time<-NULL; group.dat$Fishing_End_Time<-NULL; 
-# group.dat$Fishing_time_corrected<-NULL; group.dat$Fishing_End_Time_Corrected<-NULL;
-# group.dat$Guided.<-NULL; 
-# group.dat$AnglerType<-NULL;
-# group.dat$TargetSpecies<-NULL;
-# group.dat$FishingMethod<-NULL;
-
-# #Rename column headers
-# names(group.dat)[names(group.dat) == 'Survey_Date.Formatted'] <- 'Date'
-# names(group.dat)[names(group.dat) == 'CompleteTrip'] <- 'Trip.Status'
-# names(group.dat)[names(group.dat) == 'Fishing_Start_Time.Formatted'] <- 'Start.Time'
-# names(group.dat)[names(group.dat) == 'Decimal_Fishing_Start_Time'] <- 'Start.Time.Dec'
-# names(group.dat)[names(group.dat) == 'Fishing_Interview_Time.Formatted'] <- 'Interview.Time'
-# names(group.dat)[names(group.dat) == 'Decimal_Fishing_Interview_Time'] <- 'Interview.Time.Dec'
-# names(group.dat)[names(group.dat) == 'AnglerCategory'] <- 'Angler.Type'
-# names(group.dat)[names(group.dat) == 'Num_Cars'] <- 'Vehicles'
-# names(group.dat)[names(group.dat) == 'Num_Trailers'] <- 'Trailers'
-# names(group.dat)[names(group.dat) == 'Qty'] <- 'Count'
-
-
-
-#Order columns  
-group.dat<-group.dat[, c("Group.Index", "StreamName", "SectionName", "Date", "Year", "YearGroup", "Season", "Month", "Month.no"
-                         , "Weeknum", "j.date", "Day", "DayType", "GroupNum"
-                         ,"Angler.Type"
-                         #, "FishFromBoat", "NumPoles"
-                         , "NumAnglers", "Vehicles", "Trailers"
-                         , "Start.Time", "Start.Time.Dec","Interview.Time","Interview.Time.Dec" #, "End.Time", "End.Time.Dec"
-                         , "Percent_time_fished"
-                         , "Trip.Status"
-                         , "Species", "Origin", "Fate", "Count"
-                         #, "Target.Spp"
-                         # , "SectionName", "HeaderID"
-)
-]
-
+d_effort %>% left_join(d_days, by = "Date") #add days-fields to dates with data collection
 ```
 
 ## filter
@@ -924,18 +909,18 @@ head(sub.group.dat)
 
 ### 6E make stan data
 
-big single level list
-
 ```{r data_to_stan}
+#getting close to ready to build quickly from initial data load-in chunks
 
-#A_samp
-#C_sample
-#c_samp
-#E_s_samp
-#I_samp
-#T_samp; trailers
-#V_samp; vehicles
+standat <- list(
+  D = nrow(d_days)
+  #something along the lines of...? But not this!
+  foo = d_group %>% 
+    filter(Species == "SH", Origin == "W", Fate == "R") %>%
+    group_by(GroupNum, ) %>%
+    summarise(tot_hr = sum(Total_Hours), .groups = "drop")
 
+)
 
 standat <- list(
   D = nrow(all.Dates),                                               # total number of days in the fishery we are estimating catch for
