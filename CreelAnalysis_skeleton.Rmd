@@ -79,15 +79,43 @@ install_or_load_pack <- function(pack){
 Modify to accommodate creel database and/or older loose files? Seems preferable to get older loose data into the database - is that likely?
 
 ```{r user_inputs, message=FALSE, warning=FALSE, echo = FALSE}
-#======================================================
-# Specify relative working directories for sub-folders
-#======================================================
 wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
 wd_models  <-"models"           # Location of model files 
 wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
 
 # Denote catch group of interest (species_origin_fate) 
 catch.group.of.interest<-c("SH_W_R")
+```
+
+## load
+
+```{r input_files, message=FALSE, warning=FALSE, results = "hide", echo=FALSE}
+
+dir_input_files <- "input_files"
+
+# #copied contents of "lookup tables" and "data"
+# list.files("lookup tables/", full.names = T) %>%
+#   fs::file_copy(path = ., new_path = paste0("input_files/lut_",basename(.)))
+# list.files("data/", full.names = T) %>%
+#   fs::file_copy(path = ., new_path = paste0("input_files/data_",basename(.)))
+
+#can transition to informatively named files
+#such that objects are declared responsively/reactively
+list.files(dir_input_files, pattern = "lut_")
+list.files(dir_input_files, pattern = "data_")
+
+fn <- list(
+  lut_effort_xwalk = "lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv", #"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv"
+  lut_river_loc = "lut_02_River.Locations_2019-01-07.csv",
+  lut_creel_models = "lut_02_Creel_Models_2021-01-20.csv",
+  
+  data_effort = "data_03_Effort_dat - 2019_Skagit_creel_JSH_thru_4-30-19.csv",  #"Effort_dat_2021_steelhead_04132021.csv"
+  data_group = "data_03_Interview-dat_2019-Skagit_JSH_thru_4-30-2019.csv" #"Interview_dat_2021_steelhead_cleaned_04132021.csv"
+)
+
+lut <- grep("^lut_", names(fn), value = T) %>% set_names() %>%
+  map(~readr::read_csv(file.path(dir_input_files, fn[[.x]])))
+
 ```
 
 ```{r closure_dates, message=FALSE, warning=FALSE, echo = FALSE}
@@ -150,37 +178,6 @@ nrow(distinct(closure_dates, closure_date)) #or: length(unique(closure_dates$clo
 #                             ,"2021-04-09",     0,         0
 #                             ) 
     
-```
-
-## load
-
-```{r input_files, message=FALSE, warning=FALSE, results = "hide", echo=FALSE}
-
-dir_input_files <- "input_files"
-
-# #copied contents of "lookup tables" and "data"
-# list.files("lookup tables/", full.names = T) %>%
-#   fs::file_copy(path = ., new_path = paste0("input_files/lut_",basename(.)))
-# list.files("data/", full.names = T) %>%
-#   fs::file_copy(path = ., new_path = paste0("input_files/data_",basename(.)))
-
-#can transition to informatively named files
-#such than objects are declared responsively/reactively
-list.files(dir_input_files, pattern = "lut_")
-list.files(dir_input_files, pattern = "data_")
-
-fn <- list(
-  lut_effort_xwalk = "lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv", #"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv"
-  lut_river_loc = "lut_02_River.Locations_2019-01-07.csv",
-  lut_creel_models = "lut_02_Creel_Models_2021-01-20.csv",
-  
-  data_effort = "data_03_Effort_dat - 2019_Skagit_creel_JSH_thru_4-30-19.csv",  #"Effort_dat_2021_steelhead_04132021.csv"
-  data_group = "data_03_Interview-dat_2019-Skagit_JSH_thru_4-30-2019.csv" #"Interview_dat_2021_steelhead_cleaned_04132021.csv"
-)
-
-lut <- grep("^lut_", names(fn), value = T) %>% set_names() %>%
-  map(~readr::read_csv(file.path(dir_input_files, fn[[.x]])))
-
 ```
 
 ```{r all_holidays}
@@ -888,8 +885,6 @@ standat <- list(
   #   )
   O = as.matrix(fishery.open.closed),                                # matrix denoting whether the fishery was open (1) or closed (1E-9) for each individual "D" (row) and section 1:S (column)
   # str(fishery.open.closed)
-  # #appears this could derive from closure_dates (i.e., shown above)
-  # #in conjuction with date handling via d_header or finalized d_effort
 
   G = length(unique(I_samp$Gear)),                                   # total number of unique gear types (#previously G=n_gear.types)
   #see I_samp below
@@ -976,7 +971,6 @@ standat <- list(
 
 ```
 
-
 ```{r stan_6e_orig, message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
 standat<-list(
   D=nrow(all.Dates),                                               # total number of days in the fishery we are estimating catch for
@@ -1052,8 +1046,7 @@ standat<-list(
 
 # analysis
 
-```{r run_analysis,results = "hide",echo=FALSE,warning=FALSE}
-
+```{r analysis_params, results = "hide",echo=FALSE,warning=FALSE}
 ### Run Analysis
 #Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
 #================================================================
@@ -1100,17 +1093,184 @@ standat<-list(
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
   adapt_delta<-0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+```
 
-# Create sub-folders for output (if they don't already exist)
-    source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
+```{r analysis_subfolders, results = "hide",echo=FALSE,warning=FALSE}
+# # Create sub-folders for output (if they don't already exist)
+#     source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
 
-# Run source code to prepare data for model
-    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))
-# Run source code to generate creel estimates
-  source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
+# outputs
+  ifelse(!dir.exists(wd_outputs), {dir.create(wd_outputs); "Output sub-folder created"},"Output sub-folder exists already")
+    
+# catch group  
+  filepath_catchgroup<-paste(wd_outputs, catch.group.of.interest, sep="/")
+  ifelse(!dir.exists(filepath_catchgroup), {dir.create(filepath_catchgroup); "Catch group sub-folder created"},"Catch group sub-folder exists already")
+
+# model run  
+  filepath_Run<-paste(filepath_catchgroup, paste0("Run_", Model_Run), sep="/")
+  ifelse(!dir.exists(filepath_Run), {dir.create(filepath_Run); "Model run sub-folder created"},"Model run sub-folder exists already")
+
+# model information and outputs    
+  filepath_modeloutputs<-paste(filepath_Run, "model_outputs", sep="/")
+  ifelse(!dir.exists(filepath_modeloutputs), {dir.create(filepath_modeloutputs); "Model info sub-folder created"},"Model info sub-folder exists already")
+
+# summarized estimates  
+  filepath_modelestimates<-paste(filepath_Run, "summarized_estimates", sep="/")
+  ifelse(!dir.exists(filepath_modelestimates), {dir.create(filepath_modelestimates); "Model estimates sub-folder created"},"Model info sub-folder exists already")
+```
+
+```{r analysis_fina_prep, results = "hide",echo=FALSE,warning=FALSE}
+# # Run source code to prepare data for model
+#     source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))
+
+#Last minute data fixes
+  standat$V_A[standat$V_A>standat$A_A]<-standat$A_A[standat$V_A>standat$A_A] #Number of vehicles for a group can't be greater than number of anglers in the group
+      
+# Create two new "standat" variables depending on specified time (strata) period (e.g., day vs. week) 
+  if(model_period=="day"){
+    standat$P_n<-nrow(all.Dates) # For now: enter "D" for day or length(unique(week)) for week
+    standat$period<-c(1:nrow(all.Dates)) #week          # For now: enter "1:D" for day or "week" for week
+  }else{
+    if(model_period=="week"){
+      standat$P_n<-length(unique(all.Dates$Weeknum_Rel)) 
+      standat$period<-all.Dates$Weeknum_Rel
+    }
+  }
   
-# Generate summaries of model inputs and outputs
-  if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
+# proportion tie-in expansion
+  p_TI<-matrix(rep(1, standat$G * standat$S), nrow=standat$G, ncol=standat$S)
+  standat$p_TI<-p_TI
+
+# Add priors to "standat"
+    standat$value_cauchyDF_sigma_eps_C<-value_cauchyDF_sigma_eps_C   
+    standat$value_cauchyDF_sigma_eps_E<-value_cauchyDF_sigma_eps_E       
+    standat$value_cauchyDF_sigma_r_E<-value_cauchyDF_sigma_r_E     
+    standat$value_cauchyDF_sigma_r_C<-value_cauchyDF_sigma_r_C    
+    standat$value_normal_sigma_omega_C_0<-value_normal_sigma_omega_C_0         
+    standat$value_normal_sigma_omega_E_0<-value_normal_sigma_omega_E_0
+    standat$value_normal_sigma_B1<-value_normal_sigma_B1      
+    standat$value_lognormal_sigma_b<-value_lognormal_sigma_b                    
+    standat$value_normal_mu_mu_C<-value_normal_mu_mu_C   
+    standat$value_normal_sigma_mu_C<-value_normal_sigma_mu_C   
+    standat$value_normal_mu_mu_E<-value_normal_mu_mu_E   
+    standat$value_normal_sigma_mu_E<-value_normal_sigma_mu_E   
+    standat$value_betashape_phi_E_scaled<-value_betashape_phi_E_scaled 
+    standat$value_betashape_phi_C_scaled<-value_betashape_phi_C_scaled 
+```
+
+```{r analysis_load_or_run, results = "hide",echo=FALSE,warning=FALSE}
+# # Run source code to generate creel estimates
+#   source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
+
+# This file either (1) loads models results (via an .rds file), or (2) runs a new model
+# Based on "model_number" chosen, create object of the "model.name"
+    model.name<-as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
+
+# Load saved model results or...
+if(model_source== "load_saved"){
+  res_Stan <- readRDS(paste(filepath_modeloutputs, "results_res_Stan.rds", sep="/")) #Load RDS (stan model output)
+#...Run new model
+}else{
+
+#Compile Model
+  start.time<-Sys.time(); print(start.time)
+  message(paste("Compiling stan model"))
+  model.file.name<-as.character(creel_models$Model_file_name[creel_models$Model_number == model_number])
+  model<-stan_model(paste(wd_models, model.file.name, sep="/")) 
+  
+#Run model in stan using NUTS/HMC
+  message(paste("Running stan model - track progress via Viewer Pane"))
+  res_Stan<-
+    sampling(
+      object=model
+      ,data=standat
+      , chains = n_chain
+      , cores=n_cores
+      , iter=n_iter
+      , thin=n_thin
+      , init="0"
+      , warmup=n_warmup
+      , include=T
+      , control=list(adapt_delta=adapt_delta , max_treedepth=max_treedepth)
+    )
+  end.time<-Sys.time()
+  model_duration<-print(paste("Elapsed Time = ",end.time-start.time,sep=""))
+  print(elasped_time_by_chain<-get_elapsed_time(res_Stan))
+  approx.model.runtime.minutes<-max(elasped_time_by_chain[,2])/60+max(elasped_time_by_chain[,1])/60
+  
+#Save Model warnings
+  print(warnings())
+  model_warnings<-warnings() #KB note: this doesn't appear to be working (not sure why)
+}
+#Extract posterior draws    
+  res<-extract(res_Stan) 
+ 
+```
+
+```{r analysis_results, results = "hide",echo=FALSE,warning=FALSE}
+# # Generate summaries of model inputs and outputs
+#   if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
+
+# This code generates summaries files regarding the inputs and outputs for a new model run 
+
+# # Model warnings #KB note: this doesn't appear to be working (not sure why)
+#     if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
+#     writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutputs, "/info_Model_warnings_", Sys.Date(), ".txt"))
+
+# R session Info
+  writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutputs, "/info_sessionInfo_", Sys.Date(), ".txt"))
+    
+# Model summary
+  mod.sum.elements<-
+      c("Model Name"                   , as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
+      , "Model File"                   , model.file.name
+      , "Model Period"                 , model_period
+      , "Date Begin"                   , as.character(Date_Begin)
+      , "Date End"                     , as.character(Date_End)
+      , "Catch Group"                  , catch.group.of.interest
+      , ""                             , c("")
+      , "Chains"                       , n_chain
+      , "Iterations"                   , n_iter
+      , "Warmup"                       , n_warmup
+      , "Thin Rate"                    , n_thin
+      , "Adapt_Delta"                  , adapt_delta
+      , "Max Tree Depth"               , max_treedepth
+      , "Cores"                        , n_cores
+      , ""                             , c("")
+      , "value_cauchyDF_sigma_eps_C"   , value_cauchyDF_sigma_eps_C
+      , "value_cauchyDF_sigma_eps_E"   , value_cauchyDF_sigma_eps_E
+      , "value_cauchyDF_sigma_r_E"     , value_cauchyDF_sigma_r_E
+      , "value_cauchyDF_sigma_r_C"     , value_cauchyDF_sigma_r_C
+      , "value_normal_sigma_omega_C_0" , value_normal_sigma_omega_C_0 
+      , "value_normal_sigma_omega_E_0" , value_normal_sigma_omega_E_0
+      , "value_lognormal_sigma_b"      , value_lognormal_sigma_b
+      , "value_normal_sigma_B1"        , value_normal_sigma_B1
+      , "value_normal_mu_mu_C"         , round(value_normal_mu_mu_C, 3)
+      , "value_normal_sigma_mu_C"      , round(value_normal_sigma_mu_C, 3) 
+      , "value_normal_mu_mu_E"         , round(value_normal_mu_mu_E, 3) 
+      , "value_normal_sigma_mu_E"      , round(value_normal_sigma_mu_E, 3)
+      , "value_betashape_phi_E_scaled" , value_betashape_phi_E_scaled 
+      , "value_betashape_phi_C_scaled" , value_betashape_phi_C_scaled 
+  )
+  mod.sum<-setNames(as.data.frame(matrix(mod.sum.elements, nrow=length(mod.sum.elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
+  writeLines(capture.output(mod.sum), paste0(filepath_modeloutputs, "/info_Model_setup_", Sys.Date(), ".txt"))
+
+# Model run-time
+  run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
+  mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
+  writeLines(capture.output(mod_run.time), paste0(filepath_modeloutputs, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
+
+# Save a file of the summary model results
+  s.stan<-summary(res_Stan)
+  write.csv(s.stan$summary, paste0(filepath_modeloutputs, "/results_res_Stan_summary_", Sys.Date(), ".csv"))
+  
+# Save "res_stan" object as .rds file   
+  saveRDS(res_Stan, file=paste0(filepath_modeloutputs, "/results_res_Stan.rds"))
+
+# Calculate loo-IC
+  loo_IC<-loo(res$log_lik) # see: https://rdrr.io/cran/loo/man/loo.html and https://cran.r-project.org/web/packages/loo/loo.pdf 
+  writeLines(capture.output(loo_IC), paste0(filepath_modeloutputs, "/results_model_looIC_", Sys.Date(), ".txt"))  
+
 ```
 
 
