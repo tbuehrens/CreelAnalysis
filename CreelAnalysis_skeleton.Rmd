@@ -14,55 +14,36 @@ output:
 
 # setup 
 
-```{r set_options, echo = FALSE, message = FALSE}
+```{r setup, echo = FALSE, message = FALSE}
 options(width = 100)
 knitr::opts_chunk$set(message = FALSE)
 set.seed(123)
-```
 
-```{r not_in}
-"%!in%" <- function(x,table) match(x,table, nomatch = 0) == 0
-#DA: if declaring rather than just '!', why not '%!in%' <- function(x,y) {!('%in%'(x,y))} ?
-```
-
-```{r using}
-#this function appears unused (ironically enough)?
-using <- function(...) {
-    libs <- unlist(list(...))
-    req <- unlist(lapply(libs, require, character.only=TRUE, quietly=TRUE))
-    need <- libs[req==FALSE]
-    if(length(need) > 0){ 
-        install.packages(need)
-        lapply(need, require, character.only=TRUE, quietly=TRUE)
-    }
-}  
-```
-
-```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
 # Load packages, install and load if not already
 packages_list<-c(
-  "tidyverse", "lubridate", 
-  "plyr", "reshape2", #really needed?
-
-  "devtools", "here", 
+  "DBI", "odbc", "dbplyr",
+  "tidyverse", "lubridate",
+  #"plyr", "reshape2", #really needed?
 
   "timeDate", #used for holidays, maybe other? check conflicts with lubridate?
   "suncalc", #used for daylight/length getSunlightTimes()
   "rstan", "shinystan", #will autoload dependencies
-  "loo", 
+  "loo", "MASS",
+
+  #"devtools", "here", 
 
   "readxl",
-  "xlsx", #really needed?
+  #"xlsx", #really needed?
   
-  "tinytex",
-  "kableExtra",
-  "cowplot",
-  "ggpubr", 
-  "RColorBrewer",
+  # "tinytex",
+  # "kableExtra",
+  # "cowplot",
+  # "ggpubr", 
+  # "RColorBrewer",
 
-  "chron",
-  "data.table", #really needed?
-  "MASS"
+  # "chron",
+  # "data.table" #really needed?
+  
 )
 install_or_load_pack(pack = packages_list)
 install_or_load_pack <- function(pack){
@@ -76,13 +57,53 @@ install_or_load_pack <- function(pack){
 
 # data prep
 
-Modify to accommodate creel database and/or older loose files? Seems preferable to get older loose data into the database - is that likely?
+```{r creel_connection}
+# u <- "user"
+# p <- "pwd"
+
+#presumably want to break this out differently at some point, but need to talk to Danny
+***REMOVED***
+```
+
+```{r creel_tables}
+#quick demo
+
+#can/should/will redo this after talking to Kale and Danny
+get_creel <- function(river = "Kalama", date_start = "2019-03-01", date_end = "2019-03-31"){
+  date_start <- as.Date(date_start); date_end <- as.Date(date_end)
+  
+  event = tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_creel_event")) %>%
+    filter(
+      str_detect(water_body_desc, river),
+      between(event_date, date_start, date_end)
+    )
+  
+  effort = event %>% left_join(
+    tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_effort_count")) 
+    , by = "creel_event_id", suffix = c("_event", "_effort"))
+  
+  interview = event %>% left_join(
+    tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_interview")) 
+    , by = "creel_event_id", suffix = c("_event", "_interview"))
+  
+  d <- list(event = event, effort = effort, interview = interview) %>% map(~collect(.x))
+
+  return(d)
+}
+
+(z <- get_creel())
+
+#needs to join on creel_event_id + interview_id?
+tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_gear_hook"))
+tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_catch"))
+
+
+DBI::dbDisconnect(con_creel)
+
+```
+
 
 ```{r user_inputs, message=FALSE, warning=FALSE, echo = FALSE}
-wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
-wd_models  <-"models"           # Location of model files 
-wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
-
 # Denote catch group of interest (species_origin_fate) 
 catch.group.of.interest<-c("SH_W_R")
 ```
@@ -125,59 +146,26 @@ lut <- grep("^lut_", names(fn), value = T) %>% set_names() %>%
 #for example something like this...
 (closure_dates <- bind_rows(
   tibble(closure_begin = "2021-02-03", closure_end = "2021-02-05", section = "1,2"),
-  tibble(closure_begin = "2021-02-10", closure_end = "2021-02-11", section = "1,2")
+  tibble(closure_begin = "2021-02-10", closure_end = "2021-02-12", section = "1,2"),
+  tibble(closure_begin = "2021-02-17", closure_end = "2021-02-19", section = "1,2"),
+  tibble(closure_begin = "2021-02-24", closure_end = "2021-02-26", section = "1,2"),
+  tibble(closure_begin = "2021-03-03", closure_end = "2021-03-05", section = "1,2"),
+  tibble(closure_begin = "2021-03-10", closure_end = "2021-03-12", section = "1,2"),
+  tibble(closure_begin = "2021-03-17", closure_end = "2021-03-19", section = "1,2"),
+  tibble(closure_begin = "2021-03-24", closure_end = "2021-03-26", section = "1,2"),
+  tibble(closure_begin = "2021-03-31", closure_end = "2021-04-02", section = "1,2"),
+  tibble(closure_begin = "2021-04-07", closure_end = "2021-04-09", section = "1,2")
   ) %>%
   rowwise() %>%
   mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) %>%
   separate_rows(closure_date, sep = ",") %>%
   separate_rows(section, sep = ","))
-#then easy to..
-closure_dates %>% select(closure_date, section) %>% mutate(closure_code = 0) %>% pivot_wider(names_from = section, values_from = closure_code)
 #and total is
 nrow(distinct(closure_dates, closure_date)) #or: length(unique(closure_dates$closure_date))
+#then easy to..
+closure_dates %>% select(closure_date, section) %>% mutate(closure_code = 0) %>% pivot_wider(names_from = section, values_from = closure_code)
+#and if truly needed as long character vector: %>% rowwise() %>% mutate(x = list(c(closure_date, `1`, `2`))) %>% select(x) %>% unlist()
 
-
-# # NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
-# # First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
-# total.closed.dates<-30 # Total number of dates that at least one section of the river was closed 
-# # Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
-# # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
-# # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
-# # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
-# # create a new line for each individual closure by date
-# #    Date   , Section-1, Section-2
-#     closed.Dates.Sections<-c("2021-02-03",     0,         0 
-#                             ,"2021-02-04",     0,         0
-#                             ,"2021-02-05",     0,         0
-#                             ,"2021-02-10",     0,         0 
-#                             ,"2021-02-11",     0,         0
-#                             ,"2021-02-12",     0,         0
-#                             ,"2021-02-17",     0,         0
-#                             ,"2021-02-18",     0,         0
-#                             ,"2021-02-19",     0,         0
-#                             ,"2021-02-24",     0,         0
-#                             ,"2021-02-25",     0,         0
-#                             ,"2021-02-26",     0,         0
-#                             ,"2021-03-03",     0,         0
-#                             ,"2021-03-04",     0,         0
-#                             ,"2021-03-05",     0,         0
-#                             ,"2021-03-10",     0,         0
-#                             ,"2021-03-11",     0,         0
-#                             ,"2021-03-12",     0,         0
-#                             ,"2021-03-17",     0,         0
-#                             ,"2021-03-18",     0,         0
-#                             ,"2021-03-19",     0,         0
-#                             ,"2021-03-24",     0,         0
-#                             ,"2021-03-25",     0,         0
-#                             ,"2021-03-26",     0,         0
-#                             ,"2021-03-31",     0,         0
-#                             ,"2021-04-01",     0,         0
-#                             ,"2021-04-02",     0,         0
-#                             ,"2021-04-07",     0,         0
-#                             ,"2021-04-08",     0,         0
-#                             ,"2021-04-09",     0,         0
-#                             ) 
-    
 ```
 
 ```{r all_holidays}
@@ -201,10 +189,9 @@ all_holidays <- 2016:2024 %>%
 ```
 
 ```{r d_days}
-#can think about different ways to do this, 
 #illustrating an example of building an "expanded dates lattice"
 #to which any/all observations are attached
-#also will need to bring in closures (closure_dates) here
+#also needs closure_dates joined?
 date_start <- as.Date("2021-02-01")
 date_end <- as.Date("2021-04-13")
 
@@ -250,6 +237,8 @@ d_effort <- readr::read_csv("C:/Users/auerbdaa/Downloads/Effort_dat_2021_steelhe
     across(c(Effort_StartTime, Effort_EndTime), as.character),
     across(c(Effort_StartTime, Effort_EndTime), .fns = list(Dec = function(x) {round(as.numeric(chron::times(x))*24, 3)})),
     
+    #should NA be coered to 0? 
+    across(c(starts_with("Shore_"), starts_with("Boat_")), ~replace_na(., 0)),
     Boat = Shore_Boat_Motor + Shore_Drift_Raft + Boat_Boat_Motor + Boat_Drift_Raft,
     Bank = Shore_No_Craft + Shore_Pontoon
   ) %>%
@@ -264,9 +253,6 @@ d_effort <- d_effort %>%
   select(
     Effort.Index, HeaderID, 
     StreamName, Date, Surveyor,
-    #Year, 
-    #YearGroup, Season,
-    #Month, Month.no, Weeknum, j.date, Day, DayType,
     Survey.Type, SectionName, CountNum, Effort_StartTime, Effort_StartTime_Dec, Effort_EndTime, Effort_EndTime_Dec,
     Vehicles, Trailers, Boat, Bank
   )
@@ -275,11 +261,7 @@ d_effort <- d_effort %>%
 # d_effort %>% unite(hid, c(Date, Survey.Type, Effort_StartTime)) %>% count(hid, HeaderID)
 
 d_header <- d_effort %>%
-  select(StreamName, Date, 
-         #Year, 
-         #YearGroup, Season, 
-         #Month, Month.no, Weeknum, j.date, Day, DayType, 
-         Survey.Type, Surveyor, HeaderID) %>%
+  select(StreamName, Date, Survey.Type, Surveyor, HeaderID) %>%
   distinct(HeaderID, .keep_all = T)
 
 ```
@@ -339,9 +321,23 @@ d_group <- d_group %>%
 ```
 
 ```{r maybe_d_days_joins}
-d_days %>% left_join(d_effort, by = "Date") #fields missing/NA for days without data collection
+#fields missing/NA for days without data collection
+d_days %>% left_join(d_effort, by = "Date")
 
-d_effort %>% left_join(d_days, by = "Date") #add days-fields to dates with data collection
+setdiff(distinct(d_effort, Date), distinct(d_group, Date)); setdiff(distinct(d_group, Date), distinct(d_effort, Date))
+#add days-fields to dates with data collection
+#illustrating very silly example of EDA
+left_join(d_group, d_days, by = "Date") %>% 
+  filter(Species == "SH", Fate == "R") %>%
+  group_by(Date) %>%
+  summarise(
+    date_cnt = sum(Count),
+    date_hrs = sum(Total_Hours),
+    date_cnt_per_hrs = date_cnt / date_hrs,
+    date_total_cnt = DayL * date_cnt_per_hrs
+    ) %>%
+  ggplot(aes(Date, date_total_cnt)) + geom_point()
+
 ```
 
 ## filter
@@ -1047,12 +1043,8 @@ standat<-list(
 # analysis
 
 ```{r analysis_params, results = "hide",echo=FALSE,warning=FALSE}
-### Run Analysis
-#Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-#================================================================
-#=======
-#note for editing: any new priors need to go here, also in "prepare data" and in "summarize inputs"
-#=======
+wd_models  <-"models"           # Location of model files 
+wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
 
 # Denote whether you want to run a new model or load "saved" results from a previous model run
   model_source<-c("load_saved")  #enter either "run_new" or "load_saved"
