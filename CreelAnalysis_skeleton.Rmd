@@ -19,62 +19,62 @@ options(width = 100)
 knitr::opts_chunk$set(message = FALSE)
 set.seed(123)
 
-# Load packages, install and load if not already
-packages_list<-c(
-  "DBI", "odbc", "dbplyr",
-  "tidyverse", "lubridate",
-  #"plyr", "reshape2", #really needed?
+library(DBI); library(odbc); library(dbplyr)
+library(tidyverse)
 
-  "timeDate", #used for holidays, maybe other? check conflicts with lubridate?
-  "suncalc", #used for daylight/length getSunlightTimes()
-  "rstan", "shinystan", #will autoload dependencies
-  "loo", "MASS",
-
-  #"devtools", "here", 
-
-  "readxl",
-  #"xlsx", #really needed?
-  
-  # "tinytex",
-  # "kableExtra",
-  # "cowplot",
-  # "ggpubr", 
-  # "RColorBrewer",
-
-  # "chron",
-  # "data.table" #really needed?
-  
-)
-install_or_load_pack(pack = packages_list)
-install_or_load_pack <- function(pack){
-  create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
-  if (length(create.pkg))
-    install.packages(create.pkg, dependencies = TRUE)
-  sapply(pack, require, character.only = TRUE)
-}
+# # Load packages, install and load if not already
+# packages_list<-c(
+#   "DBI", "odbc", "dbplyr",
+#   "tidyverse", "lubridate",
+#   #"plyr", "reshape2", #really needed?
+# 
+#   "timeDate", #used for holidays, maybe other? check conflicts with lubridate?
+#   "suncalc", #used for daylight/length getSunlightTimes()
+#   "rstan", "shinystan", #will autoload dependencies
+#   "loo", "MASS",
+# 
+#   #"devtools", "here", 
+# 
+#   "readxl"
+#   ,
+#   #"xlsx", #really needed?
+#   
+#   # "tinytex",
+#   # "kableExtra",
+#   # "cowplot",
+#   # "ggpubr", 
+#   # "RColorBrewer",
+# 
+#   # "chron",
+#   # "data.table" #really needed?
+#   
+# )
+# install_or_load_pack(pack = packages_list)
+# install_or_load_pack <- function(pack){
+#   create.pkg <- pack[!(pack %in% installed.packages()[, "Package"])]
+#   if (length(create.pkg))
+#     install.packages(create.pkg, dependencies = TRUE)
+#   sapply(pack, require, character.only = TRUE)
+# }
 
 ```
 
 # data prep
 
-```{r creel_connection}
-# u <- "user"
-# p <- "pwd"
-
-#presumably want to break this out differently at some point, but need to talk to Danny
-con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server = "35.167.13.195", Database = "FISH", UID = u, PWD = p, Trusted_Connection = "True")
-```
-
-```{r creel_tables}
-#quick demo
-
-#can/should/will redo this after talking to Kale and Danny
-get_creel <- function(river = "Kalama", date_start = "2019-03-01", date_end = "2019-03-31"){
+```{r get_creel}
+#quick demo, can/should/will redo this after talking to Kale and Danny
+get_creel <- function(
+  water_body, #test against 'water_body_desc'
+  date_start, #test against 'event_date'
+  date_end, #default could be Sys.Date()?
+  proj_name # test against 'project_name'
+  ){
   date_start <- as.Date(date_start); date_end <- as.Date(date_end)
   
   event = tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_creel_event")) %>%
     filter(
-      str_detect(water_body_desc, river),
+      str_detect(water_body_desc, water_body),
+      str_detect(project_name, proj_name),
       between(event_date, date_start, date_end)
     )
   
@@ -85,23 +85,175 @@ get_creel <- function(river = "Kalama", date_start = "2019-03-01", date_end = "2
   interview = event %>% left_join(
     tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_interview")) 
     , by = "creel_event_id", suffix = c("_event", "_interview"))
-  
-  d <- list(event = event, effort = effort, interview = interview) %>% map(~collect(.x))
+
+  catch = interview %>% left_join(
+    tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_catch"))
+    , by = c("creel_event_id", "interview_id"), suffix = c("_interview", "_catch")
+    )
+    
+  d <- list(event = event, effort = effort, interview = interview, catch = catch) %>% map(~collect(.x))
 
   return(d)
 }
+```
 
-(z <- get_creel())
+```{r analysis_args}
+#can imagine various ways to define this...
+analysis_args <- list(
+  water_body = "Kalama",
+  date_start = "2017-03-01",
+  date_end = "2017-03-31",
+  proj_name = "R5 Steelhead"
+)
+```
 
-#needs to join on creel_event_id + interview_id?
-tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_gear_hook"))
-tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_catch"))
+```{r get_creel_demo_object}
+# u <- "user"
+# p <- "pwd"
+#presumably want to break this out differently at some point, but need to talk to Danny
+con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server = "35.167.13.195", Database = "FISH", UID = u, PWD = p, Trusted_Connection = "True")
 
+#example single pull
+(z <- get_creel(
+  water_body = analysis_args$water_body,
+  date_start = analysis_args$date_start,
+  date_end = analysis_args$date_end,
+  proj_name = analysis_args$proj_name
+  ))
+
+# #example pull same month across different years...
+# z2 <- c(2015:2017) %>% set_names() %>%
+#   map(
+#     ~get_creel(
+#       water_body = analysis_args$water_body, proj_name = analysis_args$proj_name,
+#       date_start = paste0(.x, "-03-01"), date_end = paste0(.x, "-03-31")
+#       )
+#     )
+
+# #needs to join on creel_event_id + interview_id?
+# tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_gear_hook"))
 
 DBI::dbDisconnect(con_creel)
 
 ```
 
+```{r standat_example}
+standat <- list(
+  #total number of days in the fishery we are estimating catch for
+  #the span of interest, not the days for which data are available
+  D = 1 + as.numeric(as.Date(analysis_args$date_end) - as.Date(analysis_args$date_start))
+  
+)
+
+standat <- list(
+  w = all.Dates$DayType,                                             # an indexing column with length equal to total number of days in the fishery
+  L = DayL$DayL,                                                     # decimal daylength in hrs for each day in 1 : D
+  # # #can/should build here off common object
+  # # str(all.Dates)   #all.Dates; df of date-related fields as chr & num
+  # # #only using DayType (0|1 ~ wkday|wkend/holiday)
+  # # str(DayL) #df dusk-dawn
+  # # #could work from something like this, maybe needs bind of closure_dates/fishery.open.closed
+  # tibble(Date = seq(min(d_header$Date), max(d_header$Date), by = "day")) %>%
+  #   mutate(
+  #     Day = weekdays(Date),
+  #     DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+  #     DayType_num = if_else(str_detect(DayType, "end"),1,0),
+  #     DayL = suncalc::getSunlightTimes(
+  #       date = Date,
+  #       tz = "America/Los_Angeles",
+  #       lat = lut$lut_river_loc$Lat,
+  #       lon = lut$lut_river_loc$Long,
+  #       keep=c("dawn", "dusk")
+  #       ) %>%
+  #       mutate(DayL = as.numeric(dusk - dawn)) %>%
+  #       .$DayL
+  #   )
+  O = as.matrix(fishery.open.closed),                                # matrix denoting whether the fishery was open (1) or closed (1E-9) for each individual "D" (row) and section 1:S (column)
+  # str(fishery.open.closed)
+
+  G = length(unique(I_samp$Gear)),                                   # total number of unique gear types (#previously G=n_gear.types)
+  #see I_samp below
+
+  S = n_sections,                                                    # total number of census/tie in Sections
+  # str(n_sections) #scalar int
+  # #appears based on lut effort section number
+  # lut$lut_effort_xwalk %>% distinct(Section.Name, Section.Summ)
+  # #currently re-derived from joined version on final effort data
+  # #so various options depending on how it gets used in modeling
+  # left_join(d_effort, lut$lut_effort_xwalk, by = c("SectionName" = "Section.Field")) %>% select(contains("ection")) %>% distinct(Section.Name, Section.Summ)
+  
+  H = max(as.numeric(V_samp$CountNum), as.numeric(T_samp$CountNum)), # max. number of index effort counts completed on a single survey day
+  #see V_samp, T_samp below
+
+# str(A_samp) #empty? CountNum
+# C_sample #grouped tibble, Total_Catch, Total_Hours
+# str(c_samp) #1828, SH_W_R, Total_Hours 
+# str(a_samp) #1828, NumAnglers, Vehicles, Trailers
+# str(E_s_samp) # also empty?
+# str(I_samp) #484, Gear
+# str(T_samp) #242, CountNum (used), but also Count
+# str(V_samp) #242, CountNum
+
+  #Angler counts
+  A_n = nrow(A_samp),
+  A_I = A_samp$Count,
+  day_A = A_samp$Day,
+  gear_A = A_samp$Gear,
+  section_A = A_samp$Section,
+  countnum_A = as.numeric(A_samp$CountNum),
+  
+  #interview data total creeled effort and catch
+  IntCreel = nrow(C_sample),
+  day_Creel = C_sample$Day,
+  gear_Creel = C_sample$Gear,
+  section_Creel = C_sample$Section.Num,
+  C_Creel = C_sample$Total_Catch,
+  E_Creel = C_sample$Total_Hours,
+
+  #interview data - CPUE
+  IntC = nrow(c_samp),              # total number of interviews conducted across all surveys dates where CPUE data (c & h) were collected 
+  gear_IntC = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
+  day_IntC = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
+  section_IntC = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
+  c = c_samp[, catch.group.of.interest[1]], # total catch of [spp.of.interest] for an individual group #c_samp$SH_NOR_R          
+  h = abs(c_samp$Total_Hours),        # number of hours an individual angler/group spent fishing
+
+  #interview data - angler expansions
+  IntA = nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
+  gear_IntA = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
+  day_IntA = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
+  section_IntA = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
+  V_A = a_samp$Vehicles,        # Total number of vehicles an individual angler group brought to the river
+  T_A = a_samp$Trailers,        # Total number of Trailers an individual angler group brought to the river
+  A_A = a_samp$NumAnglers,      #Total number of anglers in each group interviewed
+  
+  #tie ins
+  E_n = nrow(E_s_samp),          # the total number of census effort counts 
+  E_s = E_s_samp$Count,          # the effort count in a tie-in section
+  day_E = E_s_samp$Day,          # an indexing column with length equal to count of Census effort counts with the day of the fishery listed starting at 1 and going to the last day n.
+  gear_E = E_s_samp$Gear,        # an indexing column with length equal to count of Census effort counts with a 1 or 2 depending on whether the interview was a boat or bank 	fisherman
+  section_E = E_s_samp$Section,  # an indexing column with length equal to count of Census effort counts 	with the section number starting at 1 
+  countnum_E = as.numeric(E_s_samp$CountNum),
+  
+  #Trailers
+  T_n = nrow(T_samp),            # the total number of index effort counts  (n = index survey dates X sections X # of index count for each day)
+  T_I = T_samp$Count,            # sum of the index effort counts (of vehicles & trailers) within a section during an effort count
+  day_T = T_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
+  gear_T = T_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
+  section_T = T_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
+  countnum_T = as.numeric(T_samp$CountNum),
+  
+  #Vehicles
+  V_n = nrow(V_samp),            # the total number of index effort counts  (n = index survey dates X sections X counts X angler types)
+  V_I = V_samp$Count,            # sum of the index effort vehicle count within a section during an effort count
+  day_V = V_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
+  gear_V = V_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
+  section_V = V_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
+  countnum_V = as.numeric(V_samp$CountNum),
+
+)
+
+```
 
 ```{r user_inputs, message=FALSE, warning=FALSE, echo = FALSE}
 # Denote catch group of interest (species_origin_fate) 
@@ -338,40 +490,6 @@ left_join(d_group, d_days, by = "Date") %>%
     ) %>%
   ggplot(aes(Date, date_total_cnt)) + geom_point()
 
-```
-
-## filter
-
-```{r filter_options}
-# Specify filter type(s) to extract data by (Enter "Y" or "N")
-  by.Year<-      "N" # If "Y", will filter by full calendar year(s) (Jan. 1 - Dec. 31)
-  by.YearGroup<- "N" # If "Y", will filter by a "Year Group", which go from May 1st Yr1 - April 30 Yr2
-  by.Season<-    "N" # If "Y", will filter by "season", which is either Summer (May 1st - Oct 31st) or Winter (Nov. 1 - April 30)
-  by.StreamName<-"Y" # If "Y", will filter by stream name
-  by.Date<-      "N" # If "Y", will filter by a date range
-  
-# Specify date ranges for "Year Groups" and "Seasons"
-  YearBegin<-  121 # day of year a "YearGroup" begins (FYI - 121 = May 1st in a non-leap year)
-  summerBegin<-121 
-  summerEnd<-  304 # FYI - 304 = Oct. 31st (in a non-leap year)
-  winterBegin<-305 
-  winterEnd<-  120 
-
-# Specify filter unit(s)
-  # YearGroup.of.Interest<- c("2017-2018") 
-  # Season.of.Interest<-    c("Winter") 
-  # Year.of.Interest<-      c("2017") 
-  StreamName.of.Interest<-c("Skagit")
-  # Begin.Date<-            c("2016-05-01") #Format must be "yyyy-mm-dd"
-  # End.Date<-              c("2017-03-31") #Format must be "yyyy-mm-dd"
-
-  
-# YearGroup = if_else(
-#   as.numeric(format(Date, "%j")) >= YearBegin,
-#   paste(as.numeric(format(Date, "%Y")), as.numeric(format(Date, "%Y"))+1, sep="-"),
-#   paste(as.numeric(format(Date, "%Y"))-1, as.numeric(format(Date, "%Y")), sep="-")),
-# Season = if_else(as.numeric(format(Date, "%j")) >= summerBegin & as.numeric(format(Date, "%j"))<=summerEnd, "Summer", "Winter"),
-  
 ```
 
 Alternative row subsets. Couple of easy options to streamline, depending on whether repeat re-runs with alternative subsets are realistically going to happen.
