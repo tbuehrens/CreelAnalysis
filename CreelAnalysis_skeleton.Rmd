@@ -136,120 +136,95 @@ analysis_args <- list(
 DBI::dbDisconnect(con_creel)
 
 ```
+```{r kale test arena}
+
+df_header<-
+  z %>% 
+  `[[`("event") %>% 
+  select(creel_event_id, water_body_desc, event_date, tie_in_indicator) 
+
+df_effort<-
+  z$effort %>% 
+  select(creel_event_id, effort_event_id, tie_in_indicator, location, count_sequence, start_time_effort, end_time_effort, boat_anglers, bank_anglers) # will want option to select "angler type" fields; may also want counts by angler type summarized by row instead of column
+
+
+df_interview<-
+  z %>% 
+  `[[`("interview") %>% 
+  select(creel_event_id, interview_id, interview_number, angler_type_code, interview_location, angler_count, trip_status, fishing_start_time, fishing_end_time, interview_time, ) # Noticed there are locations listed as NA
+
+df_catch<-
+  z %>% 
+  `[[`("catch") %>% 
+  select(creel_event_id, interview_id, catch_id, species_name, run_name, life_stage_name, fin_mark_code, fate_name, fish_count) 
+
+```
+
 
 ```{r standat_example}
-standat <- list(
-  #total number of days in the fishery we are estimating catch for
-  #the span of interest, not the days for which data are available
-  D = 1 + as.numeric(as.Date(analysis_args$date_end) - as.Date(analysis_args$date_start))
-  
-)
-
-standat <- list(
-  w = all.Dates$DayType,                                             # an indexing column with length equal to total number of days in the fishery
-  L = DayL$DayL,                                                     # decimal daylength in hrs for each day in 1 : D
-  # # #can/should build here off common object
-  # # str(all.Dates)   #all.Dates; df of date-related fields as chr & num
-  # # #only using DayType (0|1 ~ wkday|wkend/holiday)
-  # # str(DayL) #df dusk-dawn
-  # # #could work from something like this, maybe needs bind of closure_dates/fishery.open.closed
-  # tibble(Date = seq(min(d_header$Date), max(d_header$Date), by = "day")) %>%
-  #   mutate(
-  #     Day = weekdays(Date),
-  #     DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
-  #     DayType_num = if_else(str_detect(DayType, "end"),1,0),
-  #     DayL = suncalc::getSunlightTimes(
-  #       date = Date,
-  #       tz = "America/Los_Angeles",
-  #       lat = lut$lut_river_loc$Lat,
-  #       lon = lut$lut_river_loc$Long,
-  #       keep=c("dawn", "dusk")
-  #       ) %>%
-  #       mutate(DayL = as.numeric(dusk - dawn)) %>%
-  #       .$DayL
-  #   )
-  O = as.matrix(fishery.open.closed),                                # matrix denoting whether the fishery was open (1) or closed (1E-9) for each individual "D" (row) and section 1:S (column)
-  # str(fishery.open.closed)
-
-  G = length(unique(I_samp$Gear)),                                   # total number of unique gear types (#previously G=n_gear.types)
-  #see I_samp below
-
-  S = n_sections,                                                    # total number of census/tie in Sections
-  # str(n_sections) #scalar int
-  # #appears based on lut effort section number
-  # lut$lut_effort_xwalk %>% distinct(Section.Name, Section.Summ)
-  # #currently re-derived from joined version on final effort data
-  # #so various options depending on how it gets used in modeling
-  # left_join(d_effort, lut$lut_effort_xwalk, by = c("SectionName" = "Section.Field")) %>% select(contains("ection")) %>% distinct(Section.Name, Section.Summ)
-  
-  H = max(as.numeric(V_samp$CountNum), as.numeric(T_samp$CountNum)), # max. number of index effort counts completed on a single survey day
-  #see V_samp, T_samp below
-
-# str(A_samp) #empty? CountNum
-# C_sample #grouped tibble, Total_Catch, Total_Hours
-# str(c_samp) #1828, SH_W_R, Total_Hours 
-# str(a_samp) #1828, NumAnglers, Vehicles, Trailers
-# str(E_s_samp) # also empty?
-# str(I_samp) #484, Gear
-# str(T_samp) #242, CountNum (used), but also Count
-# str(V_samp) #242, CountNum
-
-  #Angler counts
-  A_n = nrow(A_samp),
-  A_I = A_samp$Count,
-  day_A = A_samp$Day,
-  gear_A = A_samp$Gear,
-  section_A = A_samp$Section,
-  countnum_A = as.numeric(A_samp$CountNum),
-  
-  #interview data total creeled effort and catch
-  IntCreel = nrow(C_sample),
-  day_Creel = C_sample$Day,
-  gear_Creel = C_sample$Gear,
-  section_Creel = C_sample$Section.Num,
-  C_Creel = C_sample$Total_Catch,
-  E_Creel = C_sample$Total_Hours,
-
-  #interview data - CPUE
-  IntC = nrow(c_samp),              # total number of interviews conducted across all surveys dates where CPUE data (c & h) were collected 
-  gear_IntC = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
-  day_IntC = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
-  section_IntC = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
-  c = c_samp[, catch.group.of.interest[1]], # total catch of [spp.of.interest] for an individual group #c_samp$SH_NOR_R          
-  h = abs(c_samp$Total_Hours),        # number of hours an individual angler/group spent fishing
-
-  #interview data - angler expansions
-  IntA = nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
-  gear_IntA = c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
-  day_IntA = c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
-  section_IntA = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
-  V_A = a_samp$Vehicles,        # Total number of vehicles an individual angler group brought to the river
-  T_A = a_samp$Trailers,        # Total number of Trailers an individual angler group brought to the river
-  A_A = a_samp$NumAnglers,      #Total number of anglers in each group interviewed
-  
-  #tie ins
-  E_n = nrow(E_s_samp),          # the total number of census effort counts 
-  E_s = E_s_samp$Count,          # the effort count in a tie-in section
-  day_E = E_s_samp$Day,          # an indexing column with length equal to count of Census effort counts with the day of the fishery listed starting at 1 and going to the last day n.
-  gear_E = E_s_samp$Gear,        # an indexing column with length equal to count of Census effort counts with a 1 or 2 depending on whether the interview was a boat or bank 	fisherman
-  section_E = E_s_samp$Section,  # an indexing column with length equal to count of Census effort counts 	with the section number starting at 1 
-  countnum_E = as.numeric(E_s_samp$CountNum),
-  
-  #Trailers
-  T_n = nrow(T_samp),            # the total number of index effort counts  (n = index survey dates X sections X # of index count for each day)
-  T_I = T_samp$Count,            # sum of the index effort counts (of vehicles & trailers) within a section during an effort count
-  day_T = T_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
-  gear_T = T_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
-  section_T = T_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
-  countnum_T = as.numeric(T_samp$CountNum),
-  
-  #Vehicles
-  V_n = nrow(V_samp),            # the total number of index effort counts  (n = index survey dates X sections X counts X angler types)
-  V_I = V_samp$Count,            # sum of the index effort vehicle count within a section during an effort count
-  day_V = V_samp$Day,            # an indexing column with length equal to count of Index effort counts with the day of the fishery listed starting at 1 and going to the last day n
-  gear_V = V_samp$Gear,          # an indexing column with length equal to count of Index effort counts with 	a 1 or 2 depending on whether the interview was a boat or bank fisherman
-  section_V = V_samp$Section,    # an indexing column with length equal to count of Index effort counts with the section number starting at 1
-  countnum_V = as.numeric(V_samp$CountNum),
+standat<-
+  list(
+# Day attributes
+	  D =            # int; number of fishing days;                                KB: pull from master date DF
+	, G =            # int; final number of unique gear/angler types               KB: pull from subsetted angler x-walk?
+	, S =            # int; final number of river sections                         KB: pull from subsetted section x-walk?
+	, H =            # int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
+	, P_n =          # int; #number of periods (number of states for our state variable); P_n can equal D or some other interval (e.g., weekly)
+  , w=             # vec; index denoting daytype, where 0=weekday, 1= weekend/holiday.  
+	, period =       # int; index denoting period                                  KB: not sure why this isn't a vector)   
+	, L =            # vec; total amount of available fishing hours per day (e.g., day length - sunrise to sunset)
+	, O =            # mat; index denoting fishery status, where 1=open, 0 = closed (by period/date and section)
+	# Vehicle index effort counts
+	, V_n =          # int; total number of individual vehicle index effort counts
+	, day_V =        # int; index denoting the "day" for an individual vehicle index effort count
+	, section_V =    # int; index denoting the "section" for an individual vehicle index effort count
+	, countnum_V =   # int; index denoting the "count number" for an individual vehicle index effort count
+	, V_I =          # int; number of vehicles enumerated during an individual index effort survey
+	# Trailer index effort counts 
+	, T_n =          # int; total number of boat trailer index effort counts
+	, day_T =        # int; index denoting the "day" for an individual boat trailer index effort count
+	, section_T =    # int; index denoting the "section" for an individual boat trailer index effort count
+	, countnum_T =   # int; index denoting the "count number" for an individual boat trailer index effort count
+	, T_I =          # int; number of boat trailers enumerated during an individual index effort survey
+	# Angler index effort counts
+	, A_n =           # int; total number of angler index effort counts             
+	, day_A =         # int; index denoting the "day" for an individual angler index effort count     
+	, gear_A =        # int; index denoting the "gear/angler type" for an individual angler index effort count (e.g., 1=bank and 2=boat)     
+	, section_A =     # int; index denoting the "section" for an individual angler index effort count  
+	, countnum_A =    # int; index denoting the "count number" for an individual angler index effort count
+	, A_I =           # int; number of anglers enumerated during an individual index effort survey         
+	# Census (tie-in) effort counts
+	, E_n =           # int; total number of angler census effort counts 
+	, day_E =         # int; index denoting the "day" for an individual angler census effort count
+	, gear_E =        # int; index denoting the "gear/angler type" for an individual angler census effort count (e.g., 1=bank and 2=boat) 
+	, section_E =     # int; index denoting the "section" for an individual angler census effort count  
+	, countnum_E =    # int; index denoting the "count number" for an individual angler census effort count
+	, E_s =           # int; number of anglers enumerated during an individual census effort survey
+	# Proportion tie-in expansion
+	, p_TI =          # mat; proportion of section covered by tie in counts (serves as an expansion if p_TI != 1 by gear and section
+	# interview data - CPUE
+	, IntC =          # int; total number of angler interviews conducted across all surveys dates where CPUE data (c & h) were collected                                       	
+	, day_IntC =      # int; index denoting the "day" for an individual angler interview                       	
+	, gear_IntC =     # int; index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
+	, section_IntC =  # int; index denoting the "section" for an individual angler interview    						
+	, c =             # int; total number of fish caught by an angler (group) collected from an individual angler interview           						
+	, h =             # vec; total number of hours fish by an angler (group) collected from an individual angler interview
+	# interview data - Total Effort & Catch Creeled
+	, IntCreel =      # int;                         	
+	, day_Creel =     # int;  	
+	, gear_Creel =    # int;   						
+	, section_Creel = # int;  					
+	, C_Creel =       # int; 
+	, E_Creel =       # vec;    
+	# interview data - angler expansion
+	, IntA =          # int; total number of angler interviews conducted across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
+	, day_IntA =      # int; index denoting the "day" for an individual angler interview                       	
+	, gear_IntA =     # int; index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
+	, section_IntA =  # int; index denoting the "section" for an individual angler interview    
+	, V_A =           # int; total number of vehicles by an individual angler/group brought to the fishery on a given survey date		
+	, T_A =           # int; total number of boat trailers by an individual angler/group brought to the fishery on a given survey date			
+	, A_A =           # int; total number of anglers in the group interviewed 
+	# hyper and hyperhyper parameters (add back in later)
 
 )
 
