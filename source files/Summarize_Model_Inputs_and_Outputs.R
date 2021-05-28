@@ -7,6 +7,9 @@
 
 # R session Info
   writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutputs, "/info_sessionInfo_", Sys.Date(), ".txt"))
+  
+# Capture standat object
+  writeLines(capture.output(standat), paste0(filepath_modeloutputs, "/info_standat_", Sys.Date(), ".txt"))
     
 # Model summary
   mod.sum.elements<-
