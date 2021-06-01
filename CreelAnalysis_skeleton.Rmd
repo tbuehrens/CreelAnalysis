@@ -114,7 +114,7 @@ analysis_args <- list(
 con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server = "35.167.13.195", Database = "FISH", UID = u, PWD = p, Trusted_Connection = "True")
 
 #example single pull
-(z <- get_creel(
+(creel_data <- get_creel(
   water_body = analysis_args$water_body,
   date_start = analysis_args$date_start,
   date_end = analysis_args$date_end,
@@ -136,28 +136,27 @@ con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server 
 DBI::dbDisconnect(con_creel)
 
 ```
-```{r kale test arena}
 
-# Extract dataframes from list "z"
-  df_header<-
-    z %>% 
-    `[[`("event") %>% 
-    dplyr::select(creel_event_id, water_body_desc, event_date, tie_in_indicator) 
+```{r kale test arena}
+df_header <- creel_data$event %>% 
+  dplyr::select(creel_event_id, water_body_desc, event_date, tie_in_indicator) 
+
+# will want option to select "angler type" fields; may also want counts by angler type summarized by row instead of column
+df_effort <- creel_data$effort %>%
+  dplyr::select(creel_event_id, effort_event_id, tie_in_indicator,
+                location, count_sequence, start_time_effort, end_time_effort,
+                boat_anglers, bank_anglers) 
+
+# Noticed there are locations listed as NA
+df_interview <- creel_data$interview %>%
+  dplyr::select(creel_event_id, interview_id, interview_number, 
+                angler_type_code, interview_location,
+                angler_count, vehicle_count, trailer_count,
+                trip_status, fishing_start_time, fishing_end_time, interview_time, boat_type, fish_from_boat)
   
-  df_effort<-
-    z$effort %>% 
-    dplyr::select(creel_event_id, effort_event_id, tie_in_indicator, location, count_sequence, start_time_effort, end_time_effort, boat_anglers, bank_anglers) # will want option to select "angler type" fields; may also want counts by angler type summarized by row instead of column
-  
-  
-  df_interview<-
-    z %>% 
-    `[[`("interview") %>% 
-    dplyr::select(creel_event_id, interview_id, interview_number, angler_type_code, interview_location, angler_count, vehicle_count, trailer_count, trip_status, fishing_start_time, fishing_end_time, interview_time, boat_type, fish_from_boat) # Noticed there are locations listed as NA
-  
-  df_catch<-
-    z %>% 
-    `[[`("catch") %>% 
-    dplyr::select(creel_event_id, interview_id, catch_id, species_name, run_name, life_stage_name, fin_mark_code, fate_name, fish_count) 
+df_catch <- creel_data$catch %>%
+  dplyr::select(creel_event_id, interview_id, catch_id, 
+                species_name, run_name, life_stage_name, fin_mark_code, fate_name, fish_count)
   
 # Load LUTS (these LUTs already exist in "lookup tables" sub-folder) 
     # River Locations
@@ -195,6 +194,13 @@ DBI::dbDisconnect(con_creel)
     
 # Summarize datasets  
     #  "summ_effort_counts" DF (effort counts summarized by survey type, day/period, gear, section, CountNum)	--- here just collapsing by gear/section
+
+#something like this? will need to calc date info and/or time fields?
+#not clear how vehicles/trailers (numeric with NAs) gets used to group/stratify?
+creel_data$effort %>%
+  group_by(tie_in_indicator, location, count_sequence) %>%
+  summarise(across(c(boat_anglers, bank_anglers), ~sum(., na.rm = T)), .groups = "drop")
+
     #  "summ_interview" DF (interviews summarized by individual angler group that include columns day/period, gear, section, total hours, catch for catch group of interest)
     #  "summ_interviewed_effort" DF (Total Hours fished for all angler groups interviewed by date, section, gear)
     #  "summ_interviewed_catch" DF (Total catch of catch-group-of-interest for all angler groups interviewed by date, section, gear)
@@ -211,11 +217,10 @@ DBI::dbDisconnect(con_creel)
 
 
 ```{r standat_example}
-
 # KB: general comment -- all of the indexing for the various effort counts could potentially be condensed with some "fill with NA" functions and filtering/re-sorting (fingers crossed) 
+#DA: sure, this is almost certainly possible, but I'm still not quite clear exactly when/where/how we want to do it
 
-standat<-
-  list(
+standat <- list(
 # Day attributes
 	  D =            # int; number of fishing days;                                KB: pull from "master_date" DF
 	, G =            # int; final number of unique gear/angler types               KB: pull from subsetted angler x-walk?
