@@ -138,6 +138,7 @@ DBI::dbDisconnect(con_creel)
 ```
 
 ```{r kale test arena}
+#DA: shouldn't really need these when "done"...
 df_header <- creel_data$event %>% 
   dplyr::select(creel_event_id, water_body_desc, event_date, tie_in_indicator) 
 
@@ -163,29 +164,38 @@ df_catch <- creel_data$catch %>%
     # Sections x-walk
     # p_TI expansions (currently, model defines this as 1 but need to edit data summary code to use this LUT table)
     # Creel models
-  
+
+dir_input_files <- "input_files"
+fn <- list(
+  lut_effort_xwalk = "lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv",
+  lut_river_loc = "lut_02_River.Locations_2019-01-07.csv",
+  lut_creel_models = "lut_02_Creel_Models_2021-01-20.csv"
+  )
+lut <- grep("^lut_", names(fn), value = T) %>% set_names() %>%
+  map(~readr::read_csv(file.path(dir_input_files, fn[[.x]])))
+
 # Cross-walk variables
-    # "All_dates" master data_frame (defines all dates for fishery; date, daytype, day length); need to link this to River location (lat, long)
-    # Currently, this is generated in the "06_Summarize_effort_and_catch_data...R" file
+  # "All_dates" master data_frame (defines all dates for fishery; date, daytype, day length); need to link this to River location (lat, long)
+  # Currently, this is generated in the "06_Summarize_effort_and_catch_data...R" file
   
-    # Sections 
-    #   - Need to create LUT for final set of sections (current structure of model allows data to be collected at whatever spatial scale but typically sections are aggregated -- fewer sections that emcompass larger area; breakpoints could be jurisdiction and/or function of data collection logistics)
-    #   - Use section LUT to assign final section number to effort and interview data
+# Sections 
+  # - Need to create LUT for final set of sections (current structure of model allows data to be collected at whatever spatial scale but typically sections are aggregated -- fewer sections that emcompass larger area; breakpoints could be jurisdiction and/or function of data collection logistics)
+  # - Use section LUT to assign final section number to effort and interview data
   # Currently, this is completed in "05_Extract_Data_of_Interest_and_Calculations...R" file
   
-    # Gear/Angler types
-    #   - current model requires angler types to be boiled down into two groups (bank, boat)
-    #   - need users to categorize angler count/interview groupings as either bank or boat
-    #   - hypothetically, could have alternative model where only direct counts of anglers are used (i.e., doesn't use indirect counts of vehicles and trailers). here, estimates of catch could be generated for a larger number of angler groupings.
-    #   - Currently, this is completed in "06_Summarize_effort_and_catch_data...R" file
+# Gear/Angler types
+  # - current model requires angler types to be boiled down into two groups (bank, boat)
+  # - need users to categorize angler count/interview groupings as either bank or boat
+  # - hypothetically, could have alternative model where only direct counts of anglers are used (i.e., doesn't use indirect counts of vehicles and trailers). here, estimates of catch could be generated for a larger number of angler groupings.
+  # - Currently, this is completed in "06_Summarize_effort_and_catch_data...R" file
   
-    # Pair Tie-in (aka census) & index effort count
-    #   - Need to pair the index count that most closely aligns with the tie-in count for a particular date/section
-    #   - Use the matching pair to update the count_num of the tie-in count
-    #   - Currently, this is completed in "05_Extract_Data_of_Interest_and_Calculations...R" file (see "paired.surveys")
+# Pair Tie-in (aka census) & index effort count
+  # - Need to pair the index count that most closely aligns with the tie-in count for a particular date/section
+  # - Use the matching pair to update the count_num of the tie-in count
+  # - Currently, this is completed in "05_Extract_Data_of_Interest_and_Calculations...R" file (see "paired.surveys")
   
-    # catch group of interest
-    #   - need to combine multiple variables (species, origin, fate) to define a "catch group"
+# catch group of interest
+  # - need to combine multiple variables (species, origin, fate) to define a "catch group"
 
 # "Calculations"
     # from interview data: Total_hours fished for an angler groups; (End/interview time - Start Time) X # of anglers in group
@@ -195,12 +205,68 @@ df_catch <- creel_data$catch %>%
 # Summarize datasets  
     #  "summ_effort_counts" DF (effort counts summarized by survey type, day/period, gear, section, CountNum)	--- here just collapsing by gear/section
 
+
 #something like this? will need to calc date info and/or time fields?
 #not clear how vehicles/trailers (numeric with NAs) gets used to group/stratify?
-creel_data$effort %>%
-  group_by(tie_in_indicator, location, count_sequence) %>%
-  summarise(across(c(boat_anglers, bank_anglers), ~sum(., na.rm = T)), .groups = "drop")
 
+all_holidays <- 2016:2024 %>%
+  map(~c(
+  timeDate::USNewYearsDay(.x), 
+  timeDate::USMLKingsBirthday(.x),
+  timeDate::USPresidentsDay(.x),
+  timeDate::USMemorialDay(.x), 
+  timeDate::USIndependenceDay(.x), 
+  timeDate::USLaborDay(.x),
+  timeDate::USVeteransDay(.x), 
+  timeDate::USThanksgivingDay(.x), 
+  timeDate::timeDate(
+    as.character(
+      timeDate::.nth.of.nday(.x, 11, 5, 4))), #Black Friday
+  timeDate::USChristmasDay(.x)
+  ) %>% as.character()) %>%
+  unlist() %>% as.Date(format="%Y-%m-%d")
+
+(d_days <- tibble(Date = seq(as.Date(analysis_args$date_start), as.Date(analysis_args$date_end), by = "day")) %>%
+    mutate(
+      Day_I = 1:nrow(.),
+      Day = weekdays(Date),
+      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+      DayType_num = if_else(str_detect(DayType, "end"),1,0),
+      DayL = suncalc::getSunlightTimes(
+        date = Date,
+        tz = "America/Los_Angeles",
+        lat = lut$lut_river_loc$Lat,
+        lon = lut$lut_river_loc$Long,
+        keep=c("dawn", "dusk")
+        ) %>%
+        mutate(DayL = as.numeric(dusk - dawn)) %>%
+        .$DayL
+    ))
+
+ 
+count_types <- c("trailers", "vehicles", "boat_anglers", "bank_anglers")
+#close to V_I, T_I, A_I below...?
+creel_data$effort %>%
+  group_by(
+    tie_in_indicator,
+    event_date_effort,
+    count_sequence,
+    location #could/should collapse to "section"?
+    ) %>%
+  summarise(
+    across(c(count_types), ~sum(., na.rm = T)),
+    .groups = "drop"
+    ) %>%
+  left_join(d_days, by = c("event_date_effort" = "Date")) %>%
+  #should be an external xwalk LUT, here just showing toy example
+  left_join(
+    creel_data$effort %>% distinct(location) %>% rownames_to_column("section"),
+    by = "location"
+  ) %>%
+  filter(tie_in_indicator == 0) %>%
+  select(tie_in_indicator, day_V = Day_I, countnum_V = count_sequence, section_V = section, V_I = vehicles)
+
+  
     #  "summ_interview" DF (interviews summarized by individual angler group that include columns day/period, gear, section, total hours, catch for catch group of interest)
     #  "summ_interviewed_effort" DF (Total Hours fished for all angler groups interviewed by date, section, gear)
     #  "summ_interviewed_catch" DF (Total catch of catch-group-of-interest for all angler groups interviewed by date, section, gear)
