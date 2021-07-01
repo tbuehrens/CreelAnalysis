@@ -1,0 +1,228 @@
+---
+title: Skykomish 2021
+output:
+  html_document:
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+---
+
+```{r set_options, echo = FALSE, message = FALSE}
+options(width = 100)
+knitr::opts_chunk$set(message = FALSE)
+set.seed(123)
+```
+```{r load_funcs, results = "hide",echo = FALSE, message = FALSE, warning = FALSE}
+### Functions
+#We also need a couple of helper functions which we will load from the functions folder, which we will load using the chunk of code with this heading in the RMD file.
+wd_functions<-"functions"
+sapply(FUN = source, paste(wd_functions, list.files(wd_functions), sep="/"))
+```
+
+```{r load_pkgs, message = FALSE, warning = FALSE, echo = FALSE,results = "hide"}
+### Packages
+#In addition to purrr, we also need a few packages that are not included with the base installation of R, so we begin by installing them (if necessary) and then loading them using using the chunk of code with this heading in the RMD file.
+#===============================================
+# Load packages, install and load if not already
+#===============================================
+packages_list<-c("timeDate",
+      "plyr",
+      "tidyverse",
+      "rstan",
+      "RColorBrewer",
+      "readxl",
+      "readr",
+      "ggplot2",
+      "tinytex",
+      "here", 
+      "lubridate", 
+      "devtools",
+      "xlsx",
+      "cowplot",
+      "ggpubr", 
+      "chron",
+      "suncalc", 
+      "shinystan",
+      "loo", 
+      "data.table",
+      "RColorBrewer",
+      "reshape2",
+      "MASS", 
+      "kableExtra"
+      )
+install_or_load_pack(pack = packages_list)
+```
+
+```{r user_inputs,message=FALSE, warning=FALSE, echo = FALSE}
+### User inputs
+#Here we will specify user inputs like the file names of the data, the species, and stream name we would like to analyze data for, etc. using the chunk of code with this heading in the RMD file.
+#======================================================
+# Specify relative working directories for sub-folders
+#======================================================
+wd_LUTs <-"lookup tables"       # Location of look-up tables (maybe could be merged with data files??)
+wd_data   <-"data"              # Location where data files are stored
+wd_source_files<-"source files" # Location of source file (code working "behind the scenes")
+wd_models  <-"models"           # Location of model files 
+wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
+
+#======================================================
+# Specify names of .csv data files
+#======================================================
+effort_file_name <-   "03_Effort_dat - 2021_Skykomish_creel thru June 22.csv"
+interview_file_name <-"03_Interview-dat_2021_Skykomish_creel thru June 22_KB.csv"
+effort_xwalk_filename<-"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-06-28.csv"
+river_loc_filename<-"02_River.Locations_2019-01-07.csv"
+creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
+
+#======================================================
+# Denote data of interest (used to filter data below)
+#======================================================
+# Specify filter type(s) to extract data by (Enter "Y" or "N")
+  by.Year<-      "N" # If "Y", will filter by full calendar year(s) (Jan. 1 - Dec. 31)
+  by.YearGroup<- "N" # If "Y", will filter by a "Year Group", which go from May 1st Yr1 - April 30 Yr2
+  by.Season<-    "N" # If "Y", will filter by "season", which is either Summer (May 1st - Oct 31st) or Winter (Nov. 1 - April 30)
+  by.StreamName<-"Y" # If "Y", will filter by stream name
+  by.Date<-      "N" # If "Y", will filter by a date range
+  
+# Specify date ranges for "Year Groups" and "Seasons"
+  YearBegin<-  121 # day of year a "YearGroup" begins (FYI - 121 = May 1st in a non-leap year)
+  summerBegin<-121 
+  summerEnd<-  304 # FYI - 304 = Oct. 31st (in a non-leap year)
+  winterBegin<-305 
+  winterEnd<-  120 
+
+# Specify filter unit(s)
+  # YearGroup.of.Interest<- c("2017-2018") 
+  # Season.of.Interest<-    c("Winter") 
+  # Year.of.Interest<-      c("2017") 
+  StreamName.of.Interest<-c("Skykomish")
+
+#======================================================
+# Denote catch group of interest (species_origin_fate) 
+#======================================================  
+  catch.group.of.interest<-c("CH_W_R") 
+
+#=========================
+# Denote fishery closures
+#=========================
+# NOTE: if the fishery was ever closed during a season, meaning that no legal fishing should have occurred, we can set estimates of catch and effort to zero for those specific dates/sections using a two-step process:
+# First, denote the total number of dates when the fishery was closed (the closure can be for the entire fishery -- all sections -- or a portion of the fishery)
+  
+  total.closed.dates<-0 # Total number of dates that at least one section of the river was closed 
+  
+# Second, if "total.closed.dates" >0, denote the specific date(s) and section that was/were closed use the following format 
+    # the first column is the list of individual dates (by row) the fishery was closed date (format of date should be "yyyy-mm-dd") 
+    # the number of additional columns equals the number of sections identified in the "final.effort.section.xwalk" 
+    # the value entered below each section column should be either a 1 if the section was open or 0 if the section was closed
+    # create a new line for each individual closure by date
+                           #    Date   , Section-1, Section-2
+    closed.Dates.Sections<-c("2021-02-03",     0,         0 
+                            ) 
+# NEED TO ADD INPUT TO DROP INTERVIEWS ROWS VWITH ZERO PERCENT TIME SPENT FISHING    
+    
+```
+
+```{r data_prep,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+### Data Preparation
+#Here we will load and format the data for the analysis using the chunk of code with this heading in the RMD file.
+#====================================================
+# Load LUTs
+  source(paste0(wd_source_files, "/Load_LUTs.R"))
+
+# Load creel data and format
+  source(paste0(wd_source_files, "/Import_Skagit_Creel_Data_and_Format.R"))
+
+# Extract data of interest and format 
+  ## add code that shows options for filtering data by date/year/season/location
+  source(paste0(wd_source_files, "/05_Extract_Data_of_Interest_and_Calculate_Fields_2019-04-08.R"))  
+
+#Run source summary file 
+  ## add code that shows options for "catch groups"
+  source(paste0(wd_source_files, "/06_Summarize_Effort_and_Catch_Data_for_TimeSeries_Model_2019-04-23.R"))   
+
+##KB note: I will work on updating the code in the "05" and "06" file at some point soon; also, creating a "Import and format" file for data that is from our creel database
+```
+
+
+```{r run_analysis,results = "hide",echo=FALSE,warning=FALSE}
+
+### Run Analysis
+#Here we will run the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+#================================================================
+#=======
+#note for editing: any new priors need to go here, also in "prepare data" and in "summarize inputs"
+#=======
+
+# Denote whether you want to run a new model or load "saved" results from a previous model run
+  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
+
+# Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
+  Model_Run<-"June22" #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+
+# Denote which creel model you want to run
+  #creel_models[,1:3] #model summary table
+  model_number<-c(5)
+  
+# Specify time period to stratify data by - day vs. week 
+  model_period<-c("day") #enter "day" or "week"
+  
+# Specify parameter values for model priors
+  value_cauchyDF_sigma_eps_C = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C; default = 1  
+  value_cauchyDF_sigma_eps_E = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E; default = 1  
+  value_cauchyDF_sigma_r_E = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
+  value_cauchyDF_sigma_r_C = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1  
+  value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
+  value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
+  value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
+  value_normal_sigma_B1 = 5 # the SD hyperparameter in the prior distribution B1; default = 5  
+  value_normal_mu_mu_C = log(0.02) # the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_sigma_mu_C = 1.5 # the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
+  value_normal_mu_mu_E = log(5) # the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
+  value_normal_sigma_mu_E = 2  # the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
+  value_betashape_phi_E_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
+  value_betashape_phi_C_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
+  value_cauchyDF_sigma_mu_C = 0.5#1      # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+  value_cauchyDF_sigma_mu_E = 0.5#1      # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
+
+# Specific Stan model arguments
+  n_chain<-4        # set the number of Markov chains. The default is 4.
+  n_iter<-2000        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
+  n_warmup<-1000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+  adapt_delta<-0.99  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+
+# Create sub-folders for output (if they don't already exist)
+    source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
+
+# Run source code to prepare data for model
+    source(paste0(wd_source_files, "/Prepare_Data_For_Model.R "))
+  
+# MOVE SOME OF INPUTS FROM "SUMMARIZE_MODEL_INPUTS_AND_OUTPUTS...." TO ABOVE FILE.  
+
+# Run source code to generate creel estimates
+  source(paste0(wd_source_files, "/RunNew_or_LoadSaved_Creel_Model.R"))
+  
+# Generate summaries of model inputs and outputs
+  if(model_source == "run_new"){  source(paste0(wd_source_files, "/Summarize_Model_Inputs_and_Outputs.R"))}
+```
+
+
+```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+### Summarize and Save Results
+#Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+#=============================================
+#convergence diagnostics
+  launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
+  if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
+
+# generate plots and tables of creel estimates 
+  source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates_UPDATED.R")) 
+
+```
