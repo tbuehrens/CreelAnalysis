@@ -2,8 +2,8 @@
 # This file summarizes creel effort and catch data that will then be fed directly into time-series model
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Denote date range of dataset
-  Date_Begin<-min(sub.effort.dat$Date) #c("2018-04-01") #Define date as the first day for which you want to make an estimate for the fishery (not necessarily first survey date)
-  Date_End<-  max(sub.effort.dat$Date) #c("2018-04-30")    
+  Date_Begin<-min(sub.effort.dat$Date) #Define date as the first day for which you want to make an estimate for the fishery (not necessarily first survey date)
+  Date_End<-  max(sub.effort.dat$Date)    
 
 #---------------------------------------------------------------------------------------------------------- - 
 # (6A) Create "all.Dates" x-walk table and create vector for open/closed fishery dates                   ####
@@ -180,6 +180,7 @@
   #Tie-In samples
     E_s_samp<-effort_samp_sum[effort_samp_sum$Survey == "TieIn", c("Day", "DayType", "Week", "Gear", "Section", "CountNum", "CountNum_Week", "Count")]
     E_s_samp<-E_s_samp[is.na(E_s_samp$Count)==FALSE,] #Drop rows where Count == "NA"
+    E_s_samp<-E_s_samp[E_s_samp$Gear %in% c(3,4),]    #Only direct counts of anglers (boat and bank anglers) for tie-in data summary
     E_s_samp$Section<-as.numeric(E_s_samp$Section)
     
   #Re-index gear-types for tie-in counts (bank(3) == 1; boat(4) ==2)  
@@ -371,10 +372,10 @@ standat<-list(
   E_Creel = C_sample$Total_Hours,
   
   #interview data - angler expansions
-  IntA=nrow(c_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
-  gear_IntA=c_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
-  day_IntA=c_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
-  section_IntA = c_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
+  IntA=nrow(a_samp),              # total number of interviews across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected 
+  gear_IntA=a_samp$Gear,          # an indexing column with length equal to count of angler interviews with a 	1 or 2 depending on whether the interview was a boat or bank fisherman
+  day_IntA=a_samp$Day,            # an indexing column with length equal to count angler interviews with the day of the fishery listed starting at 1 and going to the last day n.
+  section_IntA = a_samp$Section.Num, #Section where angler was fishing (1 = Skagit, 2 = Sauk)
   V_A= a_samp$Vehicles,        # Total number of vehicles an individual angler group brought to the river
   T_A= a_samp$Trailers,        # Total number of Trailers an individual angler group brought to the river
   A_A= a_samp$NumAnglers       #Total number of anglers in each group interviewed
