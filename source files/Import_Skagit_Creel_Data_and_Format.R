@@ -6,12 +6,11 @@
 # FORMAT EFFORT DATA                                                                                      
 #---------------------- -
 # Import creel survey effort .csv data file
-    effort.dat<-read.csv(paste(wd_data, effort_file_name, sep="/"), header=TRUE)
+  effort.dat<-read.csv(paste(wd_data, effort_file_name, sep="/"), header=TRUE, na.strings=c("NA","NaN", "", " "))
 
 # Remove data rows with no stream name <NAs> 
   effort.dat<-effort.dat[is.na(effort.dat$StreamName)==FALSE,]
 
-  
 #Create an index column
     effort.dat$Effort.Index<-0
     for(i in 1:nrow(effort.dat)){effort.dat$Effort.Index[i]<-i}
@@ -39,9 +38,9 @@
     effort.dat$Boat_Boat_Motor<-as.numeric(as.character(effort.dat$Boat_Boat_Motor))
     effort.dat$Boat_Drift_Raft<-as.numeric(as.character(effort.dat$Boat_Drift_Raft))
 
-    #Calculate total shore and total bank anglers from the tie-in survey data 
-    effort.dat$Floating_Angler_Count<-as.numeric(effort.dat$Shore_Boat_Motor + effort.dat$Shore_Drift_Raft + effort.dat$Boat_Boat_Motor + effort.dat$Boat_Drift_Raft)
-    effort.dat$Shore_Angler_Count<-as.numeric(effort.dat$Shore_No_Craft + effort.dat$Shore_Pontoon)
+#Calculate total shore and total bank anglers from the tie-in survey data 
+    effort.dat$Floating_Angler_Count<-as.numeric(effort.dat$Shore_Boat_Motor + effort.dat$Shore_Drift_Raft + effort.dat$Boat_Boat_Motor + effort.dat$Boat_Drift_Raft, na.rm = TRUE)
+    effort.dat$Shore_Angler_Count<-as.numeric(effort.dat$Shore_No_Craft + effort.dat$Shore_Pontoon, na.rm = TRUE)
     head(effort.dat)
 
 #Identify holidays
