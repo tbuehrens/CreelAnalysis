@@ -6,14 +6,15 @@
 
 # Load saved model results or...
 if(model_source== "load_saved"){
-  res_Stan <- readRDS(paste(filepath_modeloutputs, "results_res_Stan.rds", sep="/")) #Load RDS (stan model output)
+  res_Stan <- readRDS(paste(filepath_Run, "results - res_Stan.csv", sep="/")) #Load RDS (stan model output)
+  res<-extract(res_Stan)  #Extract posterior draws   
 #...Run new model
 }else{
 
 #Compile Model
   start.time<-Sys.time(); print(start.time)
   message(paste("Compiling stan model"))
-  model.file.name<-as.character(creel_models$Model_file_name[creel_models$Model_number == model_number])
+    model.file.name<-as.character(creel_models$Model_file_name[creel_models$Model_number == model_number])
   model<-stan_model(paste(wd_models, model.file.name, sep="/")) 
   
 #Run model in stan using NUTS/HMC
@@ -39,7 +40,30 @@ if(model_source== "load_saved"){
 #Save Model warnings
   print(warnings())
   model_warnings<-warnings() #KB note: this doesn't appear to be working (not sure why)
-}
+ 
+# # Model warnings #KB note: this doesn't appear to be working (not sure why)
+#     if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
+#     writeLines(capture.output(saved_model_warning), paste0(filepath_Run, "/info - model warnings.txt"))
+
+# Save a file of the summary model results
+  s.stan<-summary(res_Stan)
+  write.csv(s.stan$summary, paste0(filepath_Run, "/results - res_Stan.csv"))
+  
+# Save "res_stan" object as .rds file   
+  saveRDS(res_Stan, file=paste0(filepath_Run, "/results - res_Stan.rds"))
+
+# Model run-time
+  run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
+  mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
+  writeLines(capture.output(mod_run.time), paste0(filepath_Run, "/info - model run time.txt"))
+  
 #Extract posterior draws    
   res<-extract(res_Stan) 
+
+# Calculate loo-IC
+  loo_IC<-loo(res$log_lik) # see: https://rdrr.io/cran/loo/man/loo.html and https://cran.r-project.org/web/packages/loo/loo.pdf 
+  writeLines(capture.output(loo_IC), paste0(filepath_Run, "/results -looIC.txt"))  
+}
+
+   
  
