@@ -99,17 +99,19 @@ get_creel <- function(
 
 ```{r analysis_args}
 #can imagine various ways to define this...
+# KB: need to be intention about setting start and end dates as it dictates the time frame for which estimates are generated
 analysis_args <- list(
   water_body = "Kalama",
-  date_start = "2017-03-01",
+  date_start = "2017-03-01",   
   date_end = "2017-03-31",
   proj_name = "R5 Steelhead"
 )
 ```
 
 ```{r get_creel_demo_object}
-# u <- "user"
-# p <- "pwd"
+u <- "creel_read_only"
+p <- "@nglerC0unt"
+
 #presumably want to break this out differently at some point, but need to talk to Danny
 con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server = "35.167.13.195", Database = "FISH", UID = u, PWD = p, Trusted_Connection = "True")
 
@@ -278,6 +280,7 @@ creel_data$effort %>%
 
 # Filtering
     # subset catch for "catch_group_of_interest"
+    # will want to build "catch_group_of_interest" in cases when multiple species/origins/fates are of interest
 
 ```
 
