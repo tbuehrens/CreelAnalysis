@@ -93,15 +93,14 @@ transformed data{
 	  E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
 	}
 }
-}
 parameters{
 	//Effort
 	real B1; //fixed effect accounting for the effect of day type on effort   
 	real<lower=0> sigma_eps_E; //effort process error standard deviation 
 	real<lower=0> sigma_r_E; //prior on r_E
 	real<lower=0,upper=1> phi_E_scaled; //prior on a transformation of phi_E								    			
-	matrix[P_n-1,G] eps_E[S]; //effort process errors  
-	matrix[G,S] omega_E_0; //effort residual for initial time step (p=1)
+	matrix[P_n-1,G*S] eps_E; //effort process errors  
+	matrix[G,S] omega_E_0; //effort residual for initial time step (p)
 	vector<lower=0,upper=1>[G] R_V; //true angler vehicles per angler
 	vector<lower=0,upper=1>[G] R_T; //true angler trailers per angler
 	vector<lower=0>[G] b; //bias in counts of vehicles and trailers per angler group from road counts
@@ -118,8 +117,8 @@ parameters{
 	real<lower=0> sigma_eps_C; //catch rate (CPUE) process error standard deviation 
 	real<lower=0,upper=1> phi_C_scaled; //Prior on a transformation of phi_C									    			
 	real<lower=0> sigma_r_C; //Prior on r_C
-	matrix[P_n-1,G] eps_C[S]; //CPUE process errors 
-	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p=1)
+	matrix[P_n-1,G*S] eps_C; //CPUE process errors 
+	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p) 
 	real mu_mu_C[G] ; //hyper-prior on mean of mu_C //TB 5/3/2019
 	real<lower=0>sigma_mu_C; //hyper-prior on SD of mu_C
 	matrix[G,S] eps_mu_C;
@@ -128,7 +127,7 @@ transformed parameters{
 	//Effort
 	matrix[G,S] mu_E; //season-long effort intercept  
 	real<lower=-1,upper=1> phi_E; //auto-regressive (AR), mean-reverting lag-1 coefficient for effort 
-	matrix[P_n,G] omega_E[S]; //residual in effort 
+	matrix[P_n,G*S] omega_E; //residual in effort 
 	matrix<lower=0>[D,G] lambda_E_S[S]; //mean daily effort
 	matrix<lower=0>[D,G] lambda_E_S_I[S,H]; //mean hourly effort
 	real<lower=0> r_E; //over-dispersion parameter accounting for within day variability in effort
@@ -136,29 +135,27 @@ transformed parameters{
 	matrix[G,S] mu_C; //season-long catch rate intercept  
 	real<lower=-1,upper=1> phi_C; //auto-regressive (AR), mean-reverting lag-1 coefficient for CPUE 
 	real<lower=0> r_C; //over-dispersion parameter accounting for among angler (group) variability in CPUE
-	matrix[P_n,G] omega_C[S]; //Residual in CPUE
+	matrix[P_n,G*S] omega_C; //Residual in CPUE
 	matrix<lower=0>[D,G] lambda_C_S[S]; //mean daily CPUE
 	r_E = 1 / square(sigma_r_E);
 	r_C = 1 / square(sigma_r_C);
 	phi_C = (phi_C_scaled * 2)-1;
 	phi_E = (phi_E_scaled * 2)-1;
+	omega_C[1,] = to_row_vector(omega_C_0);
+	omega_E[1,] = to_row_vector(omega_E_0);
+	for(p in 2:P_n){
+		omega_C[p,] = to_row_vector(phi_C * to_vector(omega_C[p-1,]) + to_vector(eps_C[p-1,]) * sigma_eps_C); 
+		omega_E[p,] = to_row_vector(phi_E * to_vector(omega_E[p-1,]) + to_vector(eps_E[p-1,]) * sigma_eps_E); 
+	}
 	for(g in 1:G){
 		for(s in 1:S){
 		  mu_C[g,s] = mu_mu_C[g] + eps_mu_C[g,s] * sigma_mu_C;
-		  mu_E[g,s] = mu_mu_E[g] + eps_mu_E[g,s] * sigma_mu_E;
-			omega_C[s][1,g] = omega_C_0[g,s];
-			omega_E[s][1,g] = omega_E_0[g,s];
-		}
-		for(p in 2:P_n){ 
-			for(s in 1:S){
-				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g] * sigma_eps_C; 
-				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g] * sigma_eps_E; 
-			}													
+		  mu_E[g,s] = mu_mu_E[g] + eps_mu_E[g,s] * sigma_mu_E;												
 		}
 		for(d in 1:D){       
 			for(s in 1:S){	
-				lambda_C_S[s][d,g] = exp(mu_C[g,s] + omega_C[s][period[d],g]) * O[d,s];
-				lambda_E_S[s][d,g] = exp(mu_E[g,s] + omega_E[s][period[d],g] + B1 * w[d])* O[d,s];
+				lambda_C_S[s][d,g] = exp(mu_C[g,s] + to_matrix(omega_C[period[d],],G,S)[g,s]) * O[d,s];
+				lambda_E_S[s][d,g] = exp(mu_E[g,s] + to_matrix(omega_E[period[d],],G,S)[g,s] + B1 * w[d])* O[d,s];
 				for(i in 1:H){
 					lambda_E_S_I[s,i][d,g] = lambda_E_S[s][d,g] * eps_E_H[s,i][d,g];									
 				}
@@ -169,12 +166,12 @@ transformed parameters{
 model{
 	//Hyperpriors (effort hyperparameters)
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E);                                						
-    phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
+  phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
 	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E);
 	B1 ~ normal(0,value_normal_sigma_B1);
 	//Hyperpriors (CPUE hyperparameters)
 	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C);                     						
-    phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
+  phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
 	sigma_r_C ~ cauchy(0,value_cauchyDF_sigma_r_C);
 	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
 	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);//TB 5/3/2019
@@ -188,12 +185,6 @@ model{
 	for(g in 1:G){
 		mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); //TB 5/3/2019
 		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
-		for(p in 2:P_n){ 
-			for(s in 1:S){
-				eps_C[s][p-1,g] ~ std_normal();
-				eps_E[s][p-1,g] ~ std_normal();
-			}
-		}
 		for(d in 1:D){
 			for(s in 1:S){  					  
 				for(i in 1:H){
