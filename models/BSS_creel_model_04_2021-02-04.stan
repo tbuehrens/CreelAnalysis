@@ -45,12 +45,12 @@ data{
 	int<lower=0> c[IntC]; // total number of fish caught by an angler (group) collected from an individual angler interview           						
 	vector<lower=0>[IntC] h; // total number of hours fish by an angler (group) collected from an individual angler interview
 	//interview data - Total Effort & Catch Creeled
-	int<lower=0> IntCreel;                        	
-	int<lower=0> day_Creel[IntCreel]; 	
-	int<lower=0> gear_Creel[IntCreel];   						
-	int<lower=0> section_Creel[IntCreel]; 					
-	int<lower=0> C_Creel[IntCreel];   
-	vector<lower=0>[IntCreel] E_Creel;   
+	int<lower=0> IntCreel; // unique combination of sampled days, gear, and section where angler interviews were conducted                       	
+	int<lower=0> day_Creel[IntCreel]; //index denoting the "day" for the total hours and catch sampled during interviews	
+	int<lower=0> gear_Creel[IntCreel];   //index denoting the "gear" for the total hours and catch sampled during interviews						
+	int<lower=0> section_Creel[IntCreel]; //index denoting the "section" for the total hours and catch sampled during interviews					
+	int<lower=0> C_Creel[IntCreel];   //total catch sampled across all angler interviews for a given day/gear/section 
+	vector<lower=0>[IntCreel] E_Creel; //total angled hours reported across all interviews for a given day/gear/section   
 	//interview data - angler expansion
 	int<lower=0> IntA; //total number of angler interviews conducted across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected                                         	
 	int<lower=0> day_IntA[IntA]; //index denoting the "day" for an individual angler interview                       	
