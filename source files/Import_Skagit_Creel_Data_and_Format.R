@@ -99,7 +99,7 @@
                        , "Vehicles", "Trailers", "Boat", "Bank")]
 
 #---------------------- -  
-# FORMAT EFFORT DATA                                                                                      
+# FORMAT INTERVIEW DATA                                                                                      
 #---------------------- -  
 # Import creel survey effort and interview .csv data files
   group.dat<-read.csv(paste(wd_data, interview_file_name, sep="/"), header=TRUE)

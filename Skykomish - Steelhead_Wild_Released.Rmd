@@ -74,8 +74,8 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
 #======================================================
 # Specify names of .csv data files
 #======================================================
-effort_file_name <-   "03_Effort_dat - 2021_Skykomish_creel thru June 22.csv"
-interview_file_name <-"03_Interview-dat_2021_Skykomish_creel thru June 22_KB.csv"
+effort_file_name <-   "03_Effort_dat - 2021_Skykomish_creel thru July 3.csv"
+interview_file_name <-"03_Interview-dat_2021_Skykomish_creel thru July 3.csv"
 effort_xwalk_filename<-"02_Crosswalk_Table_for_Index_TieIn_Sections_2021-06-28.csv"
 river_loc_filename<-"02_River.Locations_2019-01-07.csv"
 creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
@@ -163,7 +163,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   model_source<-c("run_new")  #enter either "run_new" or "load_saved"
 
 # Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
-  Model_Run<-"June22" #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
+  Model_Run<-"July3" #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
 
 # Denote which creel model you want to run
   #creel_models[,1:3] #model summary table
@@ -197,7 +197,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
   n_warmup<-1000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
   adapt_delta<-0.99  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
-  max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+  max_treedepth<-12 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
 
 # Create sub-folders for output (if they don't already exist)
     source(paste0(wd_source_files, "/Create_output_subfolder.R"), print.eval = TRUE)
