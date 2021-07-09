@@ -74,7 +74,7 @@ data{
 	real value_normal_sigma_mu_C; //the hyperhyper SD parameter in the hyperprior distribution mu_mu_C
 	real value_normal_mu_mu_E; //the hyperhyper mean parameter in the hyperprior distribution mu_mu_E
 	real value_normal_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution mu_mu_E
-    real value_cauchyDF_sigma_mu_C; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+  real value_cauchyDF_sigma_mu_C; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
 	real value_cauchyDF_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 }
 transformed data{
@@ -237,13 +237,13 @@ model{
 		//trailers
 		T_A[a] ~ binomial(A_A[a], R_T[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 	}
-    //Total Angler hours and Catch creeled
-    for(i in 1:IntCreel){
-        E_Creel[i] ~ lognormal(log(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * p_sample_E[i]),0.05);//sigma_samp);
-    }
-    for(i in 1:IntCreel){
-        C_Creel[i] ~ poisson(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * lambda_C_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * p_sample_C[i]);
-    }
+  //Total Angler hours and Catch creeled
+  for(i in 1:IntCreel){
+    E_Creel[i] ~ lognormal(log(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * p_sample_E[i]),0.05);//sigma_samp);
+  }
+  for(i in 1:IntCreel){
+    C_Creel[i] ~ poisson(lambda_E_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * L[day_Creel[i]] * lambda_C_S[section_Creel[i]][day_Creel[i],gear_Creel[i]] * p_sample_C[i]);
+  }
 }
 generated quantities{
   matrix[G*S,G*S] Omega_C; //reconstructed CPUE correlations
