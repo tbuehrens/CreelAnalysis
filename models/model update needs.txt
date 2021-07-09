@@ -1,0 +1,8 @@
+1) fix version 4 and version 5 
+
+**need to convert p_sample_E into array**
+p_int[a] = h[a] / E_creel_array[section_IntC[a]][day_IntC[a],gear_IntC[a]]
+pred_hrs[a] = lambda_E_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * L[day_IntC[a]] * p_sample[section_IntC[a]][day_IntC[a],gear_IntC[a]] * p_int[a]
+
+h[a] ~ lognormal(pred_hrs[a] ,0.05)
+c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * pred_hrs[a] , r_C);
