@@ -43,7 +43,14 @@ data{
 	int<lower=0> gear_IntC[IntC]; //index denoting the "gear/angler type" for an individual angler interview (e.g., 1=bank and 2=boat)      						
 	int<lower=0> section_IntC[IntC]; //index denoting the "section" for an individual angler interview    						
 	int<lower=0> c[IntC]; // total number of fish caught by an angler (group) collected from an individual angler interview           						
-	vector<lower=0>[IntC] h; // total number of hours fish by an angler (group) collected from an individual angler interview        						
+	vector<lower=0>[IntC] h; // total number of hours fish by an angler (group) collected from an individual angler interview
+    //interview data - Total Effort & Catch Creeled
+	int<lower=0> IntCreel;                        	
+	int<lower=0> day_Creel[IntCreel]; 	
+	int<lower=0> gear_Creel[IntCreel];   						
+	int<lower=0> section_Creel[IntCreel]; 					
+	int<lower=0> C_Creel[IntCreel];   
+	vector<lower=0>[IntCreel] E_Creel;           						
 	//interview data - angler expansion
 	int<lower=0> IntA; //total number of angler interviews conducted across all surveys dates where angler expansion data (V_A, T_A, A_A) were collected                                         	
 	int<lower=0> day_IntA[IntA]; //index denoting the "day" for an individual angler interview                       	
@@ -71,16 +78,33 @@ data{
 	real value_cauchyDF_sigma_mu_E; //the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 }
 transformed data{
+  matrix<lower=0>[D,G] C_Creel_array[S]; //interviewed total daily catch
+  matrix<lower=0>[D,G] E_Creel_array[S]; //interviewed total daily catch
+  vector<lower=0,upper=1>[IntC] p_int; //proportion of hours in a particular day-gear-section included in a single interview 
+  for(g in 1:G){
+    for(d in 1:D){
+      for(s in 1:S){
+        C_Creel_array[s][d,g] = 0;
+        E_Creel_array[s][d,g] = 0;
+      }
+    }
+  }
+	for(i in 1:IntCreel){
+	  C_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += C_Creel[i];
+	  E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
+	}
+  for(a in 1:IntC){
+    p_int[a] = h[a] / E_Creel_array[section_IntC[a]][day_IntC[a],gear_IntC[a]];
+  }
 }
 parameters{
 	//Effort
 	real B1; //fixed effect accounting for the effect of day type on effort   
-	real<lower=0> sigma_E_wn; //effort white noise standard deviation
 	real<lower=0> sigma_eps_E; //effort process error standard deviation 
 	real<lower=0> sigma_r_E; //prior on r_E
 	real<lower=0,upper=1> phi_E_scaled; //prior on a transformation of phi_E								    			
-	matrix[P_n-1,G] eps_E[S]; //effort process errors  
-	matrix[G,S] omega_E_0; //effort residual for initial time step (p=1)
+	matrix[P_n-1,G*S] eps_E; //effort process errors  
+	matrix[G,S] omega_E_0; //effort residual for initial time step (p)
 	vector<lower=0,upper=1>[G] R_V; //true angler vehicles per angler
 	vector<lower=0,upper=1>[G] R_T; //true angler trailers per angler
 	vector<lower=0>[G] b; //bias in counts of vehicles and trailers per angler group from road counts
@@ -89,83 +113,90 @@ parameters{
 	real mu_mu_E[G]; //hyper-prior on mean of mu_E //TB 5/3/2019
 	real<lower=0>sigma_mu_E; //hyper-prior on SD of mu_E //TB 5/3/2019
 	matrix[G,S] eps_mu_E;
-	matrix<lower=0>[D,G] lambda_E_S[S]; //mean daily effort
+	//total effort creeled
+	vector<lower=0,upper=1>[IntCreel] p_sample_E;//proportion of daily effort interviewed when sum(interview hours) >0 by D,G,S
 	//Catch rates
-	real<lower=0> sigma_C_wn; //catch rate (CPUE) white noise standard deviation
 	real<lower=0> sigma_eps_C; //catch rate (CPUE) process error standard deviation 
 	real<lower=0,upper=1> phi_C_scaled; //Prior on a transformation of phi_C									    			
 	real<lower=0> sigma_r_C; //Prior on r_C
-	matrix[P_n-1,G] eps_C[S]; //CPUE process errors 
-	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p=1)
+	matrix[P_n-1,G*S] eps_C; //CPUE process errors 
+	matrix[G,S] omega_C_0; //CPUE residual for initial time step (p) 
 	real mu_mu_C[G] ; //hyper-prior on mean of mu_C //TB 5/3/2019
 	real<lower=0>sigma_mu_C; //hyper-prior on SD of mu_C
 	matrix[G,S] eps_mu_C;
-	matrix<lower=0>[D,G] lambda_C_S[S]; //mean daily CPUE
 }
 transformed parameters{
 	//Effort
 	matrix[G,S] mu_E; //season-long effort intercept  
 	real<lower=-1,upper=1> phi_E; //auto-regressive (AR), mean-reverting lag-1 coefficient for effort 
-	matrix[P_n,G] omega_E[S]; //residual in effort 
+	matrix[P_n,G*S] omega_E; //residual in effort 
+	matrix<lower=0>[D,G] lambda_E_S[S]; //mean daily effort
 	matrix<lower=0>[D,G] lambda_E_S_I[S,H]; //mean hourly effort
+	real<lower=0> r_E; //over-dispersion parameter accounting for within day variability in effort
+	matrix<lower=0,upper=1>[D,G] p_sample_E_array[S];//proportion of effort sampled by D,G,S
+    vector<lower=0> [IntC] pred_hrs; //predicted hours for each interview
 	//Catch rates
 	matrix[G,S] mu_C; //season-long catch rate intercept  
 	real<lower=-1,upper=1> phi_C; //auto-regressive (AR), mean-reverting lag-1 coefficient for CPUE 
 	real<lower=0> r_C; //over-dispersion parameter accounting for among angler (group) variability in CPUE
-	matrix[P_n,G] omega_C[S]; //Residual in CPUE
+	matrix[P_n,G*S] omega_C; //Residual in CPUE
+	matrix<lower=0>[D,G] lambda_C_S[S]; //mean daily CPUE
+	r_E = 1 / square(sigma_r_E);
 	r_C = 1 / square(sigma_r_C);
 	phi_C = (phi_C_scaled * 2)-1;
 	phi_E = (phi_E_scaled * 2)-1;
+	omega_C[1,] = to_row_vector(omega_C_0);
+	omega_E[1,] = to_row_vector(omega_E_0);
+	for(p in 2:P_n){
+		omega_C[p,] = to_row_vector(phi_C * to_vector(omega_C[p-1,]) + to_vector(eps_C[p-1,]) * sigma_eps_C); 
+		omega_E[p,] = to_row_vector(phi_E * to_vector(omega_E[p-1,]) + to_vector(eps_E[p-1,]) * sigma_eps_E); 
+	}
 	for(g in 1:G){
 		for(s in 1:S){
 		  mu_C[g,s] = mu_mu_C[g] + eps_mu_C[g,s] * sigma_mu_C;
-		  mu_E[g,s] = mu_mu_E[g] + eps_mu_E[g,s] * sigma_mu_E;
-			omega_C[s][1,g] = omega_C_0[g,s];
-			omega_E[s][1,g] = omega_E_0[g,s];
+		  mu_E[g,s] = mu_mu_E[g] + eps_mu_E[g,s] * sigma_mu_E;												
 		}
-		for(p in 2:P_n){ 
-			for(s in 1:S){
-				omega_C[s][p,g] = phi_C * omega_C[s][p-1,g] + eps_C[s][p-1,g] * sigma_eps_C; 
-				omega_E[s][p,g] = phi_E * omega_E[s][p-1,g] + eps_E[s][p-1,g] * sigma_eps_E; 
-			}													
-		}
-		for(d in 1:D){
-			for(s in 1:S){  					  
+		for(d in 1:D){       
+			for(s in 1:S){	
+				lambda_C_S[s][d,g] = exp(mu_C[g,s] + to_matrix(omega_C[period[d],],G,S)[g,s]) * O[d,s];
+				lambda_E_S[s][d,g] = exp(mu_E[g,s] + to_matrix(omega_E[period[d],],G,S)[g,s] + B1 * w[d])* O[d,s];
+				p_sample_E_array[s][d,g] = 0;
 				for(i in 1:H){
-				  lambda_E_S_I[s,i][d,g] = lambda_E_S[s][d,g] * eps_E_H[s,i][d,g];			
+					lambda_E_S_I[s,i][d,g] = lambda_E_S[s][d,g] * eps_E_H[s,i][d,g];									
 				}
 			}
-		}
+		}								    
+	}
+	for(i in 1:IntCreel){
+	  p_sample_E_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += p_sample_E[i];
+	}
+	for(a in 1:IntC){
+	  pred_hrs[a] = lambda_E_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * L[day_IntC[a]] * p_sample_E_array[section_IntC[a]][day_IntC[a],gear_IntC[a]] * p_int[a];
 	}	
 }
 model{
 	//Hyperpriors (effort hyperparameters)
-	sigma_E_wn ~ cauchy(0,value_cauchyDF_sigma_eps_E); 
 	sigma_eps_E ~ cauchy(0,value_cauchyDF_sigma_eps_E);                                						
   phi_E_scaled ~ beta(value_betashape_phi_E_scaled,value_betashape_phi_E_scaled);
 	sigma_r_E ~ cauchy(0,value_cauchyDF_sigma_r_E);
 	B1 ~ normal(0,value_normal_sigma_B1);
 	//Hyperpriors (CPUE hyperparameters)
-	sigma_C_wn ~ cauchy(0,value_cauchyDF_sigma_eps_C);    
 	sigma_eps_C ~ cauchy(0,value_cauchyDF_sigma_eps_C);                     						
   phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
-	sigma_r_C ~ cauchy(0, value_cauchyDF_sigma_r_C);
-	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
-	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);//TB 5/3/2019
-	//Priors 
+	sigma_r_C ~ cauchy(0,value_cauchyDF_sigma_r_C);
+	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);
+	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);
+	//Priors
+	//p_sample_E ~ beta(0.5,0.5);
+	to_vector(eps_C) ~ std_normal();
+	to_vector(eps_E) ~ std_normal();
 	for(g in 1:G){
-		mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); //TB 5/3/2019
-		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
-		for(p in 2:P_n){ 
-			for(s in 1:S){
-				eps_C[s][p-1,g] ~ std_normal();
-				eps_E[s][p-1,g] ~ std_normal();
-			}
-		}
+		mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C);
+		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E);
 		for(d in 1:D){
 			for(s in 1:S){  					  
 				for(i in 1:H){
-					eps_E_H[s,i][d,g] ~ gamma(1/square(sigma_r_E),1/square(sigma_r_E)); 
+					eps_E_H[s,i][d,g] ~ gamma(r_E,r_E); 
 				}
 			}
 		}
@@ -180,20 +211,11 @@ model{
 		R_T[g] ~ beta(0.5,0.5); //Note: leaving constant among days AND sections...may need to tweak; can make beta because is "true" angler cars or angler trailers per angler!
 		b[g] ~ lognormal(0,value_lognormal_sigma_b); //Note: leaving constant among days AND sections...may need to tweak could go as low as 0.25 for sigma
 	}
-	//est daily means from grand means, and process errors, adding daily white noise
-	for(g in 1:G){
-		for(d in 1:D){       
-			for(s in 1:S){	
-				lambda_C_S[s][d,g] ~ lognormal(mu_C[g,s] + omega_C[s][period[d],g], sigma_C_wn);
-				lambda_E_S[s][d,g] ~ lognormal(mu_E[g,s] + omega_E[s][period[d],g] + B1 * w[d], sigma_E_wn);
-			}
-		}
-	}
 	//Likelihoods
 	//Index effort counts - vehicles
 	for(i in 1:V_n){
 		V_I[i] ~ poisson((lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
-						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);
+						 lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);  //Note: leaving ratio of cars per angler and bias constant among days since was invariant!
 	}
 	//Index effort counts - trailers
 	for(i in 1:T_n){
@@ -210,7 +232,8 @@ model{
 	}
 	//Angler interviews - CPUE
 	for(a in 1:IntC){
-		c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * h[a] , r_C);
+		h[a] ~ lognormal(log(pred_hrs[a]) ,0.05);
+	  	c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * pred_hrs[a] , r_C);
 	}
 	//Angler interviews - Angler expansions
 	for(a in 1:IntA){
@@ -218,30 +241,30 @@ model{
 		V_A[a] ~ binomial(A_A[a], R_V[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
 		//trailers
 		T_A[a] ~ binomial(A_A[a], R_T[gear_IntA[a]]);  //Note: leaving ratio of cars per angler constant among days since was invariant!
-	}												
+	}										
 }
 generated quantities{ 
- 	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //total daily catch
+ 	matrix<lower=0>[D,G] lambda_Ctot_S[S]; //unsampled  daily catch
 	matrix<lower=0>[D,G] C[S]; //realized total daily catch
 	matrix<lower=0>[D,G] E[S]; //realized total daily effort
 	real<lower=0> C_sum; //season-total catch
  	real<lower=0> E_sum; //season-total effort
-	vector[V_n + T_n + A_n + E_n + IntC + IntA + IntA] log_lik;
+	vector[V_n + T_n + A_n + E_n + IntC + IntC + IntA + IntA] log_lik;
 	C_sum = 0;
  	E_sum = 0;
 	for(g in 1:G){
 		for(d in 1:D){
 			for(s in 1:S){
-				lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * O[d,s] * lambda_C_S[s][d,g]; 
-				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]); 
+			    lambda_Ctot_S[s][d,g] = lambda_E_S[s][d,g] * L[d] * (1 - p_sample_E_array[s][d,g]) * lambda_C_S[s][d,g]; 
+				C[s][d,g] = poisson_rng(lambda_Ctot_S[s][d,g]) + C_Creel_array[s][d,g]; 
  				C_sum = C_sum + C[s][d,g];
- 				E[s][d,g] = lambda_E_S[s][d,g] * L[d]; 
+ 				E[s][d,g] = lambda_E_S[s][d,g] * L[d] * (1 - p_sample_E_array[s][d,g]) + E_Creel_array[s][d,g];
  				E_sum = E_sum + E[s][d,g];
 			}                                                                                                              
 		}
 	}
-// 	//point-wise log likelihood for LOO-IC
-// 	//Index effort counts - vehicles
+    //point-wise log likelihood for LOO-IC
+    //Index effort counts - vehicles
 	for (i in 1:V_n){
 		log_lik[i] = poisson_lpmf(V_I[i]|(lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],1] * p_TI[1,section_V[i]] * R_V[1] +
 						 				  lambda_E_S_I[section_V[i],countnum_V[i]][day_V[i],2] * p_TI[2,section_V[i]] * R_V[2]) * b[1]);
@@ -261,15 +284,19 @@ generated quantities{
 	}
 	//Angler interviews - catch (number of fish)
 	for(a in 1:IntC){
-		log_lik[V_n + T_n + A_n + E_n + a] = neg_binomial_2_lpmf(c[a]|lambda_C_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * h[a] , r_C);
+		log_lik[V_n + T_n + A_n + E_n + a] = neg_binomial_2_lpmf(c[a]|lambda_C_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * pred_hrs[a], r_C);
+	}
+	//Angler interviews - hours (hours for group)
+	for(a in 1:IntC){
+		log_lik[V_n + T_n + A_n + E_n + IntC + a] = lognormal_lpdf(h[a]|log(pred_hrs[a]),0.05);
+	
 	}
 	//Angler interviews - number of vehicles
 	for(a in 1:IntA){
-		log_lik[V_n + T_n + A_n + E_n + IntC + a] = binomial_lpmf(V_A[a]|A_A[a], R_V[gear_IntA[a]]);
+		log_lik[V_n + T_n + A_n + E_n + IntC + IntC + a] = binomial_lpmf(V_A[a]|A_A[a], R_V[gear_IntA[a]]);
 	}
 	//Angler interviews - number of trailers
 	for(a in 1:IntA){
-		log_lik[V_n + T_n + A_n + E_n + IntC + IntA + a] = binomial_lpmf(T_A[a]|A_A[a], R_T[gear_IntA[a]]);
+		log_lik[V_n + T_n + A_n + E_n + IntC + IntC + IntA + a] = binomial_lpmf(T_A[a]|A_A[a], R_T[gear_IntA[a]]);
 	}												
 }
-

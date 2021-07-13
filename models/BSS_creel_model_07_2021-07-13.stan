@@ -90,7 +90,7 @@ transformed data{
     }
   }
   for(i in 1:IntCreel){
-    C_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += C_Creel[i];
+      C_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += C_Creel[i];
 	  E_Creel_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += E_Creel[i];
   }
   for(a in 1:IntC){
@@ -136,7 +136,7 @@ transformed parameters{
 	matrix<lower=0>[D,G] lambda_E_S_I[S,H]; //mean hourly effort
 	real<lower=0> r_E; //over-dispersion parameter accounting for within day variability in effort
 	matrix<lower=0,upper=1>[D,G] p_sample_E_array[S];//proportion of effort sampled by D,G,S
-  vector<lower=0> [IntC] pred_hrs; //predicted hours for each interview
+    vector<lower=0> [IntC] pred_hrs; //predicted hours for each interview
 	//Catch rates
 	matrix[G,S] mu_C; //season-long catch rate intercept 
 	real<lower=-1,upper=1> phi_C; //auto-regressive (AR), mean-reverting lag-1 coefficient for CPUE 
@@ -195,7 +195,7 @@ model{
 	to_vector(eps_C) ~ std_normal();
 	to_vector(eps_E) ~ std_normal();
 	for(g in 1:G){
-    mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); 
+    	mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); 
 		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); 
 		for(d in 1:D){
 			for(s in 1:S){
