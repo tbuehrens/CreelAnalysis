@@ -188,18 +188,15 @@ model{
   Lcorr_C ~ lkj_corr_cholesky(1);                                						
   phi_C_scaled ~ beta(value_betashape_phi_C_scaled,value_betashape_phi_C_scaled);
 	sigma_r_C ~ cauchy(0,value_cauchyDF_sigma_r_C);
-	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);//TB 5/3/2019
-	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);//TB 5/3/2019 
-	//hyperpriors for total effort and catch
-	//sigma_samp ~ cauchy(0,1);
+	sigma_mu_C~cauchy(0,value_cauchyDF_sigma_mu_C);
+	sigma_mu_E~cauchy(0,value_cauchyDF_sigma_mu_E);
 	//Priors
-	//p_sample_C ~ beta(0.5,0.5);
 	//p_sample_E ~ beta(0.5,0.5);
 	to_vector(eps_C) ~ std_normal();
 	to_vector(eps_E) ~ std_normal();
 	for(g in 1:G){
-    mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); //TB 5/3/2019
-		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); //TB 5/3/2019
+    mu_mu_C[g] ~ normal(value_normal_mu_mu_C,value_normal_sigma_mu_C); 
+		mu_mu_E[g] ~ normal(value_normal_mu_mu_E,value_normal_sigma_mu_E); 
 		for(d in 1:D){
 			for(s in 1:S){
 				for(i in 1:H){
@@ -299,7 +296,7 @@ generated quantities{
 	}
 	//Angler interviews - hours (hours for group)
 	for(a in 1:IntC){
-		log_lik[V_n + T_n + A_n + E_n + IntC + a] = lognormal_lpdf(h[a]|pred_hrs[a],0.05);
+		log_lik[V_n + T_n + A_n + E_n + IntC + a] = lognormal_lpdf(h[a]|log(pred_hrs[a]),0.05);
 	}
 	//Angler interviews - number of vehicles
 	for(a in 1:IntA){
