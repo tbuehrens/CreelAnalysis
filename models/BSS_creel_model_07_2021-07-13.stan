@@ -170,7 +170,7 @@ transformed parameters{
 		}
 	}
 	for(i in 1:IntCreel){
-	  p_sample_E_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] = p_sample_E[i];
+	  p_sample_E_array[section_Creel[i]][day_Creel[i],gear_Creel[i]] += p_sample_E[i];
 	}
 	for(a in 1:IntC){
 	  pred_hrs[a] = lambda_E_S[section_IntC[a]][day_IntC[a],gear_IntC[a]] * L[day_IntC[a]] * p_sample_E_array[section_IntC[a]][day_IntC[a],gear_IntC[a]] * p_int[a];
@@ -239,7 +239,7 @@ model{
 	}
 	//Angler interviews - CPUE
 	for(a in 1:IntC){
-	  h[a] ~ lognormal(pred_hrs[a] ,0.05);
+	  h[a] ~ lognormal(log(pred_hrs[a]) ,0.05);
 	  c[a] ~ neg_binomial_2(lambda_C_S[section_IntC[a]][day_IntC[a], gear_IntC[a]] * pred_hrs[a] , r_C);
 	}
 	//Angler interviews - Angler expansions
@@ -258,7 +258,7 @@ generated quantities{
 	matrix<lower=0>[D,G] E[S]; //realized total daily effort
 	real<lower=0> C_sum; //season-total catch
 	real<lower=0> E_sum; //season-total effort
-	vector[V_n + T_n + A_n + E_n + IntC + IntA + IntA] log_lik;
+	vector[V_n + T_n + A_n + E_n + IntC + IntC + IntA + IntA] log_lik;
 	Omega_C = multiply_lower_tri_self_transpose(Lcorr_C);
 	Omega_E = multiply_lower_tri_self_transpose(Lcorr_E);
 	C_sum = 0;
