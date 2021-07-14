@@ -6,7 +6,7 @@
 
 # Load saved model results or...
 if(model_source== "load_saved"){
-  res_Stan <- readRDS(paste(filepath_Run, "results - res_Stan.csv", sep="/")) #Load RDS (stan model output)
+  res_Stan <- readRDS(paste(filepath_Run, "results - res_Stan.rds", sep="/")) #Load RDS (stan model output)
   res<-extract(res_Stan)  #Extract posterior draws   
 #...Run new model
 }else{
