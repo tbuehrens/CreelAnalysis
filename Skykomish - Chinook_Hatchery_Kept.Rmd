@@ -217,7 +217,7 @@ creel_models_filename<-"02_Creel_Models_2021-01-20.csv"
 #=============================================
 #convergence diagnostics
   launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
-  if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
+  if(launch_diagnostics=="Yes"){launch_shinystan(res_Stan)} 
 
 # generate plots and tables of creel estimates 
   source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates_UPDATED.R")) 
