@@ -71,28 +71,29 @@ get_creel <- function(
   ){
   date_start <- as.Date(date_start); date_end <- as.Date(date_end)
   
-  event = tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_creel_event")) %>%
+  event = tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_creel_event")) %>%
     filter(
-      str_detect(water_body_desc, water_body),
+      str_detect(water_body, water_body),
       str_detect(project_name, proj_name),
       between(event_date, date_start, date_end)
     )
   
   effort = event %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_effort_count")) 
+    tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_effort_counts"))
     , by = "creel_event_id", suffix = c("_event", "_effort"))
-  
+
   interview = event %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_interview")) 
+    tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_interview"))
     , by = "creel_event_id", suffix = c("_event", "_interview"))
 
   catch = interview %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel","vw_steelhead_catch"))
+    tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_catch"))
     , by = c("creel_event_id", "interview_id"), suffix = c("_interview", "_catch")
     )
     
+  #d <- list(event = event) %>% map(~collect(.x))
   d <- list(event = event, effort = effort, interview = interview, catch = catch) %>% map(~collect(.x))
-
+  
   return(d)
 }
 ```
@@ -101,7 +102,7 @@ get_creel <- function(
 #can imagine various ways to define this...
 # KB: need to be intention about setting start and end dates as it dictates the time frame for which estimates are generated
 analysis_args <- list(
-  water_body = "Kalama",
+  water_body = "Kalama River",
   date_start = "2017-03-01",   
   date_end = "2017-03-31",
   proj_name = "R5 Steelhead"
@@ -142,7 +143,7 @@ DBI::dbDisconnect(con_creel)
 ```{r kale test arena}
 #DA: shouldn't really need these when "done"...
 df_header <- creel_data$event %>% 
-  dplyr::select(creel_event_id, water_body_desc, event_date, tie_in_indicator) 
+  dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator) 
 
 # will want option to select "angler type" fields; may also want counts by angler type summarized by row instead of column
 df_effort <- creel_data$effort %>%
