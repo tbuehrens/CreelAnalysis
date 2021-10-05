@@ -64,37 +64,44 @@ library(tidyverse)
 ```{r get_creel}
 #quick demo, can/should/will redo this after talking to Kale and Danny
 get_creel <- function(
-  water_body, #test against 'water_body_desc'
-  date_start, #test against 'event_date'
+  location, 
+  date_start, 
   date_end, #default could be Sys.Date()?
-  proj_name # test against 'project_name'
+  proj_name 
   ){
   date_start <- as.Date(date_start); date_end <- as.Date(date_end)
-  
-  event = tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_creel_event")) %>%
+
+  event = 
+    tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_creel_event")) %>%
     filter(
-      str_detect(water_body, water_body),
+      str_detect(water_body, location),
       str_detect(project_name, proj_name),
       between(event_date, date_start, date_end)
-    )
-  
-  effort = event %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_effort_counts"))
-    , by = "creel_event_id", suffix = c("_event", "_effort"))
+    ) %>% 
+    dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator)
 
-  interview = event %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_interview"))
-    , by = "creel_event_id", suffix = c("_event", "_interview"))
-
-  catch = interview %>% left_join(
-    tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_catch"))
-    , by = c("creel_event_id", "interview_id"), suffix = c("_interview", "_catch")
+  effort = 
+    event %>%
+    left_join(tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_effort_count")) %>% 
+        dplyr::select(creel_event_id, location, count_sequence, start_time = effort_start_time, end_time = effort_end_time, count_type, count_quantity)
+    , by = "creel_event_id", suffix = c("_event", "_effort")
     )
-    
-  #d <- list(event = event) %>% map(~collect(.x))
-  d <- list(event = event, effort = effort, interview = interview, catch = catch) %>% map(~collect(.x))
-  
-  return(d)
+
+interview = event %>%
+  dplyr::select(-tie_in_indicator) %>% 
+  left_join(tbl(con_creel, dbplyr::in_schema("creel", "vw_analysis_interview")) %>% 
+      dplyr::select(creel_event_id, interview_id, interview_number,	angler_type,	interview_location, angler_count,	total_group_count, trip_status, fishing_start_time,	fishing_end_time,	interview_time, boat_used, boat_type,	fish_from_boat,	vehicle_count,	trailer_count)
+  , by = "creel_event_id", suffix = c("_event", "_interview"))
+
+catch = interview %>%
+  left_join(tbl(con_creel, dbplyr::in_schema("creel","vw_analysis_catch")) %>% 
+      dplyr::select(creel_event_id, interview_id, catch_id,  species, run, life_stage, fin_mark, fate, fish_count)
+  , by = c("creel_event_id", "interview_id"), suffix = c("_interview", "_catch")
+  )
+
+d <- list(event = event, effort = effort, interview = interview, catch = catch) %>% map(~collect(.x))
+
+return(d)
 }
 ```
 
@@ -102,7 +109,7 @@ get_creel <- function(
 #can imagine various ways to define this...
 # KB: need to be intention about setting start and end dates as it dictates the time frame for which estimates are generated
 analysis_args <- list(
-  water_body = "Kalama River",
+  location = "Kalama River",
   date_start = "2017-03-01",   
   date_end = "2017-03-31",
   proj_name = "R5 Steelhead"
@@ -118,50 +125,17 @@ con_creel <- DBI::dbConnect(odbc::odbc(), Driver = "PostgreSQL Unicode", Server 
 
 #example single pull
 (creel_data <- get_creel(
-  water_body = analysis_args$water_body,
+  location = analysis_args$location,
   date_start = analysis_args$date_start,
   date_end = analysis_args$date_end,
   proj_name = analysis_args$proj_name
   ))
-
-# #example pull same month across different years...
-# z2 <- c(2015:2017) %>% set_names() %>%
-#   map(
-#     ~get_creel(
-#       water_body = analysis_args$water_body, proj_name = analysis_args$proj_name,
-#       date_start = paste0(.x, "-03-01"), date_end = paste0(.x, "-03-31")
-#       )
-#     )
-
-# #needs to join on creel_event_id + interview_id?
-# tbl(con_creel, dbplyr::in_schema("creel", "vw_steelhead_gear_hook"))
 
 DBI::dbDisconnect(con_creel)
 
 ```
 
 ```{r kale test arena}
-#DA: shouldn't really need these when "done"...
-df_header <- creel_data$event %>% 
-  dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator) 
-
-# will want option to select "angler type" fields; may also want counts by angler type summarized by row instead of column
-df_effort <- creel_data$effort %>%
-  dplyr::select(creel_event_id, effort_event_id, tie_in_indicator,
-                location, count_sequence, start_time_effort, end_time_effort,
-                boat_anglers, bank_anglers) 
-
-# Noticed there are locations listed as NA
-df_interview <- creel_data$interview %>%
-  dplyr::select(creel_event_id, interview_id, interview_number, 
-                angler_type_code, interview_location,
-                angler_count, vehicle_count, trailer_count,
-                trip_status, fishing_start_time, fishing_end_time, interview_time, boat_type, fish_from_boat)
-  
-df_catch <- creel_data$catch %>%
-  dplyr::select(creel_event_id, interview_id, catch_id, 
-                species_name, run_name, life_stage_name, fin_mark_code, fate_name, fish_count)
-  
 # Load LUTS (these LUTs already exist in "lookup tables" sub-folder) 
     # River Locations
     # Sections x-walk
