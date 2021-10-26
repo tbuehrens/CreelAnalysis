@@ -1,10 +1,10 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  location: "Kalama River"
-  date_start: "2017-03-01"   
-  date_end: "2017-03-31"
-  proj_name: "R5 Steelhead"  
+  location: "Skagit River"
+  date_start: "2021-08-14"   
+  date_end: "2021-10-31"
+  proj_name: "Skagit"  
 output:
   html_document:
     fig_caption: yes
@@ -75,7 +75,7 @@ u$effort <- URLencode(
   paste0(dwg$effort,
          "?$where=creel_event_id in('",
          paste(event$creel_event_id, collapse = "','"),
-         "')"
+         "')&$limit=100000"
   )
 )
 
@@ -88,7 +88,7 @@ u$interview <- URLencode(
   paste0(dwg$interview,
          "?$where=creel_event_id in('",
          paste(event$creel_event_id, collapse = "','"),
-         "')"
+         "')&$limit=100000"
   )
 )
 
@@ -107,7 +107,7 @@ u$catch <- URLencode(
   paste0(dwg$catch,
          "?$where=creel_event_id in('",
          paste(event$creel_event_id, collapse = "','"),
-         "')"
+         "')&$limit=100000"
          # "?$where=interview_id in('",
          # paste(interview$interview_id[1:2], collapse = "','"),
          # "')"
