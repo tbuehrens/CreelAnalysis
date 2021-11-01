@@ -1,10 +1,10 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  location: "Skykomish River"
-  date_start: "2021-08-09"   
-  date_end: "2021-09-04"
-  proj_name: "District 13"  
+  location: "Skagit River"
+  date_start: "2021-08-14"   
+  date_end: "2021-10-31"
+  proj_name: "Skagit"  
 output:
   html_document:
     fig_caption: yes
@@ -79,8 +79,8 @@ u$effort <- URLencode(
   )
 )
 
-effort <- read_csv(u$effort) |> 
-  dplyr::select(creel_event_id, location, count_sequence, start_time = effort_start_time, end_time = effort_end_time, count_type, count_quantity)
+effort <- read_csv(u$effort)
+#|> dplyr::select(creel_event_id, location, count_sequence, start_time = effort_start_time, end_time = effort_end_time, count_type, count_quantity)
 ```
 
 ```{r get_interview}
@@ -119,6 +119,8 @@ catch <- read_csv(u$catch) |>
                 species, run, life_stage, fin_mark, fate, fish_count)
 
 ```
+
+# QAQC? 
 
 We could include some amount of pre-analysis QAQC...
 
@@ -167,6 +169,40 @@ catch |>
 
 
 # wrangle for `stan()`
+
+## Index data from `effort`
+
+```{r}
+
+#tie_in_indicator: 0 is index, 1 is tie-in?
+
+#need to LU location to section..
+lu_section <- distinct(effort, location) |> mutate(section = sample(1:3, size = 43, replace = T))
+
+effort |> 
+  left_join(lu_section, by = "location") |> 
+  group_by(tie_in_indicator, section, event_date, count_sequence, count_type) |> 
+  summarise(count_quantity_sum = sum(count_quantity), .groups = "drop") |> 
+  pivot_wider(names_from = count_type, values_from = count_quantity_sum)
+
+```
+
+
+## stan_dat
+
+```{r}
+stan_dat <- list(
+  
+  # Vehicle index effort counts                  KB: index_vehicles<-"summ_effort_counts" %>% filter(gear == vehicles, survey == Creel)
+	V_n =          # int; total number of individual vehicle index effort counts KB: index_vehicles %>% nrow() 
+	, day_V =        # int; index for day/period                                   KB: index_vehicles %>% pull(day/period)
+	, section_V =    # int; index for section                                      KB: index_vehicles %>% pull(section)
+	, countnum_V =   # int; index for count_num                                    KB: index_vehicles %>% pull(count_num)
+	, V_I =          # int; observed # of vehicles                                 KB: index_vehicles %>% pull(Count)
+	  
+)
+```
+
 
 # fit
 
