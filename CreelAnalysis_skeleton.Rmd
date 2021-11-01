@@ -220,13 +220,14 @@ all_holidays <- 2016:2024 %>%
         .$DayL
     ))
 
+# START BACK HERE
  
 count_types <- c("trailers", "vehicles", "boat_anglers", "bank_anglers")
 #close to V_I, T_I, A_I below...?
 creel_data$effort %>%
   group_by(
     tie_in_indicator,
-    event_date_effort,
+    event_date,
     count_sequence,
     location #could/should collapse to "section"?
     ) %>%
