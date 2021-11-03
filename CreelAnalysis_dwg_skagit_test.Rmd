@@ -34,7 +34,43 @@ dwg <- list(
 
 u <- list()
 
+
+#### static elements across estimation efforts
+## can/should continue to rethink the best way to get this in
+
+# write_lines(
+#   2015:2030 %>%
+#     map(~c(
+#       timeDate::USNewYearsDay(.x), 
+#       timeDate::USMLKingsBirthday(.x),
+#       timeDate::USPresidentsDay(.x),
+#       timeDate::USMemorialDay(.x), 
+#       timeDate::USIndependenceDay(.x), 
+#       timeDate::USLaborDay(.x),
+#       timeDate::USVeteransDay(.x), 
+#       timeDate::USThanksgivingDay(.x), 
+#       timeDate::timeDate(as.character(timeDate::.nth.of.nday(.x, 11, 5, 4))), #Black Friday
+#       timeDate::USChristmasDay(.x)
+#     ) |> as.character()
+#     ) |>  unlist(),
+#   "input_files/dates_holidays_2015_2030.txt")
+
+dates_holidays_2015_2030 <- read_lines("input_files/dates_holidays_2015_2030.txt") |> 
+  as.Date(format="%Y-%m-%d")
+
+#obviously these need revision & extension to other systems
+file_names <- list(
+  lut_effort_xwalk = "input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv",
+#  lut_effort_xwalk = "input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv",
+  lut_river_loc = "input_files/lut_02_River.Locations_2019-01-07.csv",
+  lut_creel_models = "input_files/lut_02_Creel_Models_2021-01-20.csv"
+  )
+
+lut <- grep("^lut_", names(file_names), value = T) |> set_names() |> 
+  map(~readr::read_csv(file.path(file_names[[.x]])))
+
 ```
+
 
 # get data
 
@@ -45,13 +81,9 @@ Further development may include interactive control parameter specification via 
 There is also the option to step through multiple pre-defined control parameters:
 [https://bookdown.org/yihui/rmarkdown-cookbook/parameterized-reports.html]
 
-First, get the creel events of interest.
+First, get the creel events of interest by building the Socrata API url string and grabbing the data
 
 ```{r get_event}
-#build the url string, grab the data
-#could move to using RSocrata (https://github.com/Chicago/RSocrata) 
-#if the "build a url string" approach becomes cumbersome enough to warrant introducing another dependency.
-
 u$event <- URLencode(
   paste0(dwg$event,
          "?water_body=", params$location,
@@ -68,8 +100,6 @@ event <- read_csv(u$event) |>
 
 Then, get the associated effort and interview data.
 
-**NOTE NOT CURRENTLY ENSURING 'DISTINCT' ON _id FIELDS!!!**
-
 ```{r get_effort}
 u$effort <- URLencode(
   paste0(dwg$effort,
@@ -80,7 +110,6 @@ u$effort <- URLencode(
 )
 
 effort <- read_csv(u$effort)
-#|> dplyr::select(creel_event_id, location, count_sequence, start_time = effort_start_time, end_time = effort_end_time, count_type, count_quantity)
 ```
 
 ```{r get_interview}
@@ -93,11 +122,7 @@ u$interview <- URLencode(
 )
 
 interview <- read_csv(u$interview) |> 
-  dplyr::select(creel_event_id, interview_id, interview_number,	angler_type, 
-                interview_location, angler_count,	total_group_count, trip_status,
-                fishing_start_time,	fishing_end_time,	interview_time, 
-                boat_used, boat_type,	fish_from_boat,	vehicle_count, trailer_count)
-
+  rename(location = interview_location)
 ```
 
 And finally, the catch data associated with the interviews.
@@ -114,9 +139,9 @@ u$catch <- URLencode(
   )
 )
 
+# catch with redundant post-join columns removed 
 catch <- read_csv(u$catch) |> 
-  dplyr::select(creel_event_id, interview_id, catch_id,
-                species, run, life_stage, fin_mark, fate, fish_count)
+  dplyr::select(interview_id, catch_id, species, run, life_stage, fin_mark, fate, fish_count)
 
 ```
 
@@ -125,7 +150,7 @@ catch <- read_csv(u$catch) |>
 We could include some amount of pre-analysis QAQC...
 
 ```{r, eval=FALSE}
-distinct(event, creel_event_id) 
+identical(nrow(event), nrow(distinct(event, creel_event_id))) #example, likely unnecessary given database structure
 
 #effort$creel_event_id matches event$creel_event_id
 distinct(effort, creel_event_id)
@@ -158,9 +183,6 @@ And/or visualization
 
 ```{r}
 catch |> 
-  # group_by(species, run, life_stage, fin_mark, fate) |> 
-  # summarise(across(fish_count, list(sum = sum)), .groups = "drop") |> 
-  # unite("type", species:fate) |> 
   group_by(species, fin_mark, fate) |> 
   summarise(across(fish_count, list(sum = sum)), .groups = "drop") |> 
   ggplot(aes(fin_mark, fish_count_sum, fill = fate)) + geom_col() +  facet_wrap(~species)
@@ -170,35 +192,320 @@ catch |>
 
 # wrangle for `stan()`
 
+## All dates object
+
+```{r d_days}
+#illustrating an example of building an "expanded dates lattice"
+#to which any/all observations are attached
+#also needs closure_dates joined?
+
+(d_days <- tibble(event_date = seq(as.Date(params$date_start, "%Y-%m-%d"), as.Date(params$date_end, "%Y-%m-%d"), by = "day")) %>%
+    mutate(
+      Day = weekdays(event_date),
+      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% dates_holidays_2015_2030, "Weekend", "Weekday"),
+      DayType_num = if_else(str_detect(DayType, "end"),1,0),
+      DayL = suncalc::getSunlightTimes(
+        date = event_date,
+        tz = "America/Los_Angeles",
+        lat = lut$lut_river_loc$Lat,
+        lon = lut$lut_river_loc$Long,
+        keep=c("dawn", "dusk")
+        ) |> 
+        mutate(DayL = as.numeric(dusk - dawn)) |>
+        pluck("DayL")
+    ) |> 
+    rowid_to_column(var = "DayIndex"))
+
+#other possibly useful/needed fields that had been created with effort and group/interview data objects
+    # Day = weekdays(Date),
+    # DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
+    # Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
+    # Year = as.numeric(format(Date, "%Y")),
+    # Weeknum = as.numeric(format(Date, "%V")),
+    # j.date =  as.numeric(format(Date, "%j"))
+
+```
+
 ## Index data from `effort`
 
 ```{r}
-
-#tie_in_indicator: 0 is index, 1 is tie-in?
+#tie_in_indicator: 0 is index, 1 is tie-in
 
 #need to LU location to section..
 lu_section <- distinct(effort, location) |> mutate(section = sample(1:3, size = 43, replace = T))
 
-effort |> 
+# May need to filter index (tie in) counts to their own index table, depending on how they're used in the rstan model - 
+# Are index counts matched to the nearest individual effort count within a day or to daily mean sum effort count data?
+
+# effort_index contains index counts of vehicles, trailers. Based on KB's comments from KB this should be modified to also include index counts of anglers
+effort_index <- effort |> 
   left_join(lu_section, by = "location") |> 
-  group_by(tie_in_indicator, section, event_date, count_sequence, count_type) |> 
+  left_join(d_days, by = "event_date")|> 
+  filter(tie_in_indicator == 0) |>
+  group_by(section, event_date, DayIndex, count_sequence, count_type) |> 
   summarise(count_quantity_sum = sum(count_quantity), .groups = "drop") |> 
-  pivot_wider(names_from = count_type, values_from = count_quantity_sum)
+  pivot_wider(names_from = count_type, values_from = count_quantity_sum) |> 
+    mutate(
+      across(c(starts_with("Vehicle"), starts_with("Trailers")), ~replace_na(., 0)))
+
 
 ```
+
+```{r}
+#need to LU location to section..
+lu_section <- distinct(effort, location) |> mutate(section = sample(1:3, size = 43, replace = T))
+
+# EB how is count_num defined for tie-in effort counts in the original code? is this a season long count of individual tie-in surveys? count_sequence = 1 for all tie in counts in the database because they are not repeated within a single day 
+census_index <- effort |> 
+  filter(!count_type == "Boats") |> 
+  left_join(lu_section, by = "location") |> 
+  left_join(d_days, by = "event_date")|> 
+  filter(tie_in_indicator == 1) |>
+  select(section, event_date, DayIndex, count_sequence, count_type, count_quantity) |> 
+  mutate(
+    angler_type = if_else(count_type == "Boat Anglers", "Boat", "Bank")
+  )
+
+
+
+```
+
+## Index data from `interview`
+
+```{r}
+# EB: Seems like species_origin_fate could be another useful control parameter that's set from the get go in the script 
+# or species_lifestage_origin_fate where catch of jacks vs. adults is needed (ex. Chinook)
+
+#need to LU location to section..
+lu_section <- distinct(effort, location) |> mutate(section = sample(1:3, size = 43, replace = T))
+
+# EB: need to assign anglers to either boat or bank categories 
+# trip guided information used in Skagit SH analysis 
+# unsure if filling in "unknown" for NA's in trip_guided and trip_status is actually useful 
+# use interview time as the fishing_end_time for incomplete trips 
+# mutate fishing_time, fishing_end_time - fishing start_time
+
+# EB: join reduced catch table to interview table with "interview_id"
+
+# EB: retain option to filter by target species to assess directed vs. incidental catch?
+# EB: how to join catch data to interview data so that catch catch is disinct 
+interview_index <- interview |> 
+  left_join(catch, by = "interview_id") |>
+  left_join(lu_section, by = "location") |> 
+  left_join(d_days, by = "event_date") |> 
+  mutate(
+    angler_type = if_else(boat_used == "No", "Bank", "Boat"),
+    trip_guided = case_when(
+      trip_guided == "Guided" ~ "Yes",
+      trip_guided == "Non-guided" ~ "No",
+      trip_guided == "Unknown" ~ "Unknown",
+      is.na(trip_guided) ~ "Unknown"),
+    trip_status = replace_na(trip_status, "Unknown"),
+    fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
+    angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 2),
+    group_angler_hours = angler_count * angler_hours,
+    origin = case_when(
+      fin_mark == "UM" ~ "W",
+      fin_mark == "AD" ~ "H",
+      fin_mark == "UNK" ~ "U"),
+    origin = replace_na(origin, "U"),
+    fate = case_when(
+      fate == "Kept" ~ "K",
+      fate == "Released" ~ "R",
+      fate == "Unknown" ~ "U"),
+    fate = replace_na(fate, "U"),
+    species_origin_fate = paste(species, origin, fate, sep = "_")
+  ) 
+
+# EB placeholder filter for example of harvested wild coho 
+targetfishes <- c("Coho_W_K")
+
+interview_index2 <- interview_index |> 
+  filter(species_origin_fate %in% targetfishes)
+
+
+```
+
+
 
 
 ## stan_dat
 
 ```{r}
+
+
 stan_dat <- list(
+  # Day attributes
   
-  # Vehicle index effort counts                  KB: index_vehicles<-"summ_effort_counts" %>% filter(gear == vehicles, survey == Creel)
-	V_n =          # int; total number of individual vehicle index effort counts KB: index_vehicles %>% nrow() 
-	, day_V =        # int; index for day/period                                   KB: index_vehicles %>% pull(day/period)
-	, section_V =    # int; index for section                                      KB: index_vehicles %>% pull(section)
-	, countnum_V =   # int; index for count_num                                    KB: index_vehicles %>% pull(count_num)
-	, V_I =          # int; observed # of vehicles                                 KB: index_vehicles %>% pull(Count)
+  # int; number of fishing days; KB: pull from "master_date" DF
+	  D <- nrow(d_days) 
+
+	  # int; final number of unique gear/angler types  KB: pull from subsetted angler x-walk? EB: Is this a subset of the data denoting distinct angler types?
+	, G <- as.integer(length(unique(interview_index$angler_type))) 
+	
+	# int; final number of river sections    KB: pull from subsetted section x-walk?
+	, S <-  as.integer(length(unique(lu_section$section)))    
+	  
+	# int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
+	, H <- max(effort_index$count_sequence)            
+	  
+	  # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
+	, P_n <- D
+
+	# vec; index denoting daytype (day-type is offset in model)   KB: pull from "master_date" DF (1= weekend, 0 = weekday)
+  , w <- d_days$DayType_num
+
+	# int; index denoting fishing day/period      KB: calculate as 1:P_n (not sure why this isn't a vector) EB: what is this? 
+	, period =        
+	  
+	  # vec; daylength (model offset; assumption)       KB: pull from "master_date" DF
+	, L <- d_days$DayL
+	
+	
+	, O <-            # mat; index denoting fishery status                          KB: user defined (1=open, 0 = closed; by period/date and section; 0 defined as 1E-6 for model)
+	  
+	  
+	  
+  # Vehicle index effort counts KB: index_vehicles<-"summ_effort_counts" %>% filter(gear == vehicles, survey == Creel) 
+  # int; total number of individual vehicle index effort counts KB: index_vehicles %>% nrow() 
+	 , V_n <- effort_index |> 
+	    tally() |> 
+	    as.integer()
+
+	  # int; index for day/period KB: index_vehicles %>% pull(day/period)
+	, day_V <- effort_index |>
+	  pull(DayIndex)
+	
+	  # int; index for section     KB: index_vehicles %>% pull(section)
+	, section_V <- effort_index |>
+	  pull(section) 
+	  
+	  # int; index for count_num    KB: index_vehicles %>% pull(count_num)
+	, countnum_V <- effort_index |>    
+	  pull(count_sequence)
+	  # int; observed # of vehicles  KB: index_vehicles %>% pull(Count)
+	, V_I <- effort_index |>
+	  pull(`Vehicle Only`)
+	  
+	
+	
+	
+	# Trailer index effort counts  KB: index_trailers<-"summ_effort_counts" %>% filter(gear == trailers, survey == Creel)
+	# int; total number of boat trailer index effort counts       KB: index_trailers %>% nrow() 
+	, T_n <- effort_index |> 
+	    tally() |> 
+	    as.integer()
+	
+# int; index for day/period         KB: index_trailers %>% pull(day/period)
+	, day_T <- effort_index |>
+	  pull(DayIndex) 
+
+  # int; index for section          KB: index_trailers %>% pull(section)
+	section_T <- effort_index |>
+	, pull(section)
+
+  # int; index for count_num        KB: index_trailers %>% pull(count_num)
+	countnum_T <- effort_index |>    
+	, pull(count_sequence)
+
+  # int; observed # of boat trailers      KB: index_trailers %>% pull(Count)
+	, T_I <- effort_index |>
+	  pull(`Trailers Only`)
+	       
+  
+  
+	
+	
+# Angler index effort counts                                                     KB: index_anglers<-"summ_effort_counts" %>% filter(gear == angler_groups, survey == Creel); angler_groups=user defined?
+	, A_n =           # int; total number of angler index effort counts            KB: index_anglers %>% nrow()       
+	, day_A =         # int; index for day/period                                  KB: index_anglers %>% pull(day/period)  
+	, gear_A =        # int; index denoting "gear/angler type"                     KB: index_anglers %>% pull(gear/angler) 
+	, section_A =     # int; index for section                                     KB: index_anglers %>% pull(section)
+	, countnum_A =    # int; index for count_num                                   KB: index_anglers %>% pull(count_num)
+	, A_I =           # int; observed # of anglers                                 KB: index_anglers %>% pull(Count)
+  
+  
+  
+# Census (tie-in) effort counts      KB: TI_anglers<-"summ_effort_counts" %>% filter(survey == "Tie In");
+  # int; total number of angler tie-in effort counts           KB: TI_anglers %>% nrow() 
+	  
+# EB: Not totally sure how to wrangle tie in data to match what's needed in here. Since we want an index of angler type, I left the DF census_index long and filtered out counts of boats
+	  
+	, E_n <- census_index |> 
+	    tally() |> 
+	    as.integer()          
+  
+   # int; index denoting day/period                             KB: TI_anglers %>% pull(day/period) 
+	, day_E <- census_index |> 
+  pull(DayIndex)
+	
+  # int; index denoting "gear/angler type"                     KB: TI_anglers %>% pull(gear/angler)
+  , gear_E <- census_index |> 
+  pull(angler_type)        
+	
+  # int; index for section                                     KB: TI_anglers %>% pull(section)
+  , section_E <- census_index |> 
+    pull(section)
+	
+  # int; index for count_num                                   KB: TI_anglers %>% pull(count_num)
+  , countnum_E <- census_index |> 
+    pull(count_sequence)   
+	
+  # int; observed # of anglers                                 KB: TI_anglers %>% pull(Count)
+  , E_s <- census_index |> 
+    pull(count_quantity)           
+  
+  
+  
+	# Proportion tie-in expansion
+	, p_TI =          # mat; proportion of section covered by tie in counts        KB: user defined (see "Proportional_Expansions_for_Tie_In_Sections_Kalama_Example"; need to format)
+  
+	  
+	 # EB: Need to decide at what step in the workflow to filter catch data to species_origin_fate (or other strings including life stage / run)
+	  
+	# interview data - CPUE                                                        KB: use "summ_interview" DF
+	, IntC <- interview_index |> 
+	    tally() |> 
+	    as.integer()  
+	
+	# int; index denoting day/period                             KB: summ_interview %>% pull(day/period)
+	, day_IntC <- interview_index |> 
+  pull(DayIndex)
+	
+	# int; index denoting "gear/angler type"                     KB: summ_interview %>% pull(gear/angler) 
+	, gear_IntC <- interview_index |> 
+	  pull(angler_type)
+	  
+	  # int; index for section                                     KB: summ_interview %>% pull(section)  
+	, section_IntC  <- interview_index |> 
+	  pull(section) 
+	  
+	  # int; total catch                                           KB: summ_interview %>% pull(Qty/Count)  
+
+	, c <- interview_index |> 
+	  pull(fish_count)          
+	  
+	  # vec; total hours fished                                    KB: summ_interview %>% pull(Total_Hours) 
+	, h =             
+	  
+	  
+	  
+	# interview data - Total Effort & Catch Creeled                                KB: use "summ_interviewed_effort"
+	, IntCreel =      # int; total interviews by sub-groups	                       KB: summ_interviewed_effort %>% nrow()
+	, day_Creel =     # int; index denoting day/period                             KB: summ_interviewed_effort %>% pull(day/period)
+	, gear_Creel =    # int; index denoting "gear/angler type"                     KB: summ_interviewed_effort %>% pull(gear/angler)					
+	, section_Creel = # int; index for section                                     KB: summ_interviewed_effort %>% pull(section)				
+	, C_Creel =       # int; total catch                                           KB: summ_interviewed_effort %>% pull(Qty/Count)
+	, E_Creel =       # vec; total hours fished                                    KB: summ_interviewed_effort %>% pull(Total_Hours)
+  
+	# interview data - angler expansion                                            KB: interview_sub<-df_interview %>% filter (V_A, T_A, and A_A != NA) ## these variables are used for indirect angler count expansions
+	, IntA =          # int; total number of angler interviews where V_A, T_A, A_A were collected KB: interview_sub %>% nrow()
+	, day_IntA =      # int; index denoting day/period                             KB: interview_sub %>% pull(day/period)                     	
+	, gear_IntA =     # int; index denoting day/period                             KB: interview_sub %>% pull(gear/angler)        						
+	, section_IntA =  # int; index denoting day/period                             KB: interview_sub %>% pull(section)   
+	, V_A =           # int; total number of vehicles an angler group brought      KB: interview_sub %>% pull(vehicle_count)  	
+	, T_A =           # int; total number of trailers an angler group brought      KB: interview_sub %>% pull(trailer_count)  			
+	, A_A =           # int; total number of anglers in the groups interviewed     KB: interview_sub %>% pull(angler_count) ## NOTE: this was used above to calculated "Total_Hours" (fished)
 	  
 )
 ```
