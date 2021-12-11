@@ -1,10 +1,10 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  location: "Skagit River"
+  proj_name: "Skagit"
+  water_body: "Skagit River,Sauk River"
   date_start: "2021-02-01"   
   date_end: "2021-04-13"
-  proj_name: "Skagit"
   year_group: "2020-2021"
   catch_group: "Steelhead_W_R"
 output:
@@ -27,7 +27,7 @@ library(tidyverse)
 library(rstan)
 
 #base endpoints
-dwg <- list(
+dwg_base <- list(
   event = "https://data.wa.gov/resource/ui95-axtn.csv",
   effort = "https://data.wa.gov/resource/h9a6-g38s.csv",
   interview = "https://data.wa.gov/resource/rpax-ahqm.csv",
@@ -35,12 +35,35 @@ dwg <- list(
   gear = "https://data.wa.gov/resource/d2ks-afhz.csv"
 )
 
-u <- list()
+dwg_sent <- list() #will hold full API strings built on above endpoints with params
+creel <- list() #will hold resulting data objects
+
+dates_holidays_2015_2030 <- read_lines("input_files/dates_holidays_2015_2030.txt") |> 
+  as.Date(format="%Y-%m-%d")
+
+lut <- map(
+  list(
+    river_loc = "input_files/lut_River.Locations_2019-01-07.csv",
+    creel_models = "input_files/lut_Creel_Models_2021-01-20.csv",
+    sections = "input_files/lut_water_body_location.csv",
+    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" # EB Added proportional TI expansion to list of LUTs
+  ),
+  ~readr::read_csv(file.path(.x))
+)
 
 
-#### static elements across estimation efforts
-## can/should continue to rethink the best way to get this in
+#tie_in_indicator: 0 is index/creel, 1 is tie-in/census
 
+# Proportional tie in expansion table 
+# value of 1 for p_TI means that the entire river section is surveyed during census counts?
+# What is "Indirect_TI_Expan" and how it is calculated?
+
+```
+
+```{r build_mostly_static_inputs}
+#### can/should continue to rethink the best way to get these in
+#
+## holiday dates
 # write_lines(
 #   2015:2030 %>%
 #     map(~c(
@@ -57,57 +80,20 @@ u <- list()
 #     ) |> as.character()
 #     ) |>  unlist(),
 #   "input_files/dates_holidays_2015_2030.txt")
-
-dates_holidays_2015_2030 <- read_lines("input_files/dates_holidays_2015_2030.txt") |> 
-  as.Date(format="%Y-%m-%d")
-
-# Proportional tie in expansion table 
-# value of 1 for p_TI means that the entire river section is surveyed during census counts?
-# What is "Indirect_TI_Expan" and how it is calculated?
-# what are the formatting needs for these data?
-
-# #obviously these need revision & extension to other systems
-# #tie_in_indicator: 0 is index/creel, 1 is tie-in/census
-# #seems likely that this will need further attention
-# #e.g., if different section aggregations for different species within same YearGroup
-# bind_rows(
-#   read_csv("input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2019-01-10.csv"),
-#   read_csv("input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04.csv")
-# ) |> 
-#   rename(
-#     water_body = StreamName,
-#     location = Section.Field
-#   ) |> 
-#   mutate(tie_in_indicator = if_else(Survey.Type == "Creel", 0, 1)) |> 
-#   write_csv("input_files/lut_effort_section_xwalk.csv")
-
-
-
-file_names <- list(
-  lut_section = "input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04_MatchedDB.csv",
-  lut_river_loc = "input_files/lut_02_River.Locations_2019-01-07.csv",
-  lut_creel_models = "input_files/lut_02_Creel_Models_2021-01-20.csv",
-  lut_census_expansion = "input_files/lut_02_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" # EB Added proportional TI expansion to list of LUTs
-  )
-
-
-lut <- grep("^lut_", names(file_names), value = T) |> set_names() |> 
-  map(~readr::read_csv(file.path(file_names[[.x]])))
-
-# fix the column names for lut_effort_xwalk object; specific to 2019,2021 Skagit Steelhead section lookup table
-
-lut_section <- lut$lut_section |> 
-  select(
-    water_body = StreamName,
-    location = Section.Field,
-    section = Section.Summ
-  )
-
-
+#
+##starting point for section numbering, tie-in designation, prop expansion
+##requires behind-VPN direct connection to DB
+# lut_water_body_location <- full_join(
+#   tbl(con_creel, dbplyr::in_schema("creel", "water_body_lut")) |> collect() |> select(water_body_id:water_body_desc),
+#   tbl(con_creel, dbplyr::in_schema("creel", "location_lut")) |> collect() |> select(location_id:lower_rm),
+#   by = c("water_body_id")
+#   ) |>
+#   collect()
+# 
+# write_csv(lut_water_body_location, "input_files/lut_water_body_location.csv")
 ```
 
-
-# get data
+# data
 
 The data used are from the `r params$proj_name` project on the `r params$location` between `r params$date_start` and `r params$date_end`.
 
@@ -121,77 +107,199 @@ There is also the option to step through multiple pre-defined control parameters
 First, get the creel events of interest by building the Socrata API url string and grabbing the data
 
 ```{r get_event}
-u$event <- URLencode(
-  paste0(dwg$event,
-         "?water_body=", params$location,
-         "&project_name=", params$proj_name,
-         "&$where=event_date between '", params$date_start,
-         "T00:00:00' and '", params$date_end, "T00:00:00'"
+dwg_sent$event <- URLencode(
+  paste0(dwg_base$event,
+         "?$where=project_name in('", params$proj_name, "')",
+         " AND water_body in('", str_replace(params$water_body, ",", "','"), "')",
+         " AND event_date between '", params$date_start,
+         "T00:00:00' and '", params$date_end,
+         "T00:00:00'&$limit=100000"
   )
 )
 
-event <- read_csv(u$event) |> 
+creel$event <- read_csv(dwg_sent$event) |> 
   dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator)
-
 ```
+
 ## effort counts
+
 Then, get the associated effort and interview data.
 
 ```{r get_effort}
-u$effort <- URLencode(
-  paste0(dwg$effort,
+dwg_sent$effort <- URLencode(
+  paste0(dwg_base$effort,
          "?$where=creel_event_id in('",
-         paste(event$creel_event_id, collapse = "','"),
+         paste(creel$event$creel_event_id, collapse = "','"),
          "')&$limit=100000"
   )
 )
 
-effort <- read_csv(u$effort)
-
-
-
+creel$effort <- read_csv(dwg_sent$effort)
 ```
 
 ## interviews
+
 ```{r get_interview}
-u$interview <- URLencode(
-  paste0(dwg$interview,
+dwg_sent$interview <- URLencode(
+  paste0(dwg_base$interview,
          "?$where=creel_event_id in('",
-         paste(event$creel_event_id, collapse = "','"),
+         paste(creel$event$creel_event_id, collapse = "','"),
          "')&$limit=100000"
   )
 )
 
-interview <- read_csv(u$interview) |> 
+creel$interview <- read_csv(dwg_sent$interview) |> 
   rename(location = interview_location)
-
-
 ```
+
 ## catch data
+
 And finally, the catch data associated with the interviews.
 
 ```{r get_catch}
-u$catch <- URLencode(
-  paste0(dwg$catch,
+dwg_sent$catch <- URLencode(
+  paste0(dwg_base$catch,
          "?$where=creel_event_id in('",
-         paste(event$creel_event_id, collapse = "','"),
+         paste(creel$event$creel_event_id, collapse = "','"),
          "')&$limit=100000"
-         # "?$where=interview_id in('",
-         # paste(interview$interview_id[1:2], collapse = "','"),
-         # "')"
   )
 )
 
 # catch with redundant post-join columns removed 
 # filtering catch to specific catch group parameter
-catch <- read_csv(u$catch) |> 
+creel$catch <- read_csv(dwg_sent$catch) |> 
   dplyr::select(interview_id, catch_id, species, run, life_stage, fin_mark, fate, fish_count) 
 
 ```
 
-# QAQC? 
+## sections
 
-We could include some amount of pre-analysis QAQC...
+Aggregations of `location` units that may or may not correspond to `water_body`/`water_body_desc`...
+
+```{r add_sections}
+#x <- read_csv(URLencode(paste0(dwg_base$effort, "?$limit=1000000")))
+#x |> count(project_name, water_body) |> print(n=50)
+
+# #all the units in the database associated with the YAML water_body controls
+# lut$sections |> 
+#   #count(water_body_code, water_body_desc) |> print(n=100)
+#   filter(water_body_desc %in% unlist(str_split(params$water_body, pattern = ","))) |> print(n=100)
+
+# #all the units in the pulled data
+# creel$event |> count(water_body)
+# creel$effort |> count(water_body, location) |> print(n=50)
+# creel$interview |> count(water_body, location) |> print(n=50)
+
+section_codes <- tibble(
+  water_body_desc = c("Sauk River", "Skagit River"),
+  section = c(2,1)
+)
+
+sections <- full_join(
+  distinct(creel$effort, water_body, location),
+  distinct(creel$interview, water_body, location),
+  by = c("water_body", "location")
+) |> 
+  left_join(
+    lut$sections |> select(water_body_desc, location = location_code, upper_rm, lower_rm)
+    ,
+    by = c("location")
+  ) |> 
+  #count(water_body, water_body_desc)
+  left_join(section_codes, by = "water_body_desc")
+
+# #confirming that this codes locations to identical levels as prior csv approach 
+# left_join(
+#   sections,
+#   read_csv("input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04_MatchedDB.csv"),
+#   by = c("location" = "Section.Field")
+#   ) |> 
+#   select(-c(upper_rm:lower_rm, StreamName:Survey.Type)) |> 
+#   mutate(d = section - Section.Summ) |> 
+#   print(n=40)
+
+#add to the primary objects
+creel$effort <- creel$effort |> 
+  select(-created_datetime, -modified_datetime) |> 
+  left_join(
+    sections |> select(water_body, location, water_body_desc, section),
+    by = c("water_body", "location")
+    )
+
+creel$interview <- creel$interview |> 
+  select(-created_datetime, -modified_datetime,
+         -state_residence, -zip_code) |> 
+  left_join(
+    sections |> select(water_body, location, water_body_desc, section),
+    by = c("water_body", "location")
+  )
+
+```
+
+## dates
+
+First, build an "expanded dates lattice" to which any/all observations are attached, ensuring complete cases.
+
+Then join per-section closures by date.
+
+```{r d_days}
+#creel$event |> distinct(event_date)
+(
+  d_days <- tibble(
+    event_date = seq(
+      as.Date(params$date_start, "%Y-%m-%d"),
+      as.Date(params$date_end, "%Y-%m-%d"),
+      by = "day")
+    ) |> 
+    mutate(
+      Day = weekdays(event_date),
+      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% dates_holidays_2015_2030, "Weekend", "Weekday"),
+      DayType_num = if_else(str_detect(DayType, "end"),1,0),
+      DayL = suncalc::getSunlightTimes(
+        date = event_date,
+        tz = "America/Los_Angeles",
+        lat = lut$river_loc$Lat,
+        lon = lut$river_loc$Long,
+        keep=c("dawn", "dusk")
+      ) |> 
+        mutate(DayL = as.numeric(dusk - dawn)) |>
+        pluck("DayL"),
+      Week = as.numeric(format(event_date, "%V"))
+    ) |> 
+    rowid_to_column(var = "day_index") |> 
+    #now add closures...
+    left_join(
+      bind_rows(
+        tibble(section = "1,2", closure_begin = "2021-02-03", closure_end = "2021-02-05"),
+        tibble(section = "1,2", closure_begin = "2021-02-10", closure_end = "2021-02-12"),
+        tibble(section = "1,2", closure_begin = "2021-02-17", closure_end = "2021-02-19"),
+        tibble(section = "1,2", closure_begin = "2021-02-24", closure_end = "2021-02-26"),
+        tibble(section = "1,2", closure_begin = "2021-03-03", closure_end = "2021-03-05"),
+        tibble(section = "1,2", closure_begin = "2021-03-10", closure_end = "2021-03-12"),
+        tibble(section = "1,2", closure_begin = "2021-03-17", closure_end = "2021-03-19"),
+        tibble(section = "1,2", closure_begin = "2021-03-24", closure_end = "2021-03-26"),
+        tibble(section = "1,2", closure_begin = "2021-03-31", closure_end = "2021-04-02"),
+        tibble(section = "1,2", closure_begin = "2021-04-07", closure_end = "2021-04-09"),
+        ) |> 
+        rowwise() |>
+        mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |> 
+        separate_rows(closure_date, sep = ",") |> 
+        select(event_date = closure_date, section) |> 
+        mutate(
+          event_date = as.Date(event_date),
+          closure_code = FALSE # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
+        ) |> 
+        separate_rows(section, sep = ",") |> 
+        pivot_wider(names_from = section, names_prefix = "open_section_", values_from = closure_code)
+      ,
+      by ="event_date"
+      ) |> 
+    mutate(across(starts_with("open_section_"), ~replace_na(., TRUE)))
+)
+
+```
+
+# Some sort of pre-analysis QAQC?
 
 ```{r, eval=FALSE}
 identical(nrow(event), nrow(distinct(event, creel_event_id))) #example, likely unnecessary given database structure
@@ -223,157 +331,50 @@ setdiff(catch$interview_id, interview$interview_id)
 
 ```
 
-And/or visualization
-
-```{r}
-catch |> 
-  group_by(species, fin_mark, fate) |> 
-  summarise(across(fish_count, list(sum = sum)), .groups = "drop") |> 
-  ggplot(aes(fin_mark, fish_count_sum, fill = fate)) + geom_col() +  facet_wrap(~species)
-  
-```
 
 
 # wrangle for `stan()`
-
-## dates object
-
-```{r d_days}
-#illustrating an example of building an "expanded dates lattice"
-#to which any/all observations are attached
-
-
-(d_days <- tibble(event_date = seq(as.Date(params$date_start, "%Y-%m-%d"), as.Date(params$date_end, "%Y-%m-%d"), by = "day")) %>%
-    mutate(
-      Day = weekdays(event_date),
-      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% dates_holidays_2015_2030, "Weekend", "Weekday"),
-      DayType_num = if_else(str_detect(DayType, "end"),1,0),
-      DayL = suncalc::getSunlightTimes(
-        date = event_date,
-        tz = "America/Los_Angeles",
-        lat = lut$lut_river_loc$Lat,
-        lon = lut$lut_river_loc$Long,
-        keep=c("dawn", "dusk")
-        ) |> 
-        mutate(DayL = as.numeric(dusk - dawn)) |>
-        pluck("DayL"),
-      Week = as.numeric(format(event_date, "%V"))
-    ) |> 
-    rowid_to_column(var = "day_index"))
-
-#other possibly useful/needed fields that had been created with effort and group/interview data objects
-    # Day = weekdays(Date),
-    # DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% all_holidays, "Weekend", "Weekday"),
-    # Month = format(Date,"%b"), Month.no = as.numeric(format(Date, "%m")),
-    # Year = as.numeric(format(Date, "%Y")),
-    # Weeknum = as.numeric(format(Date, "%V")),
-    # j.date =  as.numeric(format(Date, "%j"))
-
- 
-```
-
-```{r closures}
-# Denote fishery closures
-#total closed should be responsive rather than declared
-#and date declaration can/should be much more concise
-#for example something like this...
-
-
-# EB: this needs work so we don't have to declare open dates with " "
-
-(closure_dates <- bind_rows(
-  tibble(closure_begin = params$date_start, closure_end = "2021-02-02", section = ""),
-  tibble(closure_begin = "2021-02-03", closure_end = "2021-02-05", section = "1,2"),
-  tibble(closure_begin = "2021-02-06", closure_end = "2021-02-09", section = ""),
-  tibble(closure_begin = "2021-02-10", closure_end = "2021-02-12", section = "1,2"),
-  tibble(closure_begin = "2021-02-13", closure_end = "2021-02-16", section = ""),
-  tibble(closure_begin = "2021-02-17", closure_end = "2021-02-19", section = "1,2"),
-  tibble(closure_begin = "2021-02-20", closure_end = "2021-02-23", section = ""),
-  tibble(closure_begin = "2021-02-24", closure_end = "2021-02-26", section = "1,2"),
-  tibble(closure_begin = "2021-02-27", closure_end = "2021-03-02", section = ""),
-  tibble(closure_begin = "2021-03-03", closure_end = "2021-03-05", section = "1,2"),
-  tibble(closure_begin = "2021-03-06", closure_end = "2021-03-09", section = ""),
-  tibble(closure_begin = "2021-03-10", closure_end = "2021-03-12", section = "1,2"),
-  tibble(closure_begin = "2021-03-13", closure_end = "2021-03-16", section = ""),
-  tibble(closure_begin = "2021-03-17", closure_end = "2021-03-19", section = "1,2"),
-  tibble(closure_begin = "2021-03-20", closure_end = "2021-03-23", section = ""),
-  tibble(closure_begin = "2021-03-24", closure_end = "2021-03-26", section = "1,2"),
-  tibble(closure_begin = "2021-03-27", closure_end = "2021-03-30", section = ""),
-  tibble(closure_begin = "2021-03-31", closure_end = "2021-04-02", section = "1,2"),
-  tibble(closure_begin = "2021-04-03", closure_end = "2021-04-06", section = ""),
-  tibble(closure_begin = "2021-04-07", closure_end = "2021-04-09", section = "1,2"),
-  tibble(closure_begin = "2021-04-10", closure_end = params$date_end, section = "")
-  ) |> 
-  rowwise() |>
-  mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |>
-  separate_rows(closure_date, sep = ",") |>
-  separate_rows(section, sep = ","))
-
-
-
-# #and total is
-# nrow(distinct(closure_dates, closure_date)) #or: length(unique(closure_dates$closure_date))
-
-# EB: need to denote sections that remain open too, can do this with values_fill = 1 within pivot_wider()
-# looks like the closure matrix in script 06 is an array of characters
-d_days <- d_days |> 
-  left_join(
-    closure_dates |> 
-      select(event_date = closure_date, section) |> 
-      mutate(
-        event_date = as.Date(event_date),
-        closure_code = 1E-6 # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
-        ) |> 
-      pivot_wider(names_from = section, names_prefix = "section_",
-                  values_from = closure_code, values_fill = 1),
-    by = "event_date"
-  )
-
-# adding in lines to fill in dates in the closure_dates object creates rows where section is NA, which creates a column section_ when pivoted wide. Remove this column from the final table 
-d_days$section_ <- NULL
-
-#in production, will obviously need to ensure the 0/1 coding is actually appropriate...
-# d_days <- d_days |> mutate(across(starts_with("section_"), ~replace_na(., 1)))
-
-# #sets up quick QAQC testing
-# d_days |> 
-#   pivot_longer(names_to = "section", values_to = "close_open", starts_with("section_")) |> 
-#   group_by(section) |> 
-#   summarise(days_open = sum(close_open))
-
-```
 
 ## data from `effort`
 
 ### census
 
 ```{r effort_census}
-#need to LU location to section..
-#toy synthetic for demo that needs to go away
-# lut_section <- distinct(effort, water_body, location) |> #43
-#   mutate(section = sample(1:3, size = length(location), replace = T))
+
+#DA: this is reasonable, and/but I'd like to think about whether/how to do this somewhat differently... 
+#regardless, need to make a call on how to handle ties in min-time diff
+paired_counts <- left_join(
+  creel$effort |> filter(tie_in_indicator == 1) |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence)
+  ,
+  creel$effort |> filter(tie_in_indicator == 0) |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence)
+  ,
+  by = c("event_date", "section")
+  ,
+  suffix = c("_cen", "_ind")
+  ) |> 
+  group_by(event_date, section, location_cen) |> 
+  slice_min(abs(effort_start_time_cen - effort_start_time_ind), n = 1) |> 
+  count(event_date, section, location_cen)
 
 
-# #aiming to have this workable...
-# lut$lut_effort_xwalk
+# # EB based on original code effort_index and effort_census counts paired based on minimum difference between start time of counts, the count sequence from the effort_index count that best matches the effort_census count is then assigned to the effort_census count, so that they match based on event_date and count_sequence. 
+# # identify effort_index counts that are closest temporal match to effort_census counts 
+# indexcounts <- effort |> filter(tie_in_indicator == 0) |> 
+#     left_join(lut_section, by = c("water_body", "location"))
+# censuscounts <- effort |> filter(tie_in_indicator == 1) |> 
+#     left_join(lut_section, by = c("water_body", "location"))
+# 
+# paired_counts <- inner_join(indexcounts, censuscounts, by = c("event_date", "section")) |>  # join back together to pair index and census counts by event_date and section
+#   mutate(dateDiff = abs(effort_start_time.x - effort_start_time.y)) %>% # calculate time difference between start time of census and index surveys 
+#   group_by(event_date, section, location.y) |> 
+#   filter(dateDiff == min(dateDiff)) |> 
+#   arrange(event_date) |> 
+#   distinct(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>
+#   select(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>  # preserve more columns here to look at the times that are matched 
+#   select(event_date, location = location.y, section, count_sequence = count_sequence.x) # select what we'll need for a clean join to the census count data
 
-# identify effort_index counts that are closest temporal match to effort_census counts 
-
-indexcounts <- effort |> filter(tie_in_indicator == 0) |> 
-    left_join(lut_section, by = c("water_body", "location"))
-censuscounts <- effort |> filter(tie_in_indicator == 1) |> 
-    left_join(lut_section, by = c("water_body", "location"))
-
-paired_counts <- inner_join(indexcounts, censuscounts, by = c("event_date", "section")) |>  # join back together to pair index and census counts by event_date and section
-  mutate(dateDiff = abs(effort_start_time.x - effort_start_time.y)) %>% # calculate time difference between start time of census and index surveys 
-  group_by(event_date, section, location.y) |> 
-  filter(dateDiff == min(dateDiff)) |> 
-  arrange(event_date) |> 
-  distinct(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>
-  select(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>  # preserve more columns here to look at the times that are matched 
-  select(event_date, location = location.y, section, count_sequence = count_sequence.x) # select what we'll need for a clean join to the census count data
+## DA: NOT YET REWORKED BUT SHOULD BE QUICK
   
-
 # census (tie in) effort counts 
 effort_census <- effort |> 
   filter(
@@ -381,11 +382,6 @@ effort_census <- effort |>
     !count_type == "Boats" # this will be a problem for creels utilizing boat counts
     ) |> 
   select(water_body, event_date, location, tie_in_indicator, count_type, count_quantity) |> # remove count_sequence (all census count_sequence == 1) - will add closest temporal match of count_sequence from the paired counts object 
-##pending resolution of location name strings in database 
-  # left_join(
-  #   lut$lut_effort_xwalk |> 
-  #     filter(YearGroup == params$year_group)
-  #   , by = c("water_body", "location")) |> 
   left_join(lut_section, by = c("water_body", "location")) |>
   left_join(d_days, by = "event_date") |>
   left_join(paired_counts) |> 
@@ -432,85 +428,6 @@ effort_index <- effort |>
   arrange(event_date, section, count_sequence)
 
 table(effort_index$count_sequence)
-```
-
-### identify effort_index counts that are closest temporal match to effort_census counts
-
-```{r}
-# EB this is now incorporated into chunk for effort_census object 
-
-# EB based on original code effort_index and effort_census counts paired based on minimum difference between start time of counts, the count sequence from the effort_index count that best matches the effort_census count is then assigned to the effort_census count, so that they match based on event_date and count_sequence. 
-
-# This is a start on a way to accomplish the pairing by splitting the data, rejoining, and then pulling data from either LH (x) or RH (y) tables. It looks like it's at least getting there, though are some data entry issues in the Skagit on 9/10 that need to be addressed in the database
-
-# indexcounts <- effort |> filter(tie_in_indicator == 0) |> 
-#     left_join(lut_section, by = c("water_body", "location"))
-# censuscounts <- effort |> filter(tie_in_indicator == 1) |> 
-#     left_join(lut_section, by = c("water_body", "location"))
-# 
-# pairedcounts <- inner_join(indexcounts, censuscounts, by = c("event_date", "section")) %>% # join back together to pair index and census counts by event_date and section - removing effort_index counts that did not occur in the same section as effort_census counts
-#   mutate(dateDiff = abs(effort_start_time.x - effort_start_time.y)) %>% # calculate time difference between start time of census and index surveys 
-#   group_by(event_date, section, location.y) %>%
-#   filter(dateDiff == min(dateDiff)) |> 
-#   arrange(event_date) |> 
-#   distinct(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>
-#   select(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>  # preserve more columns here to look at the times that are matched 
-#   select(event_date, location = location.y, section, count_sequence = count_sequence.x)
-#   
-# # join this to effort_census table 
-# 
-# effort_census2 <- left_join(effort_census, pairedcounts, by = c("event_date", "location", "section")) |> 
-#   drop_na(count_sequence)
-
-
-# KB's code to pair effort_index and effort_census counts
-# left here in case we want to get this for loop running to compare results to the table join method in effort_census chunk
-
-# EB I made a quick attempt at making this work but ran into a formatting problem with the columns for time (e.g., Index.Start, Index.End)
-
-# #Identify dates when both index and tie-in surveys were completed on same day 
-#         index.dates<-unique(effort_index$event_date)
-#         tie.dates<-unique(effort_census$event_date)
-#         paired.dates<-index.dates[index.dates %in% tie.dates]
-#         
-# 
-#     #Create summary of creel counts to identify which one pairs best with tie-in count
-#         paired.surveys<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=8)), c("Date", "Count", "Index.Start", "Index.End", "TI.Start", "TI.End", "Start.Diff", "End.Diff"))
-#         for(date in 1:length(paired.dates)){
-#           sub.date<-effort[effort$event_date == unique(paired.dates)[date],]
-#           counts<-unique(sub.date$count_sequence)
-#           
-#           sub.paired.surveys<-setNames(as.data.frame(matrix(NA, nrow=max(effort$count_sequence), ncol=8)), c("Date", "Count", "Index.Start", "Index.End", "TI.Start", "TI.End", "Start.Diff", "End.Diff"))
-#           
-#           tie.in.data<-sub.date[sub.date$tie_in_indicator == 1, ]
-#           
-#             for(count in 1:length(counts)){
-#                 sub.count<-sub.date[sub.date$count_sequence == unique(sub.date$count_sequence)[counts] & sub.date$tie_in_indicator == 0,]
-#                 
-#                 sub.paired.surveys[counts, "Date"]<-as.character(unique(paired.dates)[date])    
-#                 sub.paired.surveys[counts, "Count"]<-as.character(unique(sub.date$count_sequence)[counts])
-#                 sub.paired.surveys[counts, "Index.Start"]<-min(sub.count$effort_start_time, na.rm=TRUE)
-#                 sub.paired.surveys[counts, "Index.End"]<-max(sub.count$effort_end_time, na.rm=TRUE)
-#                 sub.paired.surveys[counts, "TI.Start"]<-min(tie.in.data$effort_start_time, na.rm=TRUE)
-#                 sub.paired.surveys[counts, "TI.End"]<-max(tie.in.data$effort_end_time, na.rm=TRUE)
-#                 sub.paired.surveys[counts, "Start.Diff"]<-abs(sub.paired.surveys$Index.Start[counts] - sub.paired.surveys$TI.Start[counts])
-#                 sub.paired.surveys[counts, "End.Diff"]<-abs(sub.paired.surveys$Index.End[counts] - sub.paired.surveys$TI.End[counts] )
-#             }
-#           paired.surveys<-rbind(paired.surveys, sub.paired.surveys)
-#         }  
-#         paired.surveys
-# 
-#     #Update "CountNum" for TieIn surveys based on summary in "paired.surveys" DF    
-#         sub.effort.dat$CountNum_New<-NA
-#         for(row in 1:nrow(sub.effort.dat)){
-#             ifelse(sub.effort.dat$Survey.Type[row] != "Creel" & as.character(sub.effort.dat$Date[row]) %in% as.character(paired.surveys$Date)
-#               , sub.effort.dat$CountNum_New[row]<-as.numeric(paired.surveys$Count[paired.surveys$Date == sub.effort.dat$Date[row] & paired.surveys$Start.Diff ==  min(paired.surveys$Start.Diff[paired.surveys$Date == sub.effort.dat$Date[row]])])
-#               , sub.effort.dat$CountNum_New[row]<-sub.effort.dat$CountNum[row])
-#         }
-#         unique(sub.effort.dat$Date[sub.effort.dat$CountNum != sub.effort.dat$CountNum_New])
-        
-
-
 ```
 
 
