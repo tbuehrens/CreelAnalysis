@@ -60,7 +60,7 @@ lut <- map(
 
 ```
 
-```{r build_mostly_static_inputs}
+```{r build_mostly_static_inputs, eval=FALSE}
 #### can/should continue to rethink the best way to get these in
 #
 ## holiday dates
@@ -337,25 +337,57 @@ setdiff(catch$interview_id, interview$interview_id)
 
 ## data from `effort`
 
+```{r}
+#declare some intermediaries, can see later about removing and getting inline
+#but these are about to be overwritten by aggregated versions...
+effort_census <- creel$effort |> filter(tie_in_indicator == 1)
+effort_index <- creel$effort |> filter(tie_in_indicator == 0)
+```
+
 ### census
 
-```{r effort_census}
+Aggregate census (tie in) effort counts, associating to closest-in-time index count. 
 
-#DA: this is reasonable, and/but I'd like to think about whether/how to do this somewhat differently... 
-#regardless, need to make a call on how to handle ties in min-time diff
-paired_counts <- left_join(
-  creel$effort |> filter(tie_in_indicator == 1) |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence)
-  ,
-  creel$effort |> filter(tie_in_indicator == 0) |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence)
-  ,
-  by = c("event_date", "section")
-  ,
-  suffix = c("_cen", "_ind")
+```{r build_effort_census}
+effort_census <- effort_census |> 
+  filter(
+    !count_type == "Boats" # this will be a problem for creels utilizing boat counts
+    ) |> 
+  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_type, count_quantity) |> 
+  #add/overwrite count_sequence (all census count_sequence == 1) with closest temporal match of count_sequence from paired counts object 
+  left_join(
+    #inline paired closest index counts to census
+    left_join(
+      effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      by = c("event_date", "section"),
+      suffix = c("_cen", "_ind")
+    ) |> 
+      group_by(event_date, section, location_cen) |> 
+      slice_min(abs(effort_start_time_cen - effort_start_time_ind), n = 1) |> 
+      ungroup() |> 
+      #count(event_date, section, location_cen, count_sequence_cen, count_sequence_ind)
+      distinct(event_date, section, location = location_cen, count_sequence = count_sequence_ind)
+    ,
+    by = c("event_date", "section", "location")
   ) |> 
-  group_by(event_date, section, location_cen) |> 
-  slice_min(abs(effort_start_time_cen - effort_start_time_ind), n = 1) |> 
-  count(event_date, section, location_cen)
+  left_join(d_days, by = "event_date") |>
+# #is this still necessary? does not seem to be...I see no NAs at least in these data...
+#   drop_na(count_sequence) |>  # missing data stems from census count sections where we don't conduct effort count. Circle back to this..
+  mutate(
+    #angler_type = if_else(count_type == "Boat Anglers", "Boat", "Bank")
+    #angler_type = str_sub(count_type, 1, 4),
+    angler_type = word(count_type, 1),
+# re-index sections for stan_dat list
+#still necessary/appropriate?
+    section_dense = dense_rank(section)
+  ) |>
+#  count(section, section_dense)
+  group_by(event_date, day_index, section, section_dense, count_sequence, angler_type) |> # aggregate census counts to bank / boat categories
+  summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
+  arrange(event_date, section, count_sequence) 
 
+##DA: can delete?
 
 # # EB based on original code effort_index and effort_census counts paired based on minimum difference between start time of counts, the count sequence from the effort_index count that best matches the effort_census count is then assigned to the effort_census count, so that they match based on event_date and count_sequence. 
 # # identify effort_index counts that are closest temporal match to effort_census counts 
@@ -373,56 +405,28 @@ paired_counts <- left_join(
 #   select(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>  # preserve more columns here to look at the times that are matched 
 #   select(event_date, location = location.y, section, count_sequence = count_sequence.x) # select what we'll need for a clean join to the census count data
 
-## DA: NOT YET REWORKED BUT SHOULD BE QUICK
-  
-# census (tie in) effort counts 
-effort_census <- effort |> 
-  filter(
-    tie_in_indicator == 1,
-    !count_type == "Boats" # this will be a problem for creels utilizing boat counts
-    ) |> 
-  select(water_body, event_date, location, tie_in_indicator, count_type, count_quantity) |> # remove count_sequence (all census count_sequence == 1) - will add closest temporal match of count_sequence from the paired counts object 
-  left_join(lut_section, by = c("water_body", "location")) |>
-  left_join(d_days, by = "event_date") |>
-  left_join(paired_counts) |> 
-  drop_na(count_sequence) |>  # missing data stems from census count sections where we don't conduct effort count. Circle back to this..
-  mutate(
-    #angler_type = if_else(count_type == "Boat Anglers", "Boat", "Bank")
-    #angler_type = str_sub(count_type, 1, 4),
-    angler_type = word(count_type, 1), #stringr function to grab word instead of hard code length of first word due to the interchangeable use of "bank" and "shore" among datasets - can then make final encoding of boat / bank an if_else based on presence of "boat", which seems consistent to thus far
-    section = dense_rank(section) # re-index sections for stan_dat list
-  ) |>
-  group_by(event_date, day_index, section, count_sequence, angler_type) |> # aggregate census counts to bank / boat categories
-  summarize(count_quantity = sum(count_quantity)) |> 
-  arrange(event_date, section, count_sequence) |> 
-  ungroup()
-
-
 ```
 
 ### index
 
-```{r effort_index}
+Aggregate index counts of vehicles, trailers, anglers, and boats.
 
-# effort_index contains index counts of vehicles, trailers, anglers, and boats  
-
+```{r build_effort_index}
+  
 # DW - 23 effort count stops return a different Count Number / Count Sequence between the static original values and the current dynamic values returned by the database. Most of these are due to the first count not being done, and the raw csv staring at CountNum = 2. I retained the original value in the comment field of the effort_event table. 
 
 # EB - added in 'no count' events so that Database derived count sequence matches that of the original data. Only found these on 2/8 for 14 rows (effort counts of cars or trailers)
 
-effort_index <- effort |> 
-  filter(tie_in_indicator == 0) |> 
-  select(water_body, event_date, location, tie_in_indicator, count_sequence, count_type, count_quantity) |> 
-  ##pending resolution of location name strings in database 
-  # left_join(
-  #   lut$lut_effort_xwalk |> 
-  #     filter(YearGroup == params$year_group)
-  #   , by = c("water_body", "location")) |> 
-  left_join(lut_section, by = c("water_body", "location")) |>
+##DA - START HERE
+
+effort_index <- effort_index |> 
+  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |> 
   left_join(d_days, by = "event_date") |> 
   group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
-  summarise(count_quantity_sum = sum(count_quantity), .groups = "drop") |> 
-  pivot_wider(names_from = count_type, values_from = count_quantity_sum) |> 
+  summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
+##quick workaround to above comments...
+  filter(!is.na(count_type)) |> 
+  pivot_wider(names_from = count_type, values_from = count_quantity) |> 
   mutate(across(-c(section:count_sequence), ~replace_na(., 0)),
             section = dense_rank(section)) |> # re-index sections for stan_dat list 
   arrange(event_date, section, count_sequence)
@@ -514,8 +518,8 @@ lut_angler_type <- interview_index_TF |>
 ```
 
 ### Daily interview data from `interview`
-```{r}
 
+```{r}
 #total hours creel and total catch sample a per day/angler type/section to compare with effort
 
 interview_index_TF_DailySum <- interview_index_TF |>
@@ -529,8 +533,8 @@ interview_index_TF_DailySum <- interview_index_TF |>
 ```
 
 ### Interview data filtered to only events with vehicle or trailer counts from `interview`
-```{r}
 
+```{r}
 # interview data - angler expansion  KB: interview_sub<-df_interview %>% filter (V_A, T_A, and A_A != NA) ## these variables are used for indirect angler count expansions
 # TF = target fish group
 # AE = angler expansion 
@@ -540,6 +544,7 @@ interview_index_TF_AE <- interview_index_TF |>
 ```
 
 ## census count proportional expansion table
+
 ```{r}
 # pull subset of sections actually surveyed from effort_index table
 # use this to grab corresponding proportional tie expansion values per section
@@ -567,11 +572,10 @@ census_expansion_sub <- left_join(sections_sub, lut$lut_census_expansion, by = "
  
 census_expansion_sub <- bind_rows(census_expansion_sub_bank, census_expansion_sub_boat) # row 1 = bank anglers; row 2 = boat anglers 
 ```
+
 ## stan_dat
 
 ```{r}
-
-
 stan_dat <- list(
   # Day attributes
   
