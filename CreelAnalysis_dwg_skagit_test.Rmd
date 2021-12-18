@@ -6,7 +6,9 @@ params:
   date_start: "2021-02-01"   
   date_end: "2021-04-13"
   year_group: "2020-2021"
-  catch_group: "Steelhead_W_R"
+  species: "Steelhead"
+  fin_mark: "UM"
+  fate: "Released"
 output:
   html_document:
     fig_caption: yes
@@ -335,21 +337,42 @@ setdiff(catch$interview_id, interview$interview_id)
 
 # wrangle for `stan()`
 
-## data from `effort`
-
 ```{r}
-#declare some intermediaries, can see later about removing and getting inline
-#but these are about to be overwritten by aggregated versions...
-effort_census <- creel$effort |> filter(tie_in_indicator == 1)
-effort_index <- creel$effort |> filter(tie_in_indicator == 0)
+#declare an intermediary list
+#can see later about functionalizing or removing and getting inline
+#these are about to be overwritten by aggregated versions...
+
+stan_data <- list(
+  effort_census = creel$effort |> filter(tie_in_indicator == 1),
+  effort_index = creel$effort |> filter(tie_in_indicator == 0),
+##Sure the left_join of filtered catches to the full interview set is what we want?
+##creates a ton of NA fish_counts (as might be expected if many interviews do not report catch values fitting our params filter conditions)
+  interview_catch = left_join(
+    creel$interview
+    ,
+    creel$catch |> 
+      #replacing: #tidyr::unite(col = "species_fin_mark_fate", c(species, fin_mark, fate)) |> filter(species_fin_mark_fate == params$catch_group)
+      filter(
+        str_detect(species, params$species),
+        str_detect(fin_mark, params$fin_mark),
+        str_detect(fate, params$fate)
+      )
+    ,
+    by = "interview_id"
+  )
+    
+
+)
 ```
+
+## effort
 
 ### census
 
 Aggregate census (tie in) effort counts, associating to closest-in-time index count. 
 
 ```{r build_effort_census}
-effort_census <- effort_census |> 
+stan_data$effort_census <- stan_data$effort_census |> 
   filter(
     !count_type == "Boats" # this will be a problem for creels utilizing boat counts
     ) |> 
@@ -358,8 +381,8 @@ effort_census <- effort_census |>
   left_join(
     #inline paired closest index counts to census
     left_join(
-      effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
-      effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      stan_data$effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      stan_data$effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
       by = c("event_date", "section"),
       suffix = c("_cen", "_ind")
     ) |> 
@@ -375,8 +398,6 @@ effort_census <- effort_census |>
 # #is this still necessary? does not seem to be...I see no NAs at least in these data...
 #   drop_na(count_sequence) |>  # missing data stems from census count sections where we don't conduct effort count. Circle back to this..
   mutate(
-    #angler_type = if_else(count_type == "Boat Anglers", "Boat", "Bank")
-    #angler_type = str_sub(count_type, 1, 4),
     angler_type = word(count_type, 1),
 # re-index sections for stan_dat list
 #still necessary/appropriate?
@@ -387,24 +408,6 @@ effort_census <- effort_census |>
   summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
   arrange(event_date, section, count_sequence) 
 
-##DA: can delete?
-
-# # EB based on original code effort_index and effort_census counts paired based on minimum difference between start time of counts, the count sequence from the effort_index count that best matches the effort_census count is then assigned to the effort_census count, so that they match based on event_date and count_sequence. 
-# # identify effort_index counts that are closest temporal match to effort_census counts 
-# indexcounts <- effort |> filter(tie_in_indicator == 0) |> 
-#     left_join(lut_section, by = c("water_body", "location"))
-# censuscounts <- effort |> filter(tie_in_indicator == 1) |> 
-#     left_join(lut_section, by = c("water_body", "location"))
-# 
-# paired_counts <- inner_join(indexcounts, censuscounts, by = c("event_date", "section")) |>  # join back together to pair index and census counts by event_date and section
-#   mutate(dateDiff = abs(effort_start_time.x - effort_start_time.y)) %>% # calculate time difference between start time of census and index surveys 
-#   group_by(event_date, section, location.y) |> 
-#   filter(dateDiff == min(dateDiff)) |> 
-#   arrange(event_date) |> 
-#   distinct(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>
-#   select(event_date, location.y, section, count_sequence.x, count_sequence.y, effort_start_time.x, effort_start_time.y, dateDiff) |>  # preserve more columns here to look at the times that are matched 
-#   select(event_date, location = location.y, section, count_sequence = count_sequence.x) # select what we'll need for a clean join to the census count data
-
 ```
 
 ### index
@@ -412,89 +415,58 @@ effort_census <- effort_census |>
 Aggregate index counts of vehicles, trailers, anglers, and boats.
 
 ```{r build_effort_index}
-  
 # DW - 23 effort count stops return a different Count Number / Count Sequence between the static original values and the current dynamic values returned by the database. Most of these are due to the first count not being done, and the raw csv staring at CountNum = 2. I retained the original value in the comment field of the effort_event table. 
 
 # EB - added in 'no count' events so that Database derived count sequence matches that of the original data. Only found these on 2/8 for 14 rows (effort counts of cars or trailers)
 
-##DA - START HERE
-
-effort_index <- effort_index |> 
+##DA added filter() after select() as quick workaround to above comments...
+stan_data$effort_index <- stan_data$effort_index |> 
   select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |> 
   left_join(d_days, by = "event_date") |> 
   group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
   summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
-##quick workaround to above comments...
+##not a good long term solution...
   filter(!is.na(count_type)) |> 
   pivot_wider(names_from = count_type, values_from = count_quantity) |> 
-  mutate(across(-c(section:count_sequence), ~replace_na(., 0)),
-            section = dense_rank(section)) |> # re-index sections for stan_dat list 
+  mutate(
+##not seeing any NAs and don't want to do this if not strictly needed
+    #across(-c(section:count_sequence), ~replace_na(., 0)),
+    section_dense = dense_rank(section)
+    ) |>
   arrange(event_date, section, count_sequence)
-
-table(effort_index$count_sequence)
 ```
 
 
-## data from `interview`
+## interview
 
 Only "index" for interview, by definition.
 
 ```{r}
-
-catch_cg <- catch |> # catch table filtered to catch group (cg) parameter 
+#previously object named "interview_index"
+stan_data$interview_catch <- stan_data$interview_catch |> 
+  left_join(d_days, by = "event_date") |> #summary()
   mutate(
-    origin = case_when(
-      fin_mark == "UM" ~ "W",
-      fin_mark == "AD" ~ "H",
-      fin_mark == "UNK" ~ "U"),
-    origin = replace_na(origin, "U"),
-    fate = str_sub(fate, 1,1), #same operation as strsub()
-    fate = replace_na(fate, "U"),
-    species_origin_fate = paste(species, origin, fate, sep = "_")) |> 
-  filter(
-    species_origin_fate == params$catch_group
-  ) |> 
-  select(
-    interview_id, catch_id, species_origin_fate, fish_count
-  )
-
-interview_index <- interview |> 
-  left_join(catch_cg, by = "interview_id") |>
-  left_join(lut_section, by = "location") |> 
-  left_join(d_days, by = "event_date") |> 
-  mutate(
-    angler_type = if_else(boat_used == "No", "Bank", "Boat"),
-    trip_guided = case_when(
-      trip_guided == "Guided" ~ "Yes",
-      trip_guided == "Non-guided" ~ "No",
-      trip_guided == "Unknown" ~ "Unknown",
-      is.na(trip_guided) ~ "Unknown"),
+    ##appears unused?
+    # trip_guided = case_when(
+    #   trip_guided == "Guided" ~ "Yes",
+    #   trip_guided == "Non-guided" ~ "No",
+    #   trip_guided == "Unknown" ~ "Unknown",
+    #   is.na(trip_guided) ~ "Unknown"),
+    
+    across(c(vehicle_count, trailer_count, fish_count), ~replace_na(., 0)),
     trip_status = replace_na(trip_status, "Unknown"),
+    angler_type = if_else(boat_used == "No", "Shore", "Boat"),
     fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
     angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 5),
-    angler_hours_total = angler_count * angler_hours,
-    # origin = case_when(
-    #   fin_mark == "UM" ~ "W",
-    #   fin_mark == "AD" ~ "H",
-    #   fin_mark == "UNK" ~ "U"),
-    # origin = replace_na(origin, "U"),
-    # fate = str_sub(fate, 1,1), #same operation as strsub()
-    # fate = case_when(
-    #   fate == "Kept" ~ "K",
-    #   fate == "Released" ~ "R",
-    #   fate == "Unknown" ~ "U"),
-    # fate = replace_na(fate, "U"),
-    # species_origin_fate = paste(species, origin, fate, sep = "_"),
-    # fish_count = replace_na(fish_count, 0), # Could also determine which fields are appropriate to use replace_na on and perform an across( ) + replace_na to be more succinct
-    vehicle_count = replace_na(vehicle_count, 0),
-    trailer_count = replace_na(trailer_count, 0),
-    fish_count = replace_na(fish_count, 0), # coerce NA's from table join to 0's
-    species_origin_fate = params$catch_group # make catch group field uniform 
+    angler_hours_total = angler_count * angler_hours
+    
+    ,section_dense = dense_rank(section)
   ) |>
-  arrange(event_date, interview_number) |> 
   filter(!angler_hours <= 0.5) |>  # EB remove short trips
-  mutate(section = dense_rank(section)) # re-index sections for stan_dat list
+  arrange(event_date, interview_number)
 
+
+## DA START HERE - not clear we want a group_by that includes vehicle_count, trailer_count, etc. if interview_id is UID...
 
 # EB: need to make current code covers these filters from original code 
   #Drop "final_group.dat" data if "Start.Time" is <NA>, "Interview.Time" is <NA> for groups with Trip.Status == I, or "End.Time" is <NA> for groups with Trip.Status == C
@@ -503,9 +475,8 @@ interview_index <- interview |>
 
 # summarizing catch by unique interview (interview_id) in this chunk 
 interview_index_TF <- interview_index |> 
-    group_by(interview_id, event_date, interview_time, day_index, section, angler_count, angler_type, angler_hours, angler_hours_total,vehicle_count, trailer_count) |>
-  summarize(fish_count = sum(fish_count)) |> 
-  ungroup() |>
+  group_by(interview_id, event_date, interview_time, day_index, section, angler_count, angler_type, angler_hours, angler_hours_total,vehicle_count, trailer_count) |>
+  summarize(fish_count = sum(fish_count), .groups = "drop") |> 
   arrange(event_date, section, interview_time)
 
 # EB: equivalent to gear.xwalk table in original code. Keep going back on forth on what terminology makes most sense between "gear_type" or "angler_type"
@@ -515,7 +486,33 @@ lut_angler_type <- interview_index_TF |>
   rowid_to_column(var = "angler_type_num")
   
 
+## can delete?
+# catch_cg <- creel$catch |> # catch table filtered to catch group (cg) parameter 
+#   mutate(
+#     origin = case_when(
+#       fin_mark == "UM" ~ "W",
+#       fin_mark == "AD" ~ "H",
+#       fin_mark == "UNK" ~ "U"),
+#     origin = replace_na(origin, "U"),
+#     fate = str_sub(fate, 1,1), #same operation as strsub()
+#     fate = replace_na(fate, "U"),
+#     species_origin_fate = paste(species, origin, fate, sep = "_")) |> 
+#   filter(
+#     species_origin_fate == params$catch_group
+#   ) |> 
+#   select(
+#     interview_id, catch_id, species_origin_fate, fish_count
+#   )
+
 ```
+
+
+```{r}
+stan_data$effort_census |> count(section, section_dense)
+stan_data$effort_index |> count(section, section_dense)
+stan_data$interview_catch |> count(section, section_dense)
+```
+
 
 ### Daily interview data from `interview`
 
