@@ -9,6 +9,7 @@ params:
   species: "Steelhead"
   fin_mark: "UM"
   fate: "Released"
+  Model_number: 4
 output:
   html_document:
     fig_caption: yes
@@ -112,7 +113,7 @@ First, get the creel events of interest by building the Socrata API url string a
 dwg_sent$event <- URLencode(
   paste0(dwg_base$event,
          "?$where=project_name in('", params$proj_name, "')",
-         " AND water_body in('", str_replace(params$water_body, ",", "','"), "')",
+         " AND water_body in('", str_replace(params$water_body, ",|\\|", "','"), "')",
          " AND event_date between '", params$date_start,
          "T00:00:00' and '", params$date_end,
          "T00:00:00'&$limit=100000"
@@ -123,9 +124,22 @@ creel$event <- read_csv(dwg_sent$event) |>
   dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator)
 ```
 
-## effort counts
-
 Then, get the associated effort and interview data.
+
+```{r pending_vw_changes_for_water_body}
+# #if water_body dropped from event filter...
+# #but regardless can/should build creel_event_id condition once and apply twice?
+# eff_int_filter <- paste0(
+#     "?$where=creel_event_id in('",
+#     paste(creel$event$creel_event_id, collapse = "','"), "')",
+#     " AND water_body in('", str_replace(params$water_body, ",|\\|", "','"), "')",
+#     "&$limit=100000"
+#   )
+
+```
+
+
+## effort counts
 
 ```{r get_effort}
 dwg_sent$effort <- URLencode(
@@ -179,6 +193,23 @@ creel$catch <- read_csv(dwg_sent$catch) |>
 Aggregations of `location` units that may or may not correspond to `water_body`/`water_body_desc`...
 
 ```{r add_sections}
+creel$effort <- creel$effort |> 
+  select(-created_datetime, -modified_datetime) |>
+  left_join(
+    lut$sections |> select(water_body_desc, location = location_code, section),
+    by = c("location")
+    ) # |> count(section)
+
+creel$interview <- creel$interview |> 
+  select(-created_datetime, -modified_datetime,
+         -state_residence, -zip_code) |> 
+  left_join(
+    lut$sections |> select(water_body_desc, location = location_code, section),
+    by = c("location")
+  )
+
+### working out options below, can delete soon...
+
 #x <- read_csv(URLencode(paste0(dwg_base$effort, "?$limit=1000000")))
 #x |> count(project_name, water_body) |> print(n=50)
 
@@ -192,23 +223,45 @@ Aggregations of `location` units that may or may not correspond to `water_body`/
 # creel$effort |> count(water_body, location) |> print(n=50)
 # creel$interview |> count(water_body, location) |> print(n=50)
 
-section_codes <- tibble(
-  water_body_desc = c("Sauk River", "Skagit River"),
-  section = c(2,1)
-)
 
-sections <- full_join(
-  distinct(creel$effort, water_body, location),
-  distinct(creel$interview, water_body, location),
-  by = c("water_body", "location")
-) |> 
-  left_join(
-    lut$sections |> select(water_body_desc, location = location_code, upper_rm, lower_rm)
-    ,
-    by = c("location")
-  ) |> 
-  #count(water_body, water_body_desc)
-  left_join(section_codes, by = "water_body_desc")
+# #join the full set of places to those that have been queried
+# #then user assign section numbering according to analysis need
+# sections <- full_join(
+#   distinct(creel$effort, water_body, location),
+#   distinct(creel$interview, water_body, location),
+#   by = c("water_body", "location")
+# ) |> 
+#   left_join(
+#     lut$sections |> select(water_body_desc, location = location_code, upper_rm, lower_rm)
+#     ,
+#     by = c("location")
+#   ) |> 
+#   #count(water_body, water_body_desc)
+# ## user input to assign "section" numbering to the set of water_bodies
+# ## in the queried data
+#   left_join(
+#     # tibble(
+#     #   water_body_desc = c("Sauk River", "Skagit River"),
+#     #   section = c(2,1) #equivalent to "Section.Summ" in older "Crosswalk_Table"s
+#     # )
+#     #,
+#     #by = "water_body_desc"
+# 
+#     ##could also go against "location"
+#     tibble(
+#       location = c("101 hole (Car Body hole access point)", "Baker River Boat Ramp", "Big Timber log sign to Ovenells Heritage Inn driveway", "Chapel Hole", "Bryson Road access parking area", "Bryson Road to USFS Lower Sauk Ramp along Hwy 530", "Darrington Sauk-Prairie Road bridge (aka Darrington Mill Bridge)"),
+#       section = c(1,1,1,1,2,2,2)
+#     )
+#     , 
+#     by = "location"
+#     )
+# 
+# 
+# # #alternatives for example..
+# #     tibble(
+# #       water_body_desc = c("Stillaguamish River - North Fork", "Stillaguamish River - South Fork", "Stillaguamish River"),
+# #       section = c(1,1,2) #or whatever...
+# #     )
 
 # #confirming that this codes locations to identical levels as prior csv approach 
 # left_join(
@@ -220,21 +273,22 @@ sections <- full_join(
 #   mutate(d = section - Section.Summ) |> 
 #   print(n=40)
 
-#add to the primary objects
-creel$effort <- creel$effort |> 
-  select(-created_datetime, -modified_datetime) |> 
-  left_join(
-    sections |> select(water_body, location, water_body_desc, section),
-    by = c("water_body", "location")
-    )
 
-creel$interview <- creel$interview |> 
-  select(-created_datetime, -modified_datetime,
-         -state_residence, -zip_code) |> 
-  left_join(
-    sections |> select(water_body, location, water_body_desc, section),
-    by = c("water_body", "location")
-  )
+# #add to the primary objects
+# creel$effort <- creel$effort |> 
+#   select(-created_datetime, -modified_datetime) |> 
+#   left_join(
+#     sections |> select(water_body, location, water_body_desc, section),
+#     by = c("water_body", "location")
+#     )
+# 
+# creel$interview <- creel$interview |> 
+#   select(-created_datetime, -modified_datetime,
+#          -state_residence, -zip_code) |> 
+#   left_join(
+#     sections |> select(water_body, location, water_body_desc, section),
+#     by = c("water_body", "location")
+#   )
 
 ```
 
@@ -260,6 +314,7 @@ Then join per-section closures by date.
       DayL = suncalc::getSunlightTimes(
         date = event_date,
         tz = "America/Los_Angeles",
+#need to add flexibility for other rivers/multiple lines in River.Locations lut
         lat = lut$river_loc$Lat,
         lon = lut$river_loc$Long,
         keep=c("dawn", "dusk")
@@ -337,32 +392,16 @@ setdiff(catch$interview_id, interview$interview_id)
 
 # wrangle for `stan()`
 
-```{r}
+```{r init_stan_data}
 #declare an intermediary list
 #can see later about functionalizing or removing and getting inline
 #these are about to be overwritten by aggregated versions...
 
 stan_data <- list(
   effort_census = creel$effort |> filter(tie_in_indicator == 1),
-  effort_index = creel$effort |> filter(tie_in_indicator == 0),
-##Sure the left_join of filtered catches to the full interview set is what we want?
-##creates a ton of NA fish_counts (as might be expected if many interviews do not report catch values fitting our params filter conditions)
-  interview_catch = left_join(
-    creel$interview
-    ,
-    creel$catch |> 
-      #replacing: #tidyr::unite(col = "species_fin_mark_fate", c(species, fin_mark, fate)) |> filter(species_fin_mark_fate == params$catch_group)
-      filter(
-        str_detect(species, params$species),
-        str_detect(fin_mark, params$fin_mark),
-        str_detect(fate, params$fate)
-      )
-    ,
-    by = "interview_id"
-  )
-    
-
+  effort_index = creel$effort |> filter(tie_in_indicator == 0)
 )
+
 ```
 
 ## effort
@@ -373,9 +412,6 @@ Aggregate census (tie in) effort counts, associating to closest-in-time index co
 
 ```{r build_effort_census}
 stan_data$effort_census <- stan_data$effort_census |> 
-  filter(
-    !count_type == "Boats" # this will be a problem for creels utilizing boat counts
-    ) |> 
   select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_type, count_quantity) |> 
   #add/overwrite count_sequence (all census count_sequence == 1) with closest temporal match of count_sequence from paired counts object 
   left_join(
@@ -395,16 +431,10 @@ stan_data$effort_census <- stan_data$effort_census |>
     by = c("event_date", "section", "location")
   ) |> 
   left_join(d_days, by = "event_date") |>
-# #is this still necessary? does not seem to be...I see no NAs at least in these data...
-#   drop_na(count_sequence) |>  # missing data stems from census count sections where we don't conduct effort count. Circle back to this..
   mutate(
     angler_type = word(count_type, 1),
-# re-index sections for stan_dat list
-#still necessary/appropriate?
-    section_dense = dense_rank(section)
   ) |>
-#  count(section, section_dense)
-  group_by(event_date, day_index, section, section_dense, count_sequence, angler_type) |> # aggregate census counts to bank / boat categories
+  group_by(event_date, day_index, section, count_sequence, angler_type) |>
   summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
   arrange(event_date, section, count_sequence) 
 
@@ -419,20 +449,16 @@ Aggregate index counts of vehicles, trailers, anglers, and boats.
 
 # EB - added in 'no count' events so that Database derived count sequence matches that of the original data. Only found these on 2/8 for 14 rows (effort counts of cars or trailers)
 
-##DA added filter() after select() as quick workaround to above comments...
+##DA added filter(!is.na(count_quantity)) to address above comments...
+## need to think about whether !is.na(no_count_reason) should be interpolated or inferred or zeroed or...
+## for example no_count_reason == "Conditions", what to do with count_quantity == NA
 stan_data$effort_index <- stan_data$effort_index |> 
-  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |> 
+  filter(!is.na(count_quantity)) |> 
+  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |>
   left_join(d_days, by = "event_date") |> 
   group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
   summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
-##not a good long term solution...
-  filter(!is.na(count_type)) |> 
   pivot_wider(names_from = count_type, values_from = count_quantity) |> 
-  mutate(
-##not seeing any NAs and don't want to do this if not strictly needed
-    #across(-c(section:count_sequence), ~replace_na(., 0)),
-    section_dense = dense_rank(section)
-    ) |>
   arrange(event_date, section, count_sequence)
 ```
 
@@ -441,412 +467,241 @@ stan_data$effort_index <- stan_data$effort_index |>
 
 Only "index" for interview, by definition.
 
-```{r}
-#previously object named "interview_index"
-stan_data$interview_catch <- stan_data$interview_catch |> 
+```{r build_stan_data_interview}
+stan_data$interview <- creel$interview |> 
   left_join(d_days, by = "event_date") |> #summary()
   mutate(
-    ##appears unused?
-    # trip_guided = case_when(
-    #   trip_guided == "Guided" ~ "Yes",
-    #   trip_guided == "Non-guided" ~ "No",
-    #   trip_guided == "Unknown" ~ "Unknown",
-    #   is.na(trip_guided) ~ "Unknown"),
-    
-    across(c(vehicle_count, trailer_count, fish_count), ~replace_na(., 0)),
+    across(c(vehicle_count, trailer_count), ~replace_na(., 0)),
     trip_status = replace_na(trip_status, "Unknown"),
-    angler_type = if_else(boat_used == "No", "Shore", "Boat"),
+    angler_type = if_else(boat_used == "No", "Shore", "Boat"), #problems outside Skagit test case if census levels differ?
     fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
     angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 5),
     angler_hours_total = angler_count * angler_hours
-    
-    ,section_dense = dense_rank(section)
-  ) |>
-  filter(!angler_hours <= 0.5) |>  # EB remove short trips
-  arrange(event_date, interview_number)
+  ) |> 
+  left_join(
+    creel$catch |> 
+      filter(
+        str_detect(species, params$species |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fin_mark, params$fin_mark |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
+        # ,
+        # str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        # str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+      ) |> 
+    group_by(interview_id) |> 
+    summarise(fish_count = sum(fish_count), .groups = "drop")
+    ,
+    by = "interview_id"
+  ) |> 
+  select(section, event_date, day_index, Week, interview_id, interview_time, contains("angler"), contains("count")) |> 
+  mutate(across(fish_count, ~replace_na(., 0))) |> 
+  filter(angler_hours > 0) |>  
+  arrange(event_date)
 
 
-## DA START HERE - not clear we want a group_by that includes vehicle_count, trailer_count, etc. if interview_id is UID...
-
-# EB: need to make current code covers these filters from original code 
-  #Drop "final_group.dat" data if "Start.Time" is <NA>, "Interview.Time" is <NA> for groups with Trip.Status == I, or "End.Time" is <NA> for groups with Trip.Status == C
-
-  #Drop rows if hours fished by a Group is Negative 
-
-# summarizing catch by unique interview (interview_id) in this chunk 
-interview_index_TF <- interview_index |> 
-  group_by(interview_id, event_date, interview_time, day_index, section, angler_count, angler_type, angler_hours, angler_hours_total,vehicle_count, trailer_count) |>
-  summarize(fish_count = sum(fish_count), .groups = "drop") |> 
-  arrange(event_date, section, interview_time)
-
-# EB: equivalent to gear.xwalk table in original code. Keep going back on forth on what terminology makes most sense between "gear_type" or "angler_type"
-lut_angler_type <- interview_index_TF |>
-  select(angler_type) |> 
-  distinct() |> 
-  rowid_to_column(var = "angler_type_num")
-  
-
-## can delete?
-# catch_cg <- creel$catch |> # catch table filtered to catch group (cg) parameter 
-#   mutate(
-#     origin = case_when(
-#       fin_mark == "UM" ~ "W",
-#       fin_mark == "AD" ~ "H",
-#       fin_mark == "UNK" ~ "U"),
-#     origin = replace_na(origin, "U"),
-#     fate = str_sub(fate, 1,1), #same operation as strsub()
-#     fate = replace_na(fate, "U"),
-#     species_origin_fate = paste(species, origin, fate, sep = "_")) |> 
-#   filter(
-#     species_origin_fate == params$catch_group
-#   ) |> 
-#   select(
-#     interview_id, catch_id, species_origin_fate, fish_count
-#   )
+# 
+# # EB: need to make current code covers these filters from original code 
+#   #Drop "final_group.dat" data if "Start.Time" is <NA>, "Interview.Time" is <NA> for groups with Trip.Status == I, or "End.Time" is <NA> for groups with Trip.Status == C
+# 
+#   #Drop rows if hours fished by a Group is Negative 
+# 
+# # summarizing catch by unique interview (interview_id) in this chunk 
+# interview_index_TF <- interview_index |> 
+#   group_by(interview_id, event_date, interview_time, day_index, section, angler_count, angler_type, angler_hours, angler_hours_total,vehicle_count, trailer_count) |>
+#   summarize(fish_count = sum(fish_count), .groups = "drop") |> 
+#   arrange(event_date, section, interview_time)
+# 
+# # EB: equivalent to gear.xwalk table in original code. Keep going back on forth on what terminology makes most sense between "gear_type" or "angler_type"
+# lut_angler_type <- interview_index_TF |>
+#   select(angler_type) |> 
+#   distinct() |> 
+#   rowid_to_column(var = "angler_type_num")
 
 ```
 
 
-```{r}
-stan_data$effort_census |> count(section, section_dense)
-stan_data$effort_index |> count(section, section_dense)
-stan_data$interview_catch |> count(section, section_dense)
-```
-
-
-### Daily interview data from `interview`
+### Daily interview summaries
 
 ```{r}
 #total hours creel and total catch sample a per day/angler type/section to compare with effort
-
-interview_index_TF_DailySum <- interview_index_TF |>
-  group_by(event_date,day_index,section,angler_type) |>
+stan_data$interview_daily_totals <- stan_data$interview |>
+  group_by(event_date, day_index, section, angler_type) |>
   summarise(
-        angler_hours_total_dailysum = sum(angler_hours_total),
-  catch_dailysum = sum(fish_count)) |> 
-  ungroup() |> 
+    angler_hours_total_dailysum = sum(angler_hours_total),
+    catch_dailysum = sum(fish_count), .groups = "drop"
+  ) |> 
+#not sure whether this should stay?
   filter(angler_hours_total_dailysum > 0)
 
 ```
 
-### Interview data filtered to only events with vehicle or trailer counts from `interview`
+### Exclude interviews with NA vehicle and trailer counts
+
+This would form the basis for IntA below if there were cause in the data...?
+
+For now, leaving undeclared and simply defining IntA as == IntC, pending further revision...
 
 ```{r}
-# interview data - angler expansion  KB: interview_sub<-df_interview %>% filter (V_A, T_A, and A_A != NA) ## these variables are used for indirect angler count expansions
-# TF = target fish group
-# AE = angler expansion 
-interview_index_TF_AE <- interview_index_TF |>  
-	filter(across(c(vehicle_count, trailer_count), ~ !is.na(.)))
+#stan_data$interview_with_trailer_vehicle_count <-
+
+# stan_data$interview_no_zero_counts <- stan_data$interview |>
+# 	#filter(across(c(vehicle_count, trailer_count), ~ !is.na(.)))
+#   filter(vehicle_count > 0)# | trailer_count > 0 | angler_count > 0)
 
 ```
 
-## census count proportional expansion table
-
-```{r}
-# pull subset of sections actually surveyed from effort_index table
-# use this to grab corresponding proportional tie expansion values per section
-
-sections_sub <- effort_index |> 
-  select(section) |> 
-  mutate(section = dense_rank(section)) |>  # re-index sections for stan_dat list
-  distinct()
-
-census_expansion_sub <- left_join(sections_sub, lut$lut_census_expansion, by = "section")
-
- census_expansion_sub_bank <- census_expansion_sub |> 
-	  filter(angler_type == "Bank") |> 
-	  select(
-	    section,
-	    p_TI) |>
-	  pivot_wider(names_from = section, values_from = p_TI)
-
-  census_expansion_sub_boat <- census_expansion_sub |> 
-	  filter(angler_type == "Boat") |> 
-	  select(
-	    section,
-	    p_TI) |>
-	  pivot_wider(names_from = section, values_from = p_TI)
- 
-census_expansion_sub <- bind_rows(census_expansion_sub_bank, census_expansion_sub_boat) # row 1 = bank anglers; row 2 = boat anglers 
-```
 
 ## stan_dat
 
-```{r}
+```{r stan_dat}
 stan_dat <- list(
+  
   # Day attributes
-  
   # int; number of fishing days; KB: pull from "master_date" DF
-	  D = nrow(d_days) 
-
-	  # int; final number of unique gear/angler types  KB: pull from subsetted angler x-walk?
-	, G = as.integer(length(unique(interview_index$angler_type))) 
-	
+  D = nrow(d_days),
+  # int; final number of unique gear/angler types  KB: pull from subsetted angler x-walk?
+  G = as.integer(length(unique(stan_data$interview$angler_type))),
 	# int; final number of river sections    KB: pull from subsetted section x-walk?
-	, S =  as.integer(length(unique(effort_index$section)))    
-	  
+  S =  as.integer(length(unique(stan_data$effort_index$section))),
 	# int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
-	, H = max(effort_index$count_sequence)            
-	  
-	  # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
-	, P_n = nrow(d_days) 
-
+	H = max(stan_data$effort_index$count_sequence),
+  # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
+##NEED TO UPDATE? input param and if_else?
+	P_n = nrow(d_days),
+  #or for weekly? length(unique(d_days$Week))
 	# vec; index denoting daytype (day-type is offset in model)   KB: pull from "master_date" DF (1= weekend, 0 = weekday)
-  , w = d_days$DayType_num
-
+  w = d_days$DayType_num,
 	# int; index denoting fishing day/period      KB: calculate as 1:P_n (not sure why this isn't a vector)
-	, period = 1:nrow(d_days)         
-	  
-	  # vec; daylength (model offset; assumption)       KB: pull from "master_date" DF
-	, L = d_days$DayL
-	
+	period = 1:nrow(d_days), 
+	# vec; daylength (model offset; assumption)       KB: pull from "master_date" DF
+	L = d_days$DayL,
 	# mat; index denoting fishery status                          KB: user defined (1=open, 0 = closed; by period/date and section; 0 defined as 1E-6 for model)
-	, O = d_days |> 
-	  select(starts_with("section_")) |>
-	  as.matrix()
-	  
-	  
-  # Vehicle index effort counts KB: index_vehicles="summ_effort_counts" %>% filter(gear == vehicles, survey == Creel) 
-	  
-  # int; total number of individual vehicle index effort counts KB: index_vehicles %>% nrow() 
-	, V_n = effort_index |> 
-	    tally() |> 
-	    as.integer()
+	O = d_days |> 
+	  select(contains("section_")) |>
+    mutate(across(everything(), ~if_else(., 1, 0.00001))) |> 
+	  as.matrix(),  
 
-		  # int; observed # of vehicles  KB: index_vehicles %>% pull(Count)
-	, V_I = effort_index |>
-	  pull(`Vehicle Only`)
+  # Vehicle index effort counts 
+  # int; total number of individual vehicle index effort counts 
+	V_n = nrow(stan_data$effort_index),
+  # int; observed # of vehicles 
+	V_I = stan_data$effort_index$`Vehicle Only`,
+	# int; index for day/period 
+	day_V = stan_data$effort_index$day_index,
+  gear_V = as.integer(rep(1, nrow(stan_data$effort_index))),
+	# int; index for section    
+  section_V = stan_data$effort_index$section,
+	# int; index for count_num  
+	countnum_V = stan_data$effort_index$count_sequence,
 	
-	  # int; index for day/period KB: index_vehicles %>% pull(day/period)
-	, day_V = effort_index |>
-	  pull(day_index)
-	
-	, gear_V = effort_index |> 
-    mutate(gear_V = 1) |> 
-    pull(gear_V)
-  
-	  # int; index for section     KB: index_vehicles %>% pull(section)
-	, section_V = effort_index |>
-	  pull(section) 
-	  
-	  # int; index for count_num    KB: index_vehicles %>% pull(count_num)
-	, countnum_V = effort_index |>    
-	  pull(count_sequence)
+	# Trailer index effort counts
+  # int; total number of boat trailer index effort counts 
+	T_n = nrow(stan_data$effort_index),
+	# int; observed # of boat trailers 
+	T_I = stan_data$effort_index$`Trailers Only`,
+  # int; index for day/period
+## INTENTIONALLY LEFT "WRONG" TO MARK LATER REVISION IN ABOVE WRANGLING
+## TO ALLOW RAGGED VEHICLE/TRAILER VECTORS 
+	day_T = stan_data$effort_index$day_index, #day_V,
+  gear_T = as.integer(rep(2, nrow(stan_data$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
+  # int; index for section
+	section_T = stan_data$effort_index$section,
+  # int; index for count_num  
+	countnum_T = stan_data$effort_index$count_sequence,
 
-	  
-
-	
-	
-	# Trailer index effort counts  KB: index_trailers="summ_effort_counts" %>% filter(gear == trailers, survey == Creel)
-	
-	# int; total number of boat trailer index effort counts       KB: index_trailers %>% nrow() 
-	, T_n = effort_index |> 
-	    tally() |> 
-	    as.integer()
-	
-	  # int; observed # of boat trailers      KB: index_trailers %>% pull(Count)
-	, T_I = effort_index |>
-	  pull(`Trailers Only`)
-	
-  # int; index for day/period         KB: index_trailers %>% pull(day/period)
-	, day_T = effort_index |>
-	  pull(day_index) 
-	
-	, gear_T = effort_index |> 
-    mutate(gear_T = 2) |> 
-    pull(gear_T)
-	
-  # int; index for section          KB: index_trailers %>% pull(section)
-	, section_T = effort_index |>
-	   pull(section)
-
-  # int; index for count_num        KB: index_trailers %>% pull(count_num)
-	, countnum_T = effort_index |>    
-	  pull(count_sequence)
-
-
-	       
-	
-  # Angler index effort counts  KB: index_anglers="summ_effort_counts"     %>% filter(gear == angler_groups, survey == Creel); angler_groups=user defined?
-	# int; total number of angler index effort counts            KB: index_anglers %>% nrow() 
-	
+  # Angler index effort counts
+	# int; total number of angler index effort counts
 	# Need to circle back on how to deal with this when applicable, set all values to 0 as a placeholder, matching example standat_2021-05-28.txt
-	, A_n = 0
-	  
-	  # effort_index |>
-	  # tally() |> 
-	  # as.integer()
-	
-		  # int; observed # of anglers                                 KB: index_anglers %>% pull(Count)
-	, A_I = numeric(0) #EB placeholder
-	
-	
-	# int; index for day/period                                  KB: index_anglers %>% pull(day/period) 
-	, day_A = numeric(0)
-	  
-	  # effort_index |>
-	  # pull(day_index)
-	
-	 # int; index denoting "gear/angler type"                     KB: index_anglers %>% pull(gear/angler) 
-	, gear_A = numeric(0) #EB placeholder 
-	
-	
-	# int; index for section                                     KB: index_anglers %>% pull(section)
-	, section_A = numeric(0)
-	  
-	  # effort_index |>
-	  # pull(section)
-	  
-	  # int; index for count_num                                   KB: index_anglers %>% pull(count_num)
-	, countnum_A = numeric(0)
-	  
-	  # effort_index |> 
-	  # pull(count_sequence)
+	A_n = 0,
+	# int; observed # of anglers
+	A_I = numeric(0), #EB placeholder
+	# int; index for day/period
+	day_A = numeric(0),
+	# int; index denoting "gear/angler type"  
+	gear_A = numeric(0), #EB placeholder 
+	# int; index for section 
+	section_A = numeric(0),
+	# int; index for count_num
+	countnum_A = numeric(0),
 
   
-  
-  # Census (tie-in) effort counts      KB: TI_anglers="summ_effort_counts" %>% filter(survey == "Tie In");
-
-	 # int; total number of angler tie-in effort counts       KB: TI_anglers %>% nrow() 
-	, E_n = effort_census |> 
-	    tally() |> 
-	    as.integer()          
-  
-   # int; index denoting day/period                         KB: TI_anglers %>% pull(day/period) 
-	, day_E = effort_census |> 
-    pull(day_index)
-	
-  # int; index denoting "gear/angler type"                  KB: TI_anglers %>% pull(gear/angler)
-	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-  , gear_E = effort_census |> 
-	  mutate(angler_type = if_else(angler_type == "Boat", 2, 1)) |> 
-    pull(angler_type)        
-	
-  # int; index for section                                  KB: TI_anglers %>% pull(section)
-  , section_E = effort_census |> 
-    pull(section)
-	
+  # Census (tie-in) effort counts   
+	# int; total number of angler tie-in effort counts
+	E_n = nrow(stan_data$effort_census),
+  # int; index denoting day/period
+	day_E = stan_data$effort_census$day_index,
+  # int; index denoting "gear/angler type"  
+	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets
+## where vehicle==1 & trailer==2, then bank==1 & boat==2
+  gear_E = if_else(stan_data$effort_census$angler_type == "Boat", 2, 1),
+  # int; index for section
+  section_E = stan_data$effort_census$section,
 	# EB count_sequence here needs to match that of the closest effort_index count (if my understanding is correct)
-  # int; index for count_num                                KB: TI_anglers %>% pull(count_num)
-  , countnum_E = effort_census |> 
-    pull(count_sequence)   
-	
-  # int; observed # of anglers                              KB: TI_anglers %>% pull(Count)
-  , E_s = effort_census |> 
-    pull(count_quantity)           
-  
+  # int; index for count_num
+  countnum_E = stan_data$effort_census$count_sequence, 
+  # int; observed # of anglers
+  E_s = stan_data$effort_census$count_quantity,
 
 	# Proportion tie-in expansion mat; proportion of section covered by tie in counts KB: user defined (see "Proportional_Expansions_for_Tie_In_Sections_Kalama_Example"; need to format)
 
-	, p_TI = census_expansion_sub |> 
-	  as.matrix()
-	    
-	 # EB: Need to decide at what step in the workflow to filter catch data to species_origin_fate (or other strings including life stage / run). Right now TF object filters interview and catch data to the fish group of interest 
-	  
-	
-	
-	# interview data - CPUE 
-	  
-	# int; total number of angler interviews with c & h data   KB: use "summ_interview" DF
-	, IntC = interview_index_TF |> 
-	    tally() |> 
-	    as.integer()  
-	
-	# int; index denoting day/period                             KB: summ_interview %>% pull(day/period)
-	, day_IntC = interview_index_TF |> 
-    pull(day_index)
-	
-	# int; index denoting "gear/angler type"                     KB: summ_interview %>% pull(gear/angler) 
-	
-	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	, gear_IntC = interview_index_TF |>
-	  mutate(angler_type = if_else(angler_type == "Boat", 2, 1)) |> 
-	  pull(angler_type)
-	  
-	  # int; index for section                                     KB: summ_interview %>% pull(section)  
-	, section_IntC  = interview_index_TF |> 
-	  pull(section) 
-	
-	  # int; total catch                                           KB: summ_interview %>% pull(Qty/Count)  
-	, c = interview_index_TF |> 
-	  pull(fish_count)          
-	  
-	# vec; total hours fished   KB: summ_interview %>% pull(Total_Hours) 
-  # EB Does Total_Hours refer to fishing time (angler hours) multiplied by the total number of anglers in an                    interviewed party (group_angler_hours)? 
-	, h =  interview_index_TF |> 
-	  pull(angler_hours_total)         
-	  
+	p_TI = lut$census_expansion |> 
+    select(gear_num, angler_type, section, p_TI) |> 
+    pivot_wider(names_from = section, values_from = p_TI) |> 
+    select(-gear_num, -angler_type) |> 
+    as.matrix(),
 
-	 
-	# interview data - Total Effort & Catch Creeled              KB: use "summ_interviewed_effort"
+	# interview data - CPUE 
+	# int; total number of angler interviews with c & h data 
+	IntC = nrow(stan_data$interview),
+	# int; index denoting day/period   
+	day_IntC = stan_data$interview$day_index,
+	# int; index denoting "gear/angler type" 
+	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
+	gear_IntC = if_else(stan_data$interview$angler_type == "Boat", 2, 1),
+	# int; index for section
+	section_IntC = stan_data$interview$section, 
+	# int; total catch
+	c = stan_data$interview$fish_count,
+	# vec; total hours fished
+  # EB Does Total_Hours refer to fishing time (angler hours) multiplied by the total number of anglers in an                    interviewed party (group_angler_hours)? 
+	h = stan_data$interview$angler_hours_total,
+
+	# interview data - Total Effort & Catch Creeled
+	# int; total interviews by sub-groups	
+	IntCreel = nrow(stan_data$interview_daily_totals),
+	# int; index denoting day/period     
+	day_Creel = stan_data$interview_daily_totals$day_index,
+	# int; index denoting "gear/angler type"  
+# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
+	gear_Creel = if_else(stan_data$interview_daily_totals$angler_type == "Boat", 2, 1),
+	# int; index for section 
+	section_Creel = stan_data$interview_daily_totals$section,
+  # int; total catch  
+	C_Creel = stan_data$interview_daily_totals$catch_dailysum,	  
+  # vec; total hours fished 
+	E_Creel = stan_data$interview_daily_totals$angler_hours_total_dailysum,
+	  
+	# interview data - angler expansion 
 	
-	# int; total interviews by sub-groups	                       KB: summ_interviewed_effort %>% nrow()
-	, IntCreel = interview_index_TF_DailySum |>
-	    tally() |> 
-	    as.integer()        
-	
-	# int; index denoting day/period                             KB: summ_interviewed_effort %>% pull(day/period)
-	, day_Creel = interview_index_TF_DailySum |>
-	    pull(day_index)   
-	
-	# int; index denoting "gear/angler type"                     KB: summ_interviewed_effort %>% pull(gear/angler)	
-		# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	, gear_Creel = interview_index_TF_DailySum |>
-	  mutate(angler_type = if_else(angler_type == "Boat", 2, 1)) |> 
-	    pull(angler_type)    
-	  
-	  # int; index for section                                     KB: summ_interviewed_effort %>% pull(section)
-	, section_Creel = interview_index_TF_DailySum |>
-	    pull(section) 		
-	  
-	  # int; total catch                                           KB: summ_interviewed_effort %>% pull(Qty/Count)
-	, C_Creel = interview_index_TF_DailySum |>
-	    pull(catch_dailysum)       
-	  
-	   # vec; total hours fished                                    KB: summ_interviewed_effort %>% pull(Total_Hours)
-	, E_Creel = interview_index_TF_DailySum |>
-	    pull(angler_hours_total_dailysum)       
-  
-	  
-	# interview data - angler expansion  KB: interview_sub=df_interview %>% filter (V_A, T_A, and A_A != NA) ## these variables are used for indirect angler count expansions
-	
-	# int; total number of angler interviews where V_A, T_A, A_A were collected KB: interview_sub %>% nrow()
-	, IntA = interview_index_TF_AE |> 
-	  tally() |> 
-	  as.integer()
-	
-	  # int; index denoting day/period                             KB: interview_sub %>% pull(day/period)                     	
-	, day_IntA = interview_index_TF_AE |> 
-	  pull(day_index)
-	  
-	  # int; index denoting day/period                             KB: interview_sub %>% pull(gear/angler)  
-		# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	, gear_IntA = interview_index_TF_AE |>
-	  mutate(angler_type = if_else(angler_type == "Boat", 2, 1)) |> 
-	  pull(angler_type)     
-	  
-	  # int; index denoting day/period                             KB: interview_sub %>% pull(section)   
-	, section_IntA = interview_index_TF_AE |> 
-	  pull(section)  
-	  
-	  # int; total number of vehicles an angler group brought      KB: interview_sub %>% pull(vehicle_count) 
-	, V_A = interview_index_TF_AE |> 
-	  pull(vehicle_count)            
-	  
-	  # int; total number of trailers an angler group brought      KB: interview_sub %>% pull(trailer_count)  
-	  
-	, T_A = interview_index_TF_AE |> 
-	  pull(trailer_count) 
-	  
-	  # int; total number of anglers in the groups interviewed     KB: interview_sub %>% pull(angler_count) ## NOTE: this was used above to calculated "Total_Hours" (fished)
-	  
-	, A_A = interview_index_TF_AE |> 
-	  pull(angler_count)           
-	  
+	# int; total number of angler interviews where V_A, T_A, A_A were collected 
+	IntA = nrow(stan_data$interview),
+	# int; index denoting day/period
+	day_IntA = stan_data$interview$day_index,
+	# int; index denoting gear/angler  
+  # EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
+	gear_IntA = if_else(stan_data$interview$angler_type == "Boat", 2, 1),
+	# int; index denoting day/period
+	section_IntA = stan_data$interview$section, 
+	# int; total number of vehicles an angler group brought
+	V_A = stan_data$interview$vehicle_count,
+	# int; total number of trailers an angler group brought
+	T_A = stan_data$interview$trailer_count, 
+	# int; total number of anglers in the groups interviewed
+  A_A = stan_data$interview$angler_count
+
 )
 
-capture.output(stan_dat, file = "results/stan_dat_2021-12-03.txt")
-
+#capture.output(stan_dat, file = "results/stan_dat_2021-12-22.txt")
 
 ```
 
@@ -878,9 +733,6 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
   value_cauchyDF_sigma_r_E = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
   value_cauchyDF_sigma_r_C = 0.5 #1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1 
   
-
-  
-  
   value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
   value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
   value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
@@ -895,12 +747,12 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
   value_cauchyDF_sigma_mu_E = 0.5#1      # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 
 # Specific Stan model arguments
-  n_chain<-4        # set the number of Markov chains. The default is 4.
-  n_iter<-6000        # set the number of iterations for each chain (including warmup). The default is 2000.
+  n_chain<-2        # set the number of Markov chains. The default is 4.
+  n_iter<-200        # set the number of iterations for each chain (including warmup). The default is 2000.
   n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
-  n_warmup<-3000   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
+  n_warmup<-n_iter/2   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
   n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+  adapt_delta<-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
   max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
   
 ```  
@@ -931,7 +783,6 @@ wd_outputs <-"results"          # Location of saved output (summary figures/tabl
   
 ```  
   
-
 ```{r}  
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This file prepares final dataset for creel (stan) model
@@ -992,6 +843,16 @@ if(model_source== "load_saved"){
   message(paste("Compiling stan model"))
   model.file.name<-as.character(creel_models$Model_file_name[creel_models$Model_number == model_number])
   model<-stan_model(paste(wd_models, model.file.name, sep="/")) 
+
+  
+##12/22/21 just doing it
+foo <- stan(
+  file = paste0("models/", lut$creel_models |> filter(Model_number == params$Model_number) |> pluck("Model_file_name")),
+  data=stan_dat,
+  chains = n_chain, cores=n_cores, iter=n_iter,
+  thin=n_thin, init="0", warmup=n_warmup, include=T,
+  control=list(adapt_delta=adapt_delta , max_treedepth=max_treedepth)
+)
 
 
 #Run model in stan using NUTS/HMC
