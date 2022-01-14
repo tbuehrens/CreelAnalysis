@@ -1,7 +1,7 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  proj_name: "Skagit"
+  proj_name: "District 14"
   water_body: "Skagit River,Sauk River"
   date_start: "2021-02-01"   
   date_end: "2021-04-13"
@@ -9,7 +9,7 @@ params:
   species: "Steelhead"
   fin_mark: "UM"
   fate: "Released"
-  Model_number: 4
+  model_number: 4
 output:
   html_document:
     fig_caption: yes
@@ -96,7 +96,7 @@ lut <- map(
 # write_csv(lut_water_body_location, "input_files/lut_water_body_location.csv")
 ```
 
-# data
+# get raw data
 
 The data used are from the `r params$proj_name` project on the `r params$location` between `r params$date_start` and `r params$date_end`.
 
@@ -137,7 +137,6 @@ Then, get the associated effort and interview data.
 #   )
 
 ```
-
 
 ## effort counts
 
@@ -208,87 +207,6 @@ creel$interview <- creel$interview |>
     by = c("location")
   )
 
-### working out options below, can delete soon...
-
-#x <- read_csv(URLencode(paste0(dwg_base$effort, "?$limit=1000000")))
-#x |> count(project_name, water_body) |> print(n=50)
-
-# #all the units in the database associated with the YAML water_body controls
-# lut$sections |> 
-#   #count(water_body_code, water_body_desc) |> print(n=100)
-#   filter(water_body_desc %in% unlist(str_split(params$water_body, pattern = ","))) |> print(n=100)
-
-# #all the units in the pulled data
-# creel$event |> count(water_body)
-# creel$effort |> count(water_body, location) |> print(n=50)
-# creel$interview |> count(water_body, location) |> print(n=50)
-
-
-# #join the full set of places to those that have been queried
-# #then user assign section numbering according to analysis need
-# sections <- full_join(
-#   distinct(creel$effort, water_body, location),
-#   distinct(creel$interview, water_body, location),
-#   by = c("water_body", "location")
-# ) |> 
-#   left_join(
-#     lut$sections |> select(water_body_desc, location = location_code, upper_rm, lower_rm)
-#     ,
-#     by = c("location")
-#   ) |> 
-#   #count(water_body, water_body_desc)
-# ## user input to assign "section" numbering to the set of water_bodies
-# ## in the queried data
-#   left_join(
-#     # tibble(
-#     #   water_body_desc = c("Sauk River", "Skagit River"),
-#     #   section = c(2,1) #equivalent to "Section.Summ" in older "Crosswalk_Table"s
-#     # )
-#     #,
-#     #by = "water_body_desc"
-# 
-#     ##could also go against "location"
-#     tibble(
-#       location = c("101 hole (Car Body hole access point)", "Baker River Boat Ramp", "Big Timber log sign to Ovenells Heritage Inn driveway", "Chapel Hole", "Bryson Road access parking area", "Bryson Road to USFS Lower Sauk Ramp along Hwy 530", "Darrington Sauk-Prairie Road bridge (aka Darrington Mill Bridge)"),
-#       section = c(1,1,1,1,2,2,2)
-#     )
-#     , 
-#     by = "location"
-#     )
-# 
-# 
-# # #alternatives for example..
-# #     tibble(
-# #       water_body_desc = c("Stillaguamish River - North Fork", "Stillaguamish River - South Fork", "Stillaguamish River"),
-# #       section = c(1,1,2) #or whatever...
-# #     )
-
-# #confirming that this codes locations to identical levels as prior csv approach 
-# left_join(
-#   sections,
-#   read_csv("input_files/lut_02_Crosswalk_Table_for_Index_TieIn_Sections_2021-02-04_MatchedDB.csv"),
-#   by = c("location" = "Section.Field")
-#   ) |> 
-#   select(-c(upper_rm:lower_rm, StreamName:Survey.Type)) |> 
-#   mutate(d = section - Section.Summ) |> 
-#   print(n=40)
-
-
-# #add to the primary objects
-# creel$effort <- creel$effort |> 
-#   select(-created_datetime, -modified_datetime) |> 
-#   left_join(
-#     sections |> select(water_body, location, water_body_desc, section),
-#     by = c("water_body", "location")
-#     )
-# 
-# creel$interview <- creel$interview |> 
-#   select(-created_datetime, -modified_datetime,
-#          -state_residence, -zip_code) |> 
-#   left_join(
-#     sections |> select(water_body, location, water_body_desc, section),
-#     by = c("water_body", "location")
-#   )
 
 ```
 
@@ -356,7 +274,7 @@ Then join per-section closures by date.
 
 ```
 
-# Some sort of pre-analysis QAQC?
+# pre-analysis QAQC?
 
 ```{r, eval=FALSE}
 identical(nrow(event), nrow(distinct(event, creel_event_id))) #example, likely unnecessary given database structure
@@ -384,20 +302,17 @@ setdiff(catch$creel_event_id, event$creel_event_id)
 setdiff(interview$interview_id, catch$interview_id)
 setdiff(catch$interview_id, interview$interview_id)
 
-#event |> head() |> gt::gt()
-
 ```
 
 
+# prepare data for model fitting
 
-# wrangle for `stan()`
-
-```{r init_stan_data}
+```{r init_stan_data_prelim}
 #declare an intermediary list
 #can see later about functionalizing or removing and getting inline
 #these are about to be overwritten by aggregated versions...
 
-stan_data <- list(
+stan_data_prelim <- list(
   effort_census = creel$effort |> filter(tie_in_indicator == 1),
   effort_index = creel$effort |> filter(tie_in_indicator == 0)
 )
@@ -406,22 +321,23 @@ stan_data <- list(
 
 ## effort
 
-### census
+### effort census
 
 Aggregate census (tie in) effort counts, associating to closest-in-time index count. 
 
-```{r build_effort_census}
-stan_data$effort_census <- stan_data$effort_census |> 
+```{r stan_data_prelim_effort_census}
+#to the initial effort_census, with all count_sequence == 1,
+#add/overwrite the count_sequence val with that from closest temporal match from inline/anonymous paired counts object 
+
+stan_data_prelim$effort_census <- stan_data_prelim$effort_census |> 
   select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_type, count_quantity) |> 
-  #add/overwrite count_sequence (all census count_sequence == 1) with closest temporal match of count_sequence from paired counts object 
   left_join(
-    #inline paired closest index counts to census
     left_join(
-      stan_data$effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
-      stan_data$effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      stan_data_prelim$effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      stan_data_prelim$effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
       by = c("event_date", "section"),
       suffix = c("_cen", "_ind")
-    ) |> 
+      ) |> 
       group_by(event_date, section, location_cen) |> 
       slice_min(abs(effort_start_time_cen - effort_start_time_ind), n = 1) |> 
       ungroup() |> 
@@ -440,11 +356,11 @@ stan_data$effort_census <- stan_data$effort_census |>
 
 ```
 
-### index
+### effort index
 
 Aggregate index counts of vehicles, trailers, anglers, and boats.
 
-```{r build_effort_index}
+```{r stan_data_prelim_effort_index}
 # DW - 23 effort count stops return a different Count Number / Count Sequence between the static original values and the current dynamic values returned by the database. Most of these are due to the first count not being done, and the raw csv staring at CountNum = 2. I retained the original value in the comment field of the effort_event table. 
 
 # EB - added in 'no count' events so that Database derived count sequence matches that of the original data. Only found these on 2/8 for 14 rows (effort counts of cars or trailers)
@@ -452,7 +368,7 @@ Aggregate index counts of vehicles, trailers, anglers, and boats.
 ##DA added filter(!is.na(count_quantity)) to address above comments...
 ## need to think about whether !is.na(no_count_reason) should be interpolated or inferred or zeroed or...
 ## for example no_count_reason == "Conditions", what to do with count_quantity == NA
-stan_data$effort_index <- stan_data$effort_index |> 
+stan_data_prelim$effort_index <- stan_data_prelim$effort_index |> 
   filter(!is.na(count_quantity)) |> 
   select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |>
   left_join(d_days, by = "event_date") |> 
@@ -462,13 +378,14 @@ stan_data$effort_index <- stan_data$effort_index |>
   arrange(event_date, section, count_sequence)
 ```
 
-
 ## interview
 
 Only "index" for interview, by definition.
 
-```{r build_stan_data_interview}
-stan_data$interview <- creel$interview |> 
+Combines the angler fields with the catch fields (from the subset of interviews in which catches were reported and recorded).
+
+```{r stan_data_prelim_interview}
+stan_data_prelim$interview <- creel$interview |> 
   left_join(d_days, by = "event_date") |> #summary()
   mutate(
     across(c(vehicle_count, trailer_count), ~replace_na(., 0)),
@@ -498,33 +415,13 @@ stan_data$interview <- creel$interview |>
   filter(angler_hours > 0) |>  
   arrange(event_date)
 
-
-# 
-# # EB: need to make current code covers these filters from original code 
-#   #Drop "final_group.dat" data if "Start.Time" is <NA>, "Interview.Time" is <NA> for groups with Trip.Status == I, or "End.Time" is <NA> for groups with Trip.Status == C
-# 
-#   #Drop rows if hours fished by a Group is Negative 
-# 
-# # summarizing catch by unique interview (interview_id) in this chunk 
-# interview_index_TF <- interview_index |> 
-#   group_by(interview_id, event_date, interview_time, day_index, section, angler_count, angler_type, angler_hours, angler_hours_total,vehicle_count, trailer_count) |>
-#   summarize(fish_count = sum(fish_count), .groups = "drop") |> 
-#   arrange(event_date, section, interview_time)
-# 
-# # EB: equivalent to gear.xwalk table in original code. Keep going back on forth on what terminology makes most sense between "gear_type" or "angler_type"
-# lut_angler_type <- interview_index_TF |>
-#   select(angler_type) |> 
-#   distinct() |> 
-#   rowid_to_column(var = "angler_type_num")
-
 ```
-
 
 ### Daily interview summaries
 
-```{r}
+```{r stan_data_prelim_interview_daily_totals}
 #total hours creel and total catch sample a per day/angler type/section to compare with effort
-stan_data$interview_daily_totals <- stan_data$interview |>
+stan_data_prelim$interview_daily_totals <- stan_data_prelim$interview |>
   group_by(event_date, day_index, section, angler_type) |>
   summarise(
     angler_hours_total_dailysum = sum(angler_hours_total),
@@ -535,36 +432,33 @@ stan_data$interview_daily_totals <- stan_data$interview |>
 
 ```
 
-### Exclude interviews with NA vehicle and trailer counts
+### NOT RUN Exclude interviews with NA vehicle and trailer counts
 
-This would form the basis for IntA below if there were cause in the data...?
+This would form the basis for IntA below if there were cause in the data...? For now, leaving undeclared and simply defining IntA as == IntC, pending further revision...
 
-For now, leaving undeclared and simply defining IntA as == IntC, pending further revision...
+```{r placeholder_IntA}
+#stan_data_prelim$interview_with_trailer_vehicle_count <-
 
-```{r}
-#stan_data$interview_with_trailer_vehicle_count <-
-
-# stan_data$interview_no_zero_counts <- stan_data$interview |>
+# stan_data_prelim$interview_no_zero_counts <- stan_data_prelim$interview |>
 # 	#filter(across(c(vehicle_count, trailer_count), ~ !is.na(.)))
 #   filter(vehicle_count > 0)# | trailer_count > 0 | angler_count > 0)
 
 ```
 
+## declare stan_data
 
-## stan_dat
-
-```{r stan_dat}
-stan_dat <- list(
+```{r stan_data}
+stan_data <- list(
   
   # Day attributes
   # int; number of fishing days; KB: pull from "master_date" DF
   D = nrow(d_days),
   # int; final number of unique gear/angler types  KB: pull from subsetted angler x-walk?
-  G = as.integer(length(unique(stan_data$interview$angler_type))),
+  G = as.integer(length(unique(stan_data_prelim$interview$angler_type))),
 	# int; final number of river sections    KB: pull from subsetted section x-walk?
-  S =  as.integer(length(unique(stan_data$effort_index$section))),
+  S =  as.integer(length(unique(stan_data_prelim$effort_index$section))),
 	# int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
-	H = max(stan_data$effort_index$count_sequence),
+	H = max(stan_data_prelim$effort_index$count_sequence),
   # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
 ##NEED TO UPDATE? input param and if_else?
 	P_n = nrow(d_days),
@@ -583,31 +477,31 @@ stan_dat <- list(
 
   # Vehicle index effort counts 
   # int; total number of individual vehicle index effort counts 
-	V_n = nrow(stan_data$effort_index),
+	V_n = nrow(stan_data_prelim$effort_index),
   # int; observed # of vehicles 
-	V_I = stan_data$effort_index$`Vehicle Only`,
+	V_I = stan_data_prelim$effort_index$`Vehicle Only`,
 	# int; index for day/period 
-	day_V = stan_data$effort_index$day_index,
-  gear_V = as.integer(rep(1, nrow(stan_data$effort_index))),
+	day_V = stan_data_prelim$effort_index$day_index,
+  gear_V = as.integer(rep(1, nrow(stan_data_prelim$effort_index))),
 	# int; index for section    
-  section_V = stan_data$effort_index$section,
+  section_V = stan_data_prelim$effort_index$section,
 	# int; index for count_num  
-	countnum_V = stan_data$effort_index$count_sequence,
+	countnum_V = stan_data_prelim$effort_index$count_sequence,
 	
 	# Trailer index effort counts
   # int; total number of boat trailer index effort counts 
-	T_n = nrow(stan_data$effort_index),
+	T_n = nrow(stan_data_prelim$effort_index),
 	# int; observed # of boat trailers 
-	T_I = stan_data$effort_index$`Trailers Only`,
+	T_I = stan_data_prelim$effort_index$`Trailers Only`,
   # int; index for day/period
 ## INTENTIONALLY LEFT "WRONG" TO MARK LATER REVISION IN ABOVE WRANGLING
 ## TO ALLOW RAGGED VEHICLE/TRAILER VECTORS 
-	day_T = stan_data$effort_index$day_index, #day_V,
-  gear_T = as.integer(rep(2, nrow(stan_data$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
+	day_T = stan_data_prelim$effort_index$day_index, #day_V,
+  gear_T = as.integer(rep(2, nrow(stan_data_prelim$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
   # int; index for section
-	section_T = stan_data$effort_index$section,
+	section_T = stan_data_prelim$effort_index$section,
   # int; index for count_num  
-	countnum_T = stan_data$effort_index$count_sequence,
+	countnum_T = stan_data_prelim$effort_index$count_sequence,
 
   # Angler index effort counts
 	# int; total number of angler index effort counts
@@ -627,20 +521,20 @@ stan_dat <- list(
   
   # Census (tie-in) effort counts   
 	# int; total number of angler tie-in effort counts
-	E_n = nrow(stan_data$effort_census),
+	E_n = nrow(stan_data_prelim$effort_census),
   # int; index denoting day/period
-	day_E = stan_data$effort_census$day_index,
+	day_E = stan_data_prelim$effort_census$day_index,
   # int; index denoting "gear/angler type"  
 	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets
 ## where vehicle==1 & trailer==2, then bank==1 & boat==2
-  gear_E = if_else(stan_data$effort_census$angler_type == "Boat", 2, 1),
+  gear_E = if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
   # int; index for section
-  section_E = stan_data$effort_census$section,
+  section_E = stan_data_prelim$effort_census$section,
 	# EB count_sequence here needs to match that of the closest effort_index count (if my understanding is correct)
   # int; index for count_num
-  countnum_E = stan_data$effort_census$count_sequence, 
+  countnum_E = stan_data_prelim$effort_census$count_sequence, 
   # int; observed # of anglers
-  E_s = stan_data$effort_census$count_quantity,
+  E_s = stan_data_prelim$effort_census$count_quantity,
 
 	# Proportion tie-in expansion mat; proportion of section covered by tie in counts KB: user defined (see "Proportional_Expansions_for_Tie_In_Sections_Kalama_Example"; need to format)
 
@@ -652,52 +546,72 @@ stan_dat <- list(
 
 	# interview data - CPUE 
 	# int; total number of angler interviews with c & h data 
-	IntC = nrow(stan_data$interview),
+	IntC = nrow(stan_data_prelim$interview),
 	# int; index denoting day/period   
-	day_IntC = stan_data$interview$day_index,
+	day_IntC = stan_data_prelim$interview$day_index,
 	# int; index denoting "gear/angler type" 
 	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_IntC = if_else(stan_data$interview$angler_type == "Boat", 2, 1),
+	gear_IntC = if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
 	# int; index for section
-	section_IntC = stan_data$interview$section, 
+	section_IntC = stan_data_prelim$interview$section, 
 	# int; total catch
-	c = stan_data$interview$fish_count,
+	c = stan_data_prelim$interview$fish_count,
 	# vec; total hours fished
   # EB Does Total_Hours refer to fishing time (angler hours) multiplied by the total number of anglers in an                    interviewed party (group_angler_hours)? 
-	h = stan_data$interview$angler_hours_total,
+	h = stan_data_prelim$interview$angler_hours_total,
 
 	# interview data - Total Effort & Catch Creeled
 	# int; total interviews by sub-groups	
-	IntCreel = nrow(stan_data$interview_daily_totals),
+	IntCreel = nrow(stan_data_prelim$interview_daily_totals),
 	# int; index denoting day/period     
-	day_Creel = stan_data$interview_daily_totals$day_index,
+	day_Creel = stan_data_prelim$interview_daily_totals$day_index,
 	# int; index denoting "gear/angler type"  
 # EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_Creel = if_else(stan_data$interview_daily_totals$angler_type == "Boat", 2, 1),
+	gear_Creel = if_else(stan_data_prelim$interview_daily_totals$angler_type == "Boat", 2, 1),
 	# int; index for section 
-	section_Creel = stan_data$interview_daily_totals$section,
+	section_Creel = stan_data_prelim$interview_daily_totals$section,
   # int; total catch  
-	C_Creel = stan_data$interview_daily_totals$catch_dailysum,	  
+	C_Creel = stan_data_prelim$interview_daily_totals$catch_dailysum,	  
   # vec; total hours fished 
-	E_Creel = stan_data$interview_daily_totals$angler_hours_total_dailysum,
+	E_Creel = stan_data_prelim$interview_daily_totals$angler_hours_total_dailysum,
 	  
 	# interview data - angler expansion 
 	
 	# int; total number of angler interviews where V_A, T_A, A_A were collected 
-	IntA = nrow(stan_data$interview),
+	IntA = nrow(stan_data_prelim$interview),
 	# int; index denoting day/period
-	day_IntA = stan_data$interview$day_index,
+	day_IntA = stan_data_prelim$interview$day_index,
 	# int; index denoting gear/angler  
   # EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_IntA = if_else(stan_data$interview$angler_type == "Boat", 2, 1),
+	gear_IntA = if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
 	# int; index denoting day/period
-	section_IntA = stan_data$interview$section, 
+	section_IntA = stan_data_prelim$interview$section, 
 	# int; total number of vehicles an angler group brought
-	V_A = stan_data$interview$vehicle_count,
+	V_A = stan_data_prelim$interview$vehicle_count,
 	# int; total number of trailers an angler group brought
-	T_A = stan_data$interview$trailer_count, 
+	T_A = stan_data_prelim$interview$trailer_count, 
 	# int; total number of anglers in the groups interviewed
-  A_A = stan_data$interview$angler_count
+  A_A = stan_data_prelim$interview$angler_count,
+
+  #priors
+  #hyperhyper scale (degrees of freedom) parameters
+  value_cauchyDF_sigma_eps_C = 0.5, #for the hyperprior distribution sigma_eps_C; default = 1  
+  value_cauchyDF_sigma_eps_E = 0.5, #for the hyperprior distribution sigma_eps_E; default = 1  
+  value_cauchyDF_sigma_r_E = 0.5,   #for the hyperprior distribution sigma_r_E; default = 1  
+  value_cauchyDF_sigma_r_C = 0.5,   #for the hyperprior distribution sigma_r_C; default = 1 
+  value_cauchyDF_sigma_mu_C = 0.5,  #the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+  value_cauchyDF_sigma_mu_E = 0.5,   #the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
+  
+  value_normal_sigma_omega_C_0 = 1, #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
+  value_normal_sigma_omega_E_0 = 3, #the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
+  value_lognormal_sigma_b = 1,      #the SD hyperparameter in the prior distribution b; default = 1  
+  value_normal_sigma_B1 = 5,        #the SD hyperparameter in the prior distribution B1; default = 5  
+  value_normal_mu_mu_C = log(0.02), #the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_sigma_mu_C = 1.5,    #the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
+  value_normal_mu_mu_E = log(5),    #the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
+  value_normal_sigma_mu_E = 2,      #the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
+  value_betashape_phi_E_scaled = 1, #the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
+  value_betashape_phi_C_scaled = 1 #the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
 
 )
 
@@ -705,182 +619,56 @@ stan_dat <- list(
 
 ```
 
-
 # fit
 
 ```{r}
 creel_models <- lut$lut_creel_models
-model_period <- "day"
-wd_models  <-"models"           # Location of model files 
-wd_outputs <-"results"          # Location of saved output (summary figures/tables and model results)
-
-# Denote whether you want to run a new model or load "saved" results from a previous model run
-  model_source<-c("run_new")  #enter either "run_new" or "load_saved"
-
-# Assign a "Model_Run" number (if model_source == run_new, results will be saved to a new sub-folder; if model_source == load_saved, previous model results will be loaded)
-  Model_Run<-4 #Enter numeric number (NOTE: be careful not to over-write previous models runs by entering a number that's already been used)
-
-# Denote which creel model you want to run
-  #creel_models[,1:3] #model summary table
-  model_number<-c(4)
-  
-# Specify time period to stratify data by - day vs. week 
-  model_period<-c("day") #enter "day" or "week"
-  
-# Specify parameter values for model priors
-  value_cauchyDF_sigma_eps_C = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_C; default = 1  
-  value_cauchyDF_sigma_eps_E = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_eps_E; default = 1  
-  value_cauchyDF_sigma_r_E = 0.5#1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_E; default = 1  
-  value_cauchyDF_sigma_r_C = 0.5 #1 # the hyperhyper scale (degrees of freedom) parameter in the hyperprior distribution sigma_r_C; default = 1 
-  
-  value_normal_sigma_omega_C_0 = 1  #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
-  value_normal_sigma_omega_E_0 =  3 # the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
-  value_lognormal_sigma_b = 1 # the SD hyperparameter in the prior distribution b; default = 1  
-  value_normal_sigma_B1 = 5 # the SD hyperparameter in the prior distribution B1; default = 5  
-  value_normal_mu_mu_C = log(0.02) # the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
-  value_normal_sigma_mu_C = 1.5 # the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
-  value_normal_mu_mu_E = log(5) # the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
-  value_normal_sigma_mu_E = 2  # the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
-  value_betashape_phi_E_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
-  value_betashape_phi_C_scaled = 1 # the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
-  value_cauchyDF_sigma_mu_C = 0.5#1      # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
-  value_cauchyDF_sigma_mu_E = 0.5#1      # the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
 
 # Specific Stan model arguments
-  n_chain<-2        # set the number of Markov chains. The default is 4.
-  n_iter<-200        # set the number of iterations for each chain (including warmup). The default is 2000.
-  n_cores<-4         # set the number of cores to use when executing the chains in parallel. The defaults is 1. NOTE: Stan manual recommends setting the mc.cores option to be as many processors as the hardware and RAM allow (up to the number of chains).
-  n_warmup<-n_iter/2   # set the length of warm-up (aka burn-in) iterations per chain.  The default is n_iter/2.  
-  n_thin<-1          # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-  adapt_delta<-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
-  max_treedepth<-10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
-  
-```  
-  
-```{r}
-  #---------------------------------------------------------------------------------------- -    
-# This file creates sub-folders to save model information, outputs, and summarized results
-#---------------------------------------------------------------------------------------- - 
-# outputs
-  ifelse(!dir.exists(wd_outputs), {dir.create(wd_outputs); "Output sub-folder created"},"Output sub-folder exists already")
-    
-# catch group  
-  filepath_catchgroup<-paste(wd_outputs, params$catch_group, sep="/")
-  ifelse(!dir.exists(filepath_catchgroup), {dir.create(filepath_catchgroup); "Catch group sub-folder created"},"Catch group sub-folder exists already")
+n_chain <- 2  
+n_cores <- 4    
 
-# model run  
-  filepath_Run<-paste(filepath_catchgroup, paste0("Run_", Model_Run), sep="/")
-  ifelse(!dir.exists(filepath_Run), {dir.create(filepath_Run); "Model run sub-folder created"},"Model run sub-folder exists already")
-
-# model information and outputs    
-  filepath_modeloutputs<-paste(filepath_Run, "model_outputs", sep="/")
-  ifelse(!dir.exists(filepath_modeloutputs), {dir.create(filepath_modeloutputs); "Model info sub-folder created"},"Model info sub-folder exists already")
-
-# summarized estimates  
-  filepath_modelestimates<-paste(filepath_Run, "summarized_estimates", sep="/")
-  ifelse(!dir.exists(filepath_modelestimates), {dir.create(filepath_modelestimates); "Model estimates sub-folder created"},"Model info sub-folder exists already")
-
+n_iter <- 200 
+n_warmup <- n_iter/2
+n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+adapt_delta <-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+max_treedepth <- 10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
   
-```  
-  
-```{r}  
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This file prepares final dataset for creel (stan) model
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Last minute data fixes
-  stan_dat$V_A[stan_dat$V_A>stan_dat$A_A]<-stan_dat$A_A[stan_dat$V_A>stan_dat$A_A] #Number of vehicles for a group can't be greater than number of anglers in the group
+#Number of vehicles for a group can't be greater than number of anglers in the group
+#DA: why is this happening?
+stan_data$V_A[stan_data$V_A > stan_data$A_A] <- stan_data$A_A[stan_data$V_A > stan_data$A_A] 
   
 # Create two new "stan_dat" variables depending on specified time (strata) period (e.g., day vs. week) 
-  if(model_period=="day"){
-    stan_dat$P_n<-nrow(d_days) # For now: enter "D" for day or length(unique(week)) for week
-    stan_dat$period<-c(1:nrow(d_days)) #week          # For now: enter "1:D" for day or "week" for week
-  }else{
-    if(model_period=="week"){
-      stan_dat$P_n<-length(unique(d_days$Week)) 
-      stan_dat$period<-d_days$Week
-    }
-  }
-  
-# proportion tie-in expansion
-  # p_TI<-matrix(rep(1, stan_dat$G * stan_dat$S), nrow=stan_dat$G, ncol=stan_dat$S)
-  # stan_dat$p_TI<-p_TI
-
-# Add priors to "stan_dat"
-    stan_dat$value_cauchyDF_sigma_eps_C<-value_cauchyDF_sigma_eps_C   
-    stan_dat$value_cauchyDF_sigma_eps_E<-value_cauchyDF_sigma_eps_E       
-    stan_dat$value_cauchyDF_sigma_r_E<-value_cauchyDF_sigma_r_E     
-    stan_dat$value_cauchyDF_sigma_r_C<-value_cauchyDF_sigma_r_C    
-    
-    stan_dat$value_cauchyDF_sigma_mu_C <- value_cauchyDF_sigma_mu_C
-    stan_dat$value_cauchyDF_sigma_mu_E <- value_cauchyDF_sigma_mu_E
-    
-    stan_dat$value_normal_sigma_omega_C_0<-value_normal_sigma_omega_C_0         
-    stan_dat$value_normal_sigma_omega_E_0<-value_normal_sigma_omega_E_0
-    stan_dat$value_normal_sigma_B1<-value_normal_sigma_B1      
-    stan_dat$value_lognormal_sigma_b<-value_lognormal_sigma_b                    
-    stan_dat$value_normal_mu_mu_C<-value_normal_mu_mu_C   
-    stan_dat$value_normal_sigma_mu_C<-value_normal_sigma_mu_C   
-    stan_dat$value_normal_mu_mu_E<-value_normal_mu_mu_E   
-    stan_dat$value_normal_sigma_mu_E<-value_normal_sigma_mu_E   
-    stan_dat$value_betashape_phi_E_scaled<-value_betashape_phi_E_scaled 
-    stan_dat$value_betashape_phi_C_scaled<-value_betashape_phi_C_scaled 
-    
-```
-
-```{r}
-  
-# Based on "model_number" chosen, create object of the "model.name"
-    model.name<-as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
-
-# Load saved model results or...
-if(model_source== "load_saved"){
-  res_Stan <- readRDS(paste(filepath_modeloutputs, "results_res_Stan.rds", sep="/")) #Load RDS (stan model output)
-#...Run new model
+model_period <- "day"# Specify time period to stratify data by - day vs. week 
+if(model_period=="day"){
+  stan_data$P_n<-nrow(d_days) # For now: enter "D" for day or length(unique(week)) for week
+  stan_data$period<-c(1:nrow(d_days)) #week          # For now: enter "1:D" for day or "week" for week
 }else{
-
-#Compile Model
-  start.time<-Sys.time(); print(start.time)
-  message(paste("Compiling stan model"))
-  model.file.name<-as.character(creel_models$Model_file_name[creel_models$Model_number == model_number])
-  model<-stan_model(paste(wd_models, model.file.name, sep="/")) 
-
-  
-##12/22/21 just doing it
-foo <- stan(
-  file = paste0("models/", lut$creel_models |> filter(Model_number == params$Model_number) |> pluck("Model_file_name")),
-  data=stan_dat,
-  chains = n_chain, cores=n_cores, iter=n_iter,
-  thin=n_thin, init="0", warmup=n_warmup, include=T,
-  control=list(adapt_delta=adapt_delta , max_treedepth=max_treedepth)
-)
-
-
-#Run model in stan using NUTS/HMC
-  message(paste("Running stan model - track progress via Viewer Pane"))
-  res_Stan<-
-    sampling(
-      object=model
-      ,data=stan_dat
-      , chains = n_chain
-      , cores=n_cores
-      , iter=n_iter
-      , thin=n_thin
-      , init="0"
-      , warmup=n_warmup
-      , include=T
-      , control=list(adapt_delta=adapt_delta , max_treedepth=max_treedepth)
-    )
-  end.time<-Sys.time()
-  model_duration<-print(paste("Elapsed Time = ",end.time-start.time,sep=""))
-  print(elasped_time_by_chain<-get_elapsed_time(res_Stan))
-  approx.model.runtime.minutes<-max(elasped_time_by_chain[,2])/60+max(elasped_time_by_chain[,1])/60
-  
-#Save Model warnings
-  print(warnings())
-  model_warnings<-warnings() #KB note: this doesn't appear to be working (not sure why)
+  if(model_period=="week"){
+    stan_data$P_n<-length(unique(d_days$Week)) 
+    stan_data$period<-d_days$Week
+  }
 }
-#Extract posterior draws    
-  res<-extract(res_Stan) 
+
+# # proportion tie-in expansion
+# # p_TI<-matrix(rep(1, stan_dat$G * stan_dat$S), nrow=stan_dat$G, ncol=stan_dat$S)
+# # stan_dat$p_TI<-p_TI
+
+
+foo <- stan(
+  file = paste0("models/", lut$creel_models |> filter(Model_number == params$model_number) |> pluck("Model_file_name")),
+  data = stan_data,
+  chains = n_chain,
+  cores = n_cores,
+  iter = n_iter,
+  warmup = n_warmup,
+  thin = n_thin, init = "0", include = T,
+  control = list(
+    adapt_delta = adapt_delta,
+    max_treedepth = max_treedepth
+    )
+)
 
 ```
 
