@@ -3,9 +3,10 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River,Sauk River"
-  date_start: "2021-02-01"   
-  date_end: "2021-04-13"
+  date_start: "2022-01-01"   
+  date_end: "2022-01-31"
   year_group: "2020-2021"
+  sections: "lut_water_body_location_d14_skagit_winter_gf.csv"
   species: "Steelhead"
   fin_mark: "UM"
   fate: "Released"
@@ -25,7 +26,6 @@ output:
 ```{r setup, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(message = FALSE)
 
-#library(DBI); library(odbc); library(dbplyr)
 library(tidyverse)
 library(rstan)
 
@@ -48,8 +48,9 @@ lut <- map(
   list(
     river_loc = "input_files/lut_River.Locations_2019-01-07.csv",
     creel_models = "input_files/lut_Creel_Models_2021-01-20.csv",
-    sections = "input_files/lut_water_body_location.csv",
-    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" # EB Added proportional TI expansion to list of LUTs
+    sections = file.path("input_files", params$sections),
+    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_WGF_2022.csv"
+      #"input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" 
   ),
   ~readr::read_csv(file.path(.x))
 )
@@ -84,6 +85,11 @@ lut <- map(
 #     ) |>  unlist(),
 #   "input_files/dates_holidays_2015_2030.txt")
 #
+
+## 1/28/22 - retreating from single master section LU
+## and/but users should build analysis-specific section LUs from database location_code
+## (assuming that location_id is not currently available in views)
+
 ##starting point for section numbering, tie-in designation, prop expansion
 ##requires behind-VPN direct connection to DB
 # lut_water_body_location <- full_join(
@@ -94,6 +100,16 @@ lut <- map(
 #   collect()
 # 
 # write_csv(lut_water_body_location, "input_files/lut_water_body_location.csv")
+#
+# ## has been modified by hand with section numbering per location_code
+# ## 1/28/22 reran lines above to regen lut_water_body_location
+# lut_water_body_location <- rows_upsert(
+#   lut$sections, 
+#   lut_water_body_location,
+#   by = c("water_body_id", "location_id")
+#   ) 
+# #and then overwrote...
+
 ```
 
 # get raw data
@@ -189,7 +205,9 @@ creel$catch <- read_csv(dwg_sent$catch) |>
 
 ## sections
 
-Aggregations of `location` units that may or may not correspond to `water_body`/`water_body_desc`...
+Aggregations of `location` units that depend on `r params$section` lookup table.
+
+**NOTE ANY DATA THAT ARE NOT ASSIGNED TO A SECTION WILL BE EXCLUDED**
 
 ```{r add_sections}
 creel$effort <- creel$effort |> 
@@ -197,7 +215,8 @@ creel$effort <- creel$effort |>
   left_join(
     lut$sections |> select(water_body_desc, location = location_code, section),
     by = c("location")
-    ) # |> count(section)
+    ) |> 
+  filter(!is.na(section))
 
 creel$interview <- creel$interview |> 
   select(-created_datetime, -modified_datetime,
@@ -205,72 +224,8 @@ creel$interview <- creel$interview |>
   left_join(
     lut$sections |> select(water_body_desc, location = location_code, section),
     by = c("location")
-  )
-
-
-```
-
-## dates
-
-First, build an "expanded dates lattice" to which any/all observations are attached, ensuring complete cases.
-
-Then join per-section closures by date.
-
-```{r d_days}
-#creel$event |> distinct(event_date)
-(
-  d_days <- tibble(
-    event_date = seq(
-      as.Date(params$date_start, "%Y-%m-%d"),
-      as.Date(params$date_end, "%Y-%m-%d"),
-      by = "day")
-    ) |> 
-    mutate(
-      Day = weekdays(event_date),
-      DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% dates_holidays_2015_2030, "Weekend", "Weekday"),
-      DayType_num = if_else(str_detect(DayType, "end"),1,0),
-      DayL = suncalc::getSunlightTimes(
-        date = event_date,
-        tz = "America/Los_Angeles",
-#need to add flexibility for other rivers/multiple lines in River.Locations lut
-        lat = lut$river_loc$Lat,
-        lon = lut$river_loc$Long,
-        keep=c("dawn", "dusk")
-      ) |> 
-        mutate(DayL = as.numeric(dusk - dawn)) |>
-        pluck("DayL"),
-      Week = as.numeric(format(event_date, "%V"))
-    ) |> 
-    rowid_to_column(var = "day_index") |> 
-    #now add closures...
-    left_join(
-      bind_rows(
-        tibble(section = "1,2", closure_begin = "2021-02-03", closure_end = "2021-02-05"),
-        tibble(section = "1,2", closure_begin = "2021-02-10", closure_end = "2021-02-12"),
-        tibble(section = "1,2", closure_begin = "2021-02-17", closure_end = "2021-02-19"),
-        tibble(section = "1,2", closure_begin = "2021-02-24", closure_end = "2021-02-26"),
-        tibble(section = "1,2", closure_begin = "2021-03-03", closure_end = "2021-03-05"),
-        tibble(section = "1,2", closure_begin = "2021-03-10", closure_end = "2021-03-12"),
-        tibble(section = "1,2", closure_begin = "2021-03-17", closure_end = "2021-03-19"),
-        tibble(section = "1,2", closure_begin = "2021-03-24", closure_end = "2021-03-26"),
-        tibble(section = "1,2", closure_begin = "2021-03-31", closure_end = "2021-04-02"),
-        tibble(section = "1,2", closure_begin = "2021-04-07", closure_end = "2021-04-09"),
-        ) |> 
-        rowwise() |>
-        mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |> 
-        separate_rows(closure_date, sep = ",") |> 
-        select(event_date = closure_date, section) |> 
-        mutate(
-          event_date = as.Date(event_date),
-          closure_code = FALSE # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
-        ) |> 
-        separate_rows(section, sep = ",") |> 
-        pivot_wider(names_from = section, names_prefix = "open_section_", values_from = closure_code)
-      ,
-      by ="event_date"
-      ) |> 
-    mutate(across(starts_with("open_section_"), ~replace_na(., TRUE)))
-)
+  ) |> 
+  filter(!is.na(section))
 
 ```
 
@@ -309,15 +264,121 @@ setdiff(catch$interview_id, interview$interview_id)
 
 ```{r init_stan_data_prelim}
 #declare an intermediary list
-#can see later about functionalizing or removing and getting inline
-#these are about to be overwritten by aggregated versions...
 
 stan_data_prelim <- list(
   effort_census = creel$effort |> filter(tie_in_indicator == 1),
-  effort_index = creel$effort |> filter(tie_in_indicator == 0)
+  effort_index = creel$effort |> filter(tie_in_indicator == 0),
+  interview = creel$interview
 )
 
 ```
+
+## one-off clean up stuff
+
+```{r data_issues}
+#Skagit winter game fish data reveal lack of generalizability in prior wrangling code
+
+#no `Trailer only` counts for section; okay to exclude due to very low effort
+#also no census records for section 1: count(stan_data_prelim$effort_census, section)
+#unfortunately need to decrement in order to satisfy stan indexing starting at 1
+stan_data_prelim$effort_census <- filter(stan_data_prelim$effort_census, section > 1) |> 
+  mutate(section = section - 1)
+stan_data_prelim$effort_index <- filter(stan_data_prelim$effort_index, section > 1) |> 
+  mutate(section = section - 1)
+stan_data_prelim$interview <- filter(stan_data_prelim$interview, section > 1) |> 
+  mutate(section = section - 1)
+
+map(stan_data_prelim, ~count(.x, section))
+
+#also need to remove from prop expansion LU
+lut$census_expansion <- filter(lut$census_expansion, section > 1) |> 
+  mutate(section = section - 1)
+
+lut$census_expansion |> count(section)
+
+#note this means stan output sections need to be +1 to join against original LUs
+```
+
+## dates
+
+First, build an "expanded dates lattice" to which any/all observations are attached, ensuring complete cases.
+
+Start with presumption that all dates are open, then join per-section closures by date.
+
+```{r d_days}
+#creel$event |> distinct(event_date)
+d_days <- tibble(
+  event_date = seq(
+    as.Date(params$date_start, "%Y-%m-%d"),
+    as.Date(params$date_end, "%Y-%m-%d"),
+    by = "day")
+) |> 
+  mutate(
+    Day = weekdays(event_date),
+    DayType = if_else(Day == "Saturday" | Day == "Sunday" | Day %in% dates_holidays_2015_2030, "Weekend", "Weekday"),
+    DayType_num = if_else(str_detect(DayType, "end"),1,0),
+    DayL = suncalc::getSunlightTimes(
+      date = event_date,
+      tz = "America/Los_Angeles",
+      #need to add flexibility for other rivers/multiple lines in River.Locations lut
+      lat = lut$river_loc$Lat,
+      lon = lut$river_loc$Long,
+      keep=c("dawn", "dusk")
+    ) |> 
+      mutate(DayL = as.numeric(dusk - dawn)) |>
+      pluck("DayL"),
+    Week = as.numeric(format(event_date, "%V"))
+  ) |> 
+  rowid_to_column(var = "day_index") |> 
+  #make open section cols (only those actually used, not all in LU)
+  left_join(
+    expand_grid(
+      event_date = seq(
+        as.Date(params$date_start, "%Y-%m-%d"),
+        as.Date(params$date_end, "%Y-%m-%d"),
+        by = "day")
+      ,
+      s = paste0("open_section_", sort(unique(stan_data_prelim$effort_index$section)))
+    ) |> 
+      mutate(closure_code = TRUE) |> 
+      pivot_wider(names_from = s, values_from = closure_code)
+    ,
+    by = "event_date")
+
+# #now add closures if any...
+# #commented out during dev around Skagit_wgf, since no closures
+# #and because may move to params file path to closures csv or similar
+# d_days <- rows_upsert(d_days,
+#     bind_rows(
+#       tibble(section = "1,2", closure_begin = "2021-02-03", closure_end = "2021-02-05"),
+#       tibble(section = "1,2", closure_begin = "2021-02-10", closure_end = "2021-02-12"),
+#       tibble(section = "1,2", closure_begin = "2021-02-17", closure_end = "2021-02-19"),
+#       tibble(section = "1,2", closure_begin = "2021-02-24", closure_end = "2021-02-26"),
+#       tibble(section = "1,2", closure_begin = "2021-03-03", closure_end = "2021-03-05"),
+#       tibble(section = "1,2", closure_begin = "2021-03-10", closure_end = "2021-03-12"),
+#       tibble(section = "1,2", closure_begin = "2021-03-17", closure_end = "2021-03-19"),
+#       tibble(section = "1,2", closure_begin = "2021-03-24", closure_end = "2021-03-26"),
+#       tibble(section = "1,2", closure_begin = "2021-03-31", closure_end = "2021-04-02"),
+#       tibble(section = "1,2", closure_begin = "2021-04-07", closure_end = "2021-04-09")
+#     ) |> 
+#       rowwise() |>
+#       mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |> 
+#       separate_rows(closure_date, sep = ",") |> 
+#       select(event_date = closure_date, section) |> 
+#       mutate(
+#         event_date = as.Date(event_date),
+#         closure_code = FALSE # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
+#       ) |> 
+#       separate_rows(section, sep = ",") |> 
+#       pivot_wider(names_from = section, names_prefix = "open_section_", values_from = closure_code) |> 
+#       mutate(across(starts_with("open_section_"), ~replace_na(., TRUE)))
+#     ,
+#     by ="event_date"
+#   ) 
+
+
+```
+
 
 ## effort
 
@@ -348,8 +409,15 @@ stan_data_prelim$effort_census <- stan_data_prelim$effort_census |>
   ) |> 
   left_join(d_days, by = "event_date") |>
   mutate(
-    angler_type = word(count_type, 1),
+    #angler_type = word(count_type, 1),
+    angler_type = case_when(
+      word(count_type, 1) %in% c("Bank","Shore") ~ "bank_ang",
+      word(count_type, 1) %in% c("Boat") ~ "boat_ang"
+    )
   ) |>
+  #exclude any count_type strings we didn't whitelist into an angler_type
+  #e.g., "Boats" which are not a thing we use because reasons
+  filter(!is.na(angler_type)) |> 
   group_by(event_date, day_index, section, count_sequence, angler_type) |>
   summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
   arrange(event_date, section, count_sequence) 
@@ -361,15 +429,20 @@ stan_data_prelim$effort_census <- stan_data_prelim$effort_census |>
 Aggregate index counts of vehicles, trailers, anglers, and boats.
 
 ```{r stan_data_prelim_effort_index}
-# DW - 23 effort count stops return a different Count Number / Count Sequence between the static original values and the current dynamic values returned by the database. Most of these are due to the first count not being done, and the raw csv staring at CountNum = 2. I retained the original value in the comment field of the effort_event table. 
-
-# EB - added in 'no count' events so that Database derived count sequence matches that of the original data. Only found these on 2/8 for 14 rows (effort counts of cars or trailers)
 
 ##DA added filter(!is.na(count_quantity)) to address above comments...
 ## need to think about whether !is.na(no_count_reason) should be interpolated or inferred or zeroed or...
 ## for example no_count_reason == "Conditions", what to do with count_quantity == NA
+## Skagit winter gamefish example also shows valid realworld situation
+## section 1 has 'Vehicle Only' counts but not 'Trailers Only' due to low angler effort
+## so excluding section 1 is legit, but needs to be clearly indicated...
+
 stan_data_prelim$effort_index <- stan_data_prelim$effort_index |> 
-  filter(!is.na(count_quantity)) |> 
+  filter(
+    #!is.na(count_quantity)
+    is.na(no_count_reason),
+    !is.na(count_type)
+    ) |> 
   select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |>
   left_join(d_days, by = "event_date") |> 
   group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
@@ -380,17 +453,20 @@ stan_data_prelim$effort_index <- stan_data_prelim$effort_index |>
 
 ## interview
 
-Only "index" for interview, by definition.
-
-Combines the angler fields with the catch fields (from the subset of interviews in which catches were reported and recorded).
+Only "index" for interview, by definition. Combines the angler fields with the catch fields (from the subset of interviews in which catches were reported and recorded).
 
 ```{r stan_data_prelim_interview}
-stan_data_prelim$interview <- creel$interview |> 
+stan_data_prelim$interview <- stan_data_prelim$interview |> 
   left_join(d_days, by = "event_date") |> #summary()
   mutate(
     across(c(vehicle_count, trailer_count), ~replace_na(., 0)),
     trip_status = replace_na(trip_status, "Unknown"),
-    angler_type = if_else(boat_used == "No", "Shore", "Boat"), #problems outside Skagit test case if census levels differ?
+    #angler_type = if_else(boat_used == "No", "Shore", "Boat"),
+    angler_type = case_when(
+      is.na(fish_from_boat) ~ "bank_ang",
+      fish_from_boat == "Bank" ~ "bank_ang",
+      fish_from_boat == "Boat" ~ "boat_ang"
+      ),
     fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
     angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 5),
     angler_hours_total = angler_count * angler_hours
@@ -453,27 +529,27 @@ stan_data <- list(
   # Day attributes
   # int; number of fishing days; KB: pull from "master_date" DF
   D = nrow(d_days),
-  # int; final number of unique gear/angler types  KB: pull from subsetted angler x-walk?
+  # int; final number of unique gear/angler types 
   G = as.integer(length(unique(stan_data_prelim$interview$angler_type))),
-	# int; final number of river sections    KB: pull from subsetted section x-walk?
-  S =  as.integer(length(unique(stan_data_prelim$effort_index$section))),
+	# int; final number of river sections 
+  S = as.integer(length(unique(stan_data_prelim$effort_index$section))),
 	# int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
 	H = max(stan_data_prelim$effort_index$count_sequence),
   # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
 ##NEED TO UPDATE? input param and if_else?
 	P_n = nrow(d_days),
   #or for weekly? length(unique(d_days$Week))
-	# vec; index denoting daytype (day-type is offset in model)   KB: pull from "master_date" DF (1= weekend, 0 = weekday)
+	# vec; index denoting daytype (day-type is offset in model)
   w = d_days$DayType_num,
 	# int; index denoting fishing day/period      KB: calculate as 1:P_n (not sure why this isn't a vector)
 	period = 1:nrow(d_days), 
-	# vec; daylength (model offset; assumption)       KB: pull from "master_date" DF
+	# vec; daylength (model offset; assumption)
 	L = d_days$DayL,
 	# mat; index denoting fishery status                          KB: user defined (1=open, 0 = closed; by period/date and section; 0 defined as 1E-6 for model)
 	O = d_days |> 
 	  select(contains("section_")) |>
     mutate(across(everything(), ~if_else(., 1, 0.00001))) |> 
-	  as.matrix(),  
+	  as.matrix(),
 
   # Vehicle index effort counts 
   # int; total number of individual vehicle index effort counts 
@@ -633,6 +709,7 @@ n_warmup <- n_iter/2
 n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
 adapt_delta <-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
 max_treedepth <- 10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+init = "0"
   
 #Last minute data fixes
 #Number of vehicles for a group can't be greater than number of anglers in the group
@@ -656,19 +733,74 @@ if(model_period=="day"){
 # # stan_dat$p_TI<-p_TI
 
 
-foo <- stan(
+stan_fit <- stan(
   file = paste0("models/", lut$creel_models |> filter(Model_number == params$model_number) |> pluck("Model_file_name")),
   data = stan_data,
   chains = n_chain,
   cores = n_cores,
   iter = n_iter,
   warmup = n_warmup,
-  thin = n_thin, init = "0", include = T,
+  thin = n_thin, init = init, include = T,
   control = list(
     adapt_delta = adapt_delta,
     max_treedepth = max_treedepth
     )
 )
+```
+
+
+```{r}
+#n_diverg
+stan_fit |> get_sampler_params(inc_warmup = FALSE) |> map_dbl(~.x[, "divergent__"] |> sum()) |> sum()
+
+summary(stan_fit, pars = c("E_sum", "C_sum"))$summary
+
+tidybayes::spread_draws(stan_fit, C_sum) |> 
+  ggplot(aes(C_sum)) +
+  #ggdist::stat_cdfinterval()
+  #ggdist::stat_slab()
+  #ggdist::stat_pointinterval()
+  ggdist::stat_halfeye()
+
+tidybayes::spread_draws(stan_fit, E_sum) |> 
+  ggplot(aes(E_sum)) +
+  ggdist::stat_halfeye()
+
+#could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+#the E & C array dims are E[section, day, gear]?
+summary(stan_fit, pars = c("E"))$summary |> 
+#summary(stan_fit, pars = c("C"))$summary |> 
+  as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
+  mutate(
+    inds = str_sub(stan_out, 3, 20) |> str_remove("\\]")
+  ) |> 
+  separate(col = inds, into = c("section","day","gear")) |> 
+  #count(section, gear)
+  #could also mutate this...
+  left_join(
+    distinct(creel$effort,  section) |> mutate(section = as.character(section)),
+    by = "section"
+    ) |> 
+  #Bank? inverts if_else calls in stan_data declaration
+  mutate(
+    angler_type = if_else(gear == "2", "Boat", "Shore"),
+    day = as.numeric(day)
+  ) |> 
+  select(day, section, water_body, gear, angler_type, `2.5%`, `50%`, `97.5%`) |> 
+  ggplot(aes(x = day, y = `50%`, fill = angler_type, color = angler_type)) +
+  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
+  geom_line() + geom_point() +
+  facet_wrap(~water_body, ncol = 1)
+  
+
+
+# distinct(creel$effort, section, water_body)
+# distinct(creel$interview, section, water_body)
+
+distinct(stan_data_prelim$effort_index, angler)
+stan_data_prelim$interview
+
+#grep("^E", names(stan_fit), value = T)
 
 ```
 
@@ -750,10 +882,6 @@ foo <- stan(
   source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates.R")) 
     
 # KB note: update so table/plots of results are shown in PDF document
-```
-
-
-```{r}
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This file summarizes creel model estimates by creating summary plots and tables
