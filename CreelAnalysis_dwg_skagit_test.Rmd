@@ -3,13 +3,13 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River,Sauk River"
-  date_start: "2022-01-01"   
-  date_end: "2022-01-31"
+  date_start: "2021-09-01"   
+  date_end: "2021-11-01"
   year_group: "2020-2021"
-  sections: "lut_water_body_location_d14_skagit_winter_gf.csv"
-  species: "Steelhead"
-  fin_mark: "UM"
-  fate: "Released"
+  sections: "lut_water_body_location_d14_skagit_fall_salmon.csv"
+  species: "Coho"
+  fin_mark: "AD"
+  fate: "Kept"
   model_number: 4
 output:
   html_document:
@@ -27,7 +27,9 @@ output:
 knitr::opts_chunk$set(message = FALSE)
 
 library(tidyverse)
+library(gt)
 library(rstan)
+rstan_options(auto_write = TRUE)
 
 #base endpoints
 dwg_base <- list(
@@ -49,7 +51,7 @@ lut <- map(
     river_loc = "input_files/lut_River.Locations_2019-01-07.csv",
     creel_models = "input_files/lut_Creel_Models_2021-01-20.csv",
     sections = file.path("input_files", params$sections),
-    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_WGF_2022.csv"
+    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Fall_Salmon_2021.csv"
       #"input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" 
   ),
   ~readr::read_csv(file.path(.x))
@@ -273,30 +275,33 @@ stan_data_prelim <- list(
 
 ```
 
-## one-off clean up stuff
+## one-off clean up stuff 
 
-```{r data_issues}
-#Skagit winter game fish data reveal lack of generalizability in prior wrangling code
+only needed for Winter GF dev with prelim section LUT
 
-#no `Trailer only` counts for section; okay to exclude due to very low effort
-#also no census records for section 1: count(stan_data_prelim$effort_census, section)
-#unfortunately need to decrement in order to satisfy stan indexing starting at 1
-stan_data_prelim$effort_census <- filter(stan_data_prelim$effort_census, section > 1) |> 
-  mutate(section = section - 1)
-stan_data_prelim$effort_index <- filter(stan_data_prelim$effort_index, section > 1) |> 
-  mutate(section = section - 1)
-stan_data_prelim$interview <- filter(stan_data_prelim$interview, section > 1) |> 
-  mutate(section = section - 1)
+```{r data_issues, eval=FALSE}
+# #Skagit winter game fish data reveal lack of generalizability in prior wrangling code
+# 
+# #no `Trailer only` counts for section; okay to exclude due to very low effort
+# #also no census records for section 1: count(stan_data_prelim$effort_census, section)
+# #unfortunately need to decrement in order to satisfy stan indexing starting at 1
+# stan_data_prelim$effort_census <- filter(stan_data_prelim$effort_census, section > 1) |> 
+#   mutate(section = section - 1)
+# stan_data_prelim$effort_index <- filter(stan_data_prelim$effort_index, section > 1) |> 
+#   mutate(section = section - 1)
+# stan_data_prelim$interview <- filter(stan_data_prelim$interview, section > 1) |> 
+#   mutate(section = section - 1)
+# 
+# map(stan_data_prelim, ~count(.x, section))
+# 
+# #also need to remove from prop expansion LU
+# lut$census_expansion <- filter(lut$census_expansion, section > 1) |> 
+#   mutate(section = section - 1)
+# 
+# lut$census_expansion |> count(section)
+# 
+# #note this means stan output sections need to be +1 to join against original LUs
 
-map(stan_data_prelim, ~count(.x, section))
-
-#also need to remove from prop expansion LU
-lut$census_expansion <- filter(lut$census_expansion, section > 1) |> 
-  mutate(section = section - 1)
-
-lut$census_expansion |> count(section)
-
-#note this means stan output sections need to be +1 to join against original LUs
 ```
 
 ## dates
@@ -376,7 +381,6 @@ d_days <- tibble(
 #     by ="event_date"
 #   ) 
 
-
 ```
 
 
@@ -411,14 +415,15 @@ stan_data_prelim$effort_census <- stan_data_prelim$effort_census |>
   mutate(
     #angler_type = word(count_type, 1),
     angler_type = case_when(
-      word(count_type, 1) %in% c("Bank","Shore") ~ "bank_ang",
-      word(count_type, 1) %in% c("Boat") ~ "boat_ang"
-    )
+      word(count_type, 1) %in% c("Bank","Shore") ~ "bank",
+      word(count_type, 1) %in% c("Boat") ~ "boat"
+    ),
+    angler_type_ind = as.integer(factor(angler_type))
   ) |>
   #exclude any count_type strings we didn't whitelist into an angler_type
   #e.g., "Boats" which are not a thing we use because reasons
   filter(!is.na(angler_type)) |> 
-  group_by(event_date, day_index, section, count_sequence, angler_type) |>
+  group_by(event_date, day_index, section, count_sequence, angler_type, angler_type_ind) |>
   summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
   arrange(event_date, section, count_sequence) 
 
@@ -463,10 +468,11 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
     trip_status = replace_na(trip_status, "Unknown"),
     #angler_type = if_else(boat_used == "No", "Shore", "Boat"),
     angler_type = case_when(
-      is.na(fish_from_boat) ~ "bank_ang",
-      fish_from_boat == "Bank" ~ "bank_ang",
-      fish_from_boat == "Boat" ~ "boat_ang"
+      is.na(fish_from_boat) ~ "bank",
+      fish_from_boat == "Bank" ~ "bank",
+      fish_from_boat == "Boat" ~ "boat"
       ),
+    angler_type_ind = as.integer(factor(angler_type)),
     fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
     angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 5),
     angler_hours_total = angler_count * angler_hours
@@ -498,7 +504,7 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
 ```{r stan_data_prelim_interview_daily_totals}
 #total hours creel and total catch sample a per day/angler type/section to compare with effort
 stan_data_prelim$interview_daily_totals <- stan_data_prelim$interview |>
-  group_by(event_date, day_index, section, angler_type) |>
+  group_by(event_date, day_index, section, angler_type, angler_type_ind) |>
   summarise(
     angler_hours_total_dailysum = sum(angler_hours_total),
     catch_dailysum = sum(fish_count), .groups = "drop"
@@ -601,9 +607,7 @@ stan_data <- list(
   # int; index denoting day/period
 	day_E = stan_data_prelim$effort_census$day_index,
   # int; index denoting "gear/angler type"  
-	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets
-## where vehicle==1 & trailer==2, then bank==1 & boat==2
-  gear_E = if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
+  gear_E = stan_data_prelim$effort_census$angler_type_ind, #if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
   # int; index for section
   section_E = stan_data_prelim$effort_census$section,
 	# EB count_sequence here needs to match that of the closest effort_index count (if my understanding is correct)
@@ -626,8 +630,7 @@ stan_data <- list(
 	# int; index denoting day/period   
 	day_IntC = stan_data_prelim$interview$day_index,
 	# int; index denoting "gear/angler type" 
-	# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_IntC = if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
+	gear_IntC = stan_data_prelim$interview$angler_type_ind, #if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
 	# int; index for section
 	section_IntC = stan_data_prelim$interview$section, 
 	# int; total catch
@@ -642,8 +645,7 @@ stan_data <- list(
 	# int; index denoting day/period     
 	day_Creel = stan_data_prelim$interview_daily_totals$day_index,
 	# int; index denoting "gear/angler type"  
-# EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_Creel = if_else(stan_data_prelim$interview_daily_totals$angler_type == "Boat", 2, 1),
+	gear_Creel = stan_data_prelim$interview_daily_totals$angler_type_ind, #if_else(stan_data_prelim$interview_daily_totals$angler_type == "Boat", 2, 1),
 	# int; index for section 
 	section_Creel = stan_data_prelim$interview_daily_totals$section,
   # int; total catch  
@@ -658,8 +660,7 @@ stan_data <- list(
 	# int; index denoting day/period
 	day_IntA = stan_data_prelim$interview$day_index,
 	# int; index denoting gear/angler  
-  # EB: depending on the variety of angler types (eg multiple types of boats) this may not be flexible enough for other datasets 
-	gear_IntA = if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
+	gear_IntA = stan_data_prelim$interview$angler_type_ind, #if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
 	# int; index denoting day/period
 	section_IntA = stan_data_prelim$interview$section, 
 	# int; total number of vehicles an angler group brought
@@ -697,7 +698,7 @@ stan_data <- list(
 
 # fit
 
-```{r}
+```{r quick_fit}
 creel_models <- lut$lut_creel_models
 
 # Specific Stan model arguments
@@ -748,62 +749,106 @@ stan_fit <- stan(
 )
 ```
 
+# diagnostics
+
+Add more...
 
 ```{r}
-#n_diverg
 stan_fit |> get_sampler_params(inc_warmup = FALSE) |> map_dbl(~.x[, "divergent__"] |> sum()) |> sum()
+```
 
-summary(stan_fit, pars = c("E_sum", "C_sum"))$summary
+# results
+
+```{r}
+results <- list()
+```
+
+```{r res_summaries}
+results$e_sum_c_sum <- summary(stan_fit, pars = c("E_sum", "C_sum"))$summary |> 
+  as.data.frame() |> rownames_to_column("Estimate") |> as_tibble()
+
+results$e_sum_c_sum |> 
+  select(Estimate, `2.5%`:`97.5%`) |> 
+  gt() |> 
+  fmt_number(-Estimate, decimals = 0)
+
+```
+
+Posterior plots of summary estimates
+
+```{r}
+#various other diplay options: ggdist::stat_cdfinterval(), ggdist::stat_slab(), ggdist::stat_pointinterval()
 
 tidybayes::spread_draws(stan_fit, C_sum) |> 
   ggplot(aes(C_sum)) +
-  #ggdist::stat_cdfinterval()
-  #ggdist::stat_slab()
-  #ggdist::stat_pointinterval()
   ggdist::stat_halfeye()
 
 tidybayes::spread_draws(stan_fit, E_sum) |> 
   ggplot(aes(E_sum)) +
   ggdist::stat_halfeye()
 
-#could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+```
+
+Catch/effort by day, section, angler type
+
+```{r res_c_by_strata}
+# #could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+# tidybayes::spread_draws(stan_fit, C[s][d,g] | s)
+
 #the E & C array dims are E[section, day, gear]?
-summary(stan_fit, pars = c("E"))$summary |> 
-#summary(stan_fit, pars = c("C"))$summary |> 
+#summary(stan_fit, pars = c("E"))$summary |> 
+results$C <- summary(stan_fit, pars = c("C"))$summary |> 
   as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
   mutate(
-    inds = str_sub(stan_out, 3, 20) |> str_remove("\\]")
+    indices = str_sub(stan_out, 3, 20) |> str_remove("\\]")
   ) |> 
-  separate(col = inds, into = c("section","day","gear")) |> 
-  #count(section, gear)
-  #could also mutate this...
-  left_join(
-    distinct(creel$effort,  section) |> mutate(section = as.character(section)),
-    by = "section"
-    ) |> 
-  #Bank? inverts if_else calls in stan_data declaration
+  separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
   mutate(
-    angler_type = if_else(gear == "2", "Boat", "Shore"),
-    day = as.numeric(day)
+    day_ind = as.integer(day_ind),
+    angler_type_ind = as.integer(angler_type_ind)
   ) |> 
-  select(day, section, water_body, gear, angler_type, `2.5%`, `50%`, `97.5%`) |> 
-  ggplot(aes(x = day, y = `50%`, fill = angler_type, color = angler_type)) +
+  #need "section names" in LUT if going to display more than section number
+  left_join(
+    distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
+    by = "section"
+  ) |> 
+  left_join(
+    distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
+    by = "angler_type_ind"
+  ) |> 
+  left_join(
+    d_days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
+    by = "day_ind"
+  )
+
+results$C |> 
+  ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
   geom_line() + geom_point() +
-  facet_wrap(~water_body, ncol = 1)
+  scale_x_date() +
+  facet_wrap(~section_name + angler_type, ncol = 2)
   
+#unclear how sensible/meaningful this is...but we can do it!
+results$C |> 
+  group_by(section_name, angler_type, mon, DayType) |> 
+  summarise(across(`2.5%`:`97.5%`, sum), .groups = "drop") |> 
+  arrange(desc(`50%`))
 
-
-# distinct(creel$effort, section, water_body)
-# distinct(creel$interview, section, water_body)
-
-distinct(stan_data_prelim$effort_index, angler)
-stan_data_prelim$interview
-
-#grep("^E", names(stan_fit), value = T)
+#the sort of cross-ref to raw that would be helpful in QAQC, laugh testing
+left_join(
+  creel$interview, 
+  creel$catch, 
+  by = "interview_id") |> 
+  filter(species %in% c("Coho", "Pink")) |> 
+  group_by(event_date, section, species, fin_mark, fate) |> 
+  summarise(across(fish_count, sum), .groups = "drop") |> 
+  ggplot(aes(event_date, fish_count, fill = fate, color = fate)) + 
+  geom_col(position = "dodge") + 
+  facet_wrap(~section+species, ncol = 2) #, scales = "free_y"
 
 ```
 
+# older 
 
 ```{r}
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -868,7 +913,6 @@ stan_data_prelim$interview
   writeLines(capture.output(loo_IC), paste0(filepath_modeloutputs, "/results_model_looIC_", Sys.Date(), ".txt"))  
 
 ```
-
 
 ```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
 ### Summarize and Save Results
@@ -1045,11 +1089,7 @@ stan_data_prelim$interview
        
     # write "CPUE.summary" to a .csv file   
        write.csv(CPUE.summary, paste(filepath_modelestimates, paste("Summary_CPUE (fish per hr per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)   
-
-
 ```
-
-# results
 
 ```{r}
 
@@ -1082,6 +1122,7 @@ stan_data_prelim$interview
 
 ```
 
+total seasonal catch and total seasonal effort
 
 ```{r}
 # Plot #1 - PDF of total seasonal catch and total seasonal effort
@@ -1106,6 +1147,7 @@ stan_data_prelim$interview
 
 ```
 
+Total Daily Effort (hrs) by Section and Gear Type
 
 ```{r}
 # Plot #2 - Plot Total Daily Effort (hrs) by Section and Gear Type
@@ -1150,6 +1192,7 @@ stan_data_prelim$interview
 
 ```
 
+Total Daily Catch (fish) by Section and Gear Type
 
 ```{r}
  # Plot #3 - Plot Total Daily Catch (fish) by Section and Gear Type
@@ -1192,6 +1235,7 @@ stan_data_prelim$interview
 
 ```
 
+Daily CPUE (fish/hr)
 
 ```{r}
   # Plot #4 - Plot  Daily CPUE (fish/hr)
@@ -1240,15 +1284,4 @@ stan_data_prelim$interview
 dev.off()
 
 ```
-
-
-
-
-
-
-
-
-
-
-
 
