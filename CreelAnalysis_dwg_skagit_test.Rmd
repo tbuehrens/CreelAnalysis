@@ -2,14 +2,15 @@
 title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
-  water_body: "Skagit River,Sauk River"
-  date_start: "2021-09-01"   
-  date_end: "2021-11-01"
+  water_body: "Skagit River"
+  date_start: "2021-08-14"   
+  date_end: "2021-12-31"
   year_group: "2020-2021"
   sections: "lut_water_body_location_d14_skagit_fall_salmon.csv"
-  species: "Coho"
-  fin_mark: "AD"
+  species: "Pink"
+  fin_mark: "UM"
   fate: "Kept"
+  model_name: "BSS_04_corr"
   model_number: 4
 output:
   html_document:
@@ -168,6 +169,7 @@ dwg_sent$effort <- URLencode(
 )
 
 creel$effort <- read_csv(dwg_sent$effort)
+# EB are there important reasons why a new variable like count_id, used to perform a qa/qc filter for index counts with missing locations in code chunk 'r data clean up', should be mutated here instead of further down?
 ```
 
 ## interviews
@@ -224,15 +226,16 @@ creel$interview <- creel$interview |>
   select(-created_datetime, -modified_datetime,
          -state_residence, -zip_code) |> 
   left_join(
-    lut$sections |> select(water_body_desc, location = location_code, section),
+    lut$sections |> select(location = location_code, section),
     by = c("location")
   ) |> 
   filter(!is.na(section))
 
 ```
 
-# pre-analysis QAQC?
+# pre-analysis QAQC
 
+## evaluate matches in table join keys 
 ```{r, eval=FALSE}
 identical(nrow(event), nrow(distinct(event, creel_event_id))) #example, likely unnecessary given database structure
 
@@ -262,6 +265,151 @@ setdiff(catch$interview_id, interview$interview_id)
 ```
 
 
+## evaluate completeness of index counts / interviews 
+
+```{r count and interview evaluation}
+
+# Number of unique sites visits per drive around effort count
+data_eval <- list()
+
+data_eval$index_counts
+
+# Visualize raw counts of vehicles and trailers during monitoring period
+# are periods with virtually 0 effort worth running through the model?
+data_eval$index_counts <-  creel$effort |>
+  filter(tie_in_indicator == 0) |> 
+  group_by(section, event_date, count_sequence, count_type) |> 
+  summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
+  pivot_wider(names_from = count_type, values_from = count_quantity) |>
+  select(-6) |> 
+  mutate(
+    `Trailers Only` = replace_na(`Trailers Only`, 0)
+  ) |>
+  pivot_longer(names_to = "count_type", values_to = "count_quantity", cols = c(`Trailers Only`, `Vehicle Only`)) |> 
+  arrange(event_date, section)
+ 
+data_eval$index_counts |>
+ggplot(aes(x = event_date, y = count_quantity)) +
+  geom_point(aes(fill=count_type), colour="black",pch=21, size=2) +
+  scale_fill_manual(values=c("orange", "blue")) +
+  theme_bw() +
+  facet_wrap(.~ section)
+  
+
+# Assess data completeness by looking for deviations from the expected count of distinct effort count locations per section per day. Note - days can look complete if "no count" has been entered for a site, so this is just one view into potential data completeness issues 
+data_eval$location_check <- creel$effort |>
+  filter(tie_in_indicator == 0) |> 
+  select(event_date, section, location, count_sequence) |> 
+  group_by(event_date, section, count_sequence) |> 
+  summarise(
+    n_distinct_locations =  n_distinct(location),
+    distinct_locations = paste(unique(location), collapse = ","))
+
+data_eval$location_check |>  ggplot(aes(x = event_date, y = n_distinct_locations)) +
+  geom_point() +
+  theme_bw() +
+  facet_wrap(.~ section)
+
+# Look at records where "no_count_reason" was used 
+data_eval$no_count_records <- creel$effort |>
+  filter(tie_in_indicator == 0, !is.na(no_count_reason)) |> 
+  arrange(event_date)
+
+# Evaluate on a daily basis the number of boat and bank interviews obtained 
+data_eval$interview <- creel$interview |>
+  mutate(
+    interview_type = if_else(boat_used == "Yes", "Boat", "Bank")
+  ) |> 
+  group_by(event_date, section, location, interview_type) |> 
+  summarize(
+    n_interviews = n()
+  ) |> 
+  pivot_wider(names_from = interview_type, values_from = n_interviews, values_fill = 0) |> 
+  pivot_longer(names_to = "interview_type", values_to = "n_interviews", cols = starts_with("B")) |> 
+  arrange(event_date, section)
+
+data_eval$interview |>
+ggplot(aes(x = event_date, y = n_interviews)) +
+  geom_point(aes(fill=interview_type), colour="black",pch=21, size=2) +
+  scale_fill_manual(values=c("orange", "blue")) +
+  theme_bw() +
+  facet_wrap(.~ section)
+  
+```
+
+
+## examine raw catch data 
+```{r raw catch data}
+left_join(
+  creel$interview, 
+  creel$catch, 
+  by = "interview_id") |> 
+  filter(species %in% c(params$species)) |> 
+  group_by(event_date, section, species, fin_mark, fate) |> 
+  summarise(across(fish_count, sum), .groups = "drop") |> 
+  ggplot(aes(event_date, fish_count, fill = fate, color = fate)) + 
+  geom_col(position = "dodge") + 
+  facet_wrap(~section+species, ncol = 2) #, scales = "free_y"
+
+```
+  
+## fishery specific data issues 
+```{r data clean up}
+
+# chunk for fishery specific data QA/QC issues
+
+# Skagit issues which may or may not occur elsewhere include missing locations from drive around index effort counts and a location that was supposed to be monitored, but wasn't, for over half of the season (Skagit City Access). Would be good see data issues from other creels to think about what's general vs. project specific. 
+
+# effort count location that was left out of counts for large chunk of season
+data_eval$remove_location <- bind_rows(
+  tibble(location = "Skagit City Access (SF Skagit, N. end of Fir Island)"))
+
+# mistakes in data collection led to instances of incomplete effort counts, this chunk provides the user an option to censor those data by filtering them out of the final dataset 
+# count_id is a paste of event_date, section, count_sequence 
+
+creel$effort <- creel$effort |>
+   mutate(
+    count_id = paste(event_date, section, count_sequence, sep = "_")
+  )
+
+# declare individual count_sequences which contain missing counts and should be filtered from final dataset
+
+data_eval$remove_count <- bind_rows(
+    tibble(count_id = "2021-08-19_2_1"),
+    tibble(count_id = "2021-08-20_1_3"),
+    tibble(count_id = "2021-09-17_3_4"),
+    tibble(count_id = "2021-09-19_3_2"),
+    tibble(count_id = "2021-09-23_4_1"),
+    tibble(count_id = "2021-09-23_3_1"),
+    tibble(count_id = "2021-09-23_1_3"),
+    tibble(count_id = "2021-09-26_2_3"),
+    tibble(count_id = "2021-09-26_3_2"),
+    tibble(count_id = "2021-10-21_4_3"),
+    tibble(count_id = "2021-10-31_4_1")
+    )
+
+# n rows in effort data pre filter 
+data_eval$counts_pre_filter <- nrow(creel$effort)
+
+creel$effort <- creel$effort |>
+  filter(!location %in% data_eval$remove_location$location, !count_id %in% data_eval$remove_count$count_id) |>
+  arrange(event_date, section, count_sequence)
+
+# n rows in effort data post filter 
+data_eval$counts_post_filter <- nrow(creel$effort)
+
+# number of counts removed from dataset 
+print(data_eval$counts_pre_filter - data_eval$counts_post_filter)
+
+# Placeholder as option to replace NA's with 0's if/when deemed appropriate
+# creel$effort <- creel$effort |> 
+#   mutate(count_quantity = if_else(!is.na(no_count_reason), 0, count_quantity))
+
+```
+
+
+
+
 # prepare data for model fitting
 
 ```{r init_stan_data_prelim}
@@ -275,34 +423,7 @@ stan_data_prelim <- list(
 
 ```
 
-## one-off clean up stuff 
 
-only needed for Winter GF dev with prelim section LUT
-
-```{r data_issues, eval=FALSE}
-# #Skagit winter game fish data reveal lack of generalizability in prior wrangling code
-# 
-# #no `Trailer only` counts for section; okay to exclude due to very low effort
-# #also no census records for section 1: count(stan_data_prelim$effort_census, section)
-# #unfortunately need to decrement in order to satisfy stan indexing starting at 1
-# stan_data_prelim$effort_census <- filter(stan_data_prelim$effort_census, section > 1) |> 
-#   mutate(section = section - 1)
-# stan_data_prelim$effort_index <- filter(stan_data_prelim$effort_index, section > 1) |> 
-#   mutate(section = section - 1)
-# stan_data_prelim$interview <- filter(stan_data_prelim$interview, section > 1) |> 
-#   mutate(section = section - 1)
-# 
-# map(stan_data_prelim, ~count(.x, section))
-# 
-# #also need to remove from prop expansion LU
-# lut$census_expansion <- filter(lut$census_expansion, section > 1) |> 
-#   mutate(section = section - 1)
-# 
-# lut$census_expansion |> count(section)
-# 
-# #note this means stan output sections need to be +1 to join against original LUs
-
-```
 
 ## dates
 
@@ -350,36 +471,38 @@ d_days <- tibble(
     ,
     by = "event_date")
 
+
+# EB: better working example now for subset of Skagit fall salmon with closures 
+# NOTE: all declared closures must fall within start_date and end_date params. 
 # #now add closures if any...
-# #commented out during dev around Skagit_wgf, since no closures
 # #and because may move to params file path to closures csv or similar
-# d_days <- rows_upsert(d_days,
-#     bind_rows(
-#       tibble(section = "1,2", closure_begin = "2021-02-03", closure_end = "2021-02-05"),
-#       tibble(section = "1,2", closure_begin = "2021-02-10", closure_end = "2021-02-12"),
-#       tibble(section = "1,2", closure_begin = "2021-02-17", closure_end = "2021-02-19"),
-#       tibble(section = "1,2", closure_begin = "2021-02-24", closure_end = "2021-02-26"),
-#       tibble(section = "1,2", closure_begin = "2021-03-03", closure_end = "2021-03-05"),
-#       tibble(section = "1,2", closure_begin = "2021-03-10", closure_end = "2021-03-12"),
-#       tibble(section = "1,2", closure_begin = "2021-03-17", closure_end = "2021-03-19"),
-#       tibble(section = "1,2", closure_begin = "2021-03-24", closure_end = "2021-03-26"),
-#       tibble(section = "1,2", closure_begin = "2021-03-31", closure_end = "2021-04-02"),
-#       tibble(section = "1,2", closure_begin = "2021-04-07", closure_end = "2021-04-09")
-#     ) |> 
-#       rowwise() |>
-#       mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |> 
-#       separate_rows(closure_date, sep = ",") |> 
-#       select(event_date = closure_date, section) |> 
-#       mutate(
-#         event_date = as.Date(event_date),
-#         closure_code = FALSE # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
-#       ) |> 
-#       separate_rows(section, sep = ",") |> 
-#       pivot_wider(names_from = section, names_prefix = "open_section_", values_from = closure_code) |> 
-#       mutate(across(starts_with("open_section_"), ~replace_na(., TRUE)))
-#     ,
-#     by ="event_date"
-#   ) 
+d_days <- rows_upsert(d_days,
+    bind_rows(
+            tibble(section = "3,4", closure_begin = "2021-08-19", closure_end = "2021-08-31"), # salmon opens on 9/1 for sections 3,4
+      tibble(section = "3", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
+      tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
+      tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
+      tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
+      tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
+    ) |>
+      rowwise() |>
+      mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |>
+      separate_rows(closure_date, sep = ",") |>
+      select(event_date = closure_date, section) |>
+      mutate(
+        event_date = as.Date(event_date),
+        closure_code = FALSE # TB - The 1e-06 is needed to keep the model from crashing ¦log-normal parameters cant be 0
+      ) |>
+      separate_rows(section, sep = ",") |>
+      pivot_wider(names_from = section, names_prefix = "open_section_", values_from = closure_code) |>
+      mutate(across(starts_with("open_section_"), ~replace_na(., TRUE)))
+    ,
+    by ="event_date"
+  )
 
 ```
 
@@ -444,7 +567,7 @@ Aggregate index counts of vehicles, trailers, anglers, and boats.
 
 stan_data_prelim$effort_index <- stan_data_prelim$effort_index |> 
   filter(
-    #!is.na(count_quantity)
+    # !is.na(count_quantity),
     is.na(no_count_reason),
     !is.na(count_type)
     ) |> 
@@ -453,7 +576,11 @@ stan_data_prelim$effort_index <- stan_data_prelim$effort_index |>
   group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
   summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
   pivot_wider(names_from = count_type, values_from = count_quantity) |> 
-  arrange(event_date, section, count_sequence)
+  arrange(event_date, section, count_sequence) |>
+  mutate(
+    `Trailers Only` = replace_na(`Trailers Only`, 0)
+  ) # EB placeholder for trailer counts with NA's that should be 0's 
+  
 ```
 
 ## interview
@@ -466,7 +593,6 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
   mutate(
     across(c(vehicle_count, trailer_count), ~replace_na(., 0)),
     trip_status = replace_na(trip_status, "Unknown"),
-    #angler_type = if_else(boat_used == "No", "Shore", "Boat"),
     angler_type = case_when(
       is.na(fish_from_boat) ~ "bank",
       fish_from_boat == "Bank" ~ "bank",
@@ -705,7 +831,7 @@ creel_models <- lut$lut_creel_models
 n_chain <- 2  
 n_cores <- 4    
 
-n_iter <- 200 
+n_iter <- 100 # DA uses 200 for quick see if it breaks fit; TB and DA suggest that 1,000 should be sufficient, maybe more for final end of season estimate 
 n_warmup <- n_iter/2
 n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
 adapt_delta <-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
@@ -749,6 +875,42 @@ stan_fit <- stan(
 )
 ```
 
+
+# results
+
+## save model object and summary 
+```{r}
+filepath_modeloutput <- "model_output/"
+
+# Save a file of the summary model results
+s_stan <- summary(stan_fit)
+  
+write.csv(s_stan$summary, paste0(filepath_modeloutput, "/results_res_Stan_summary_", Sys.Date(), ".csv"))
+  
+# Save "res_stan" object as .rds file   
+saveRDS(stan_fit, file=paste0(filepath_modeloutput, "/results_res_Stan.rds"))
+
+# extract posterior draws
+res <- extract(stan_fit)
+  
+# Calculate loo-IC
+loo_IC<-loo(res$log_lik) # see: https://rdrr.io/cran/loo/man/loo.html and https://cran.r-project.org/web/packages/loo/loo.pdf 
+writeLines(capture.output(loo_IC), paste0(filepath_modeloutput, "/results_model_looIC_", Sys.Date(), ".txt"))  
+
+  
+```
+
+
+## option to load existing model 
+```{r}
+# file path to export model results in project folder in Rstudio remote server instance 
+# filepath_modeloutput <- "model_output/"
+# 
+# stan_fit <- read_rds(paste0(filepath_modeloutput, "results_res_Stan.rds"))
+
+```
+
+
 # diagnostics
 
 Add more...
@@ -763,18 +925,19 @@ stan_fit |> get_sampler_params(inc_warmup = FALSE) |> map_dbl(~.x[, "divergent__
 results <- list()
 ```
 
+## total cach and effort summary 
 ```{r res_summaries}
 results$e_sum_c_sum <- summary(stan_fit, pars = c("E_sum", "C_sum"))$summary |> 
   as.data.frame() |> rownames_to_column("Estimate") |> as_tibble()
 
 results$e_sum_c_sum |> 
-  select(Estimate, `2.5%`:`97.5%`) |> 
+  select(Estimate, mean, `2.5%`:`97.5%`) |> 
   gt() |> 
   fmt_number(-Estimate, decimals = 0)
 
 ```
 
-Posterior plots of summary estimates
+## posterior plots of summary estimates
 
 ```{r}
 #various other diplay options: ggdist::stat_cdfinterval(), ggdist::stat_slab(), ggdist::stat_pointinterval()
@@ -789,7 +952,7 @@ tidybayes::spread_draws(stan_fit, E_sum) |>
 
 ```
 
-Catch/effort by day, section, angler type
+## catch by day, section, angler type
 
 ```{r res_c_by_strata}
 # #could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
@@ -821,6 +984,9 @@ results$C <- summary(stan_fit, pars = c("C"))$summary |>
     by = "day_ind"
   )
 
+# write effort summary to file 
+write_csv(results$C, paste(filepath_modeloutput, paste("Summary_Catch", paste(params$species, params$fin_mark, params$fate, sep = "_"), paste0("Run_", params$model_number), ".csv", sep="_"), sep="/"))
+
 results$C |> 
   ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
@@ -828,6 +994,8 @@ results$C |>
   scale_x_date() +
   facet_wrap(~section_name + angler_type, ncol = 2)
   
+
+
 #unclear how sensible/meaningful this is...but we can do it!
 results$C |> 
   group_by(section_name, angler_type, mon, DayType) |> 
@@ -835,453 +1003,191 @@ results$C |>
   arrange(desc(`50%`))
 
 #the sort of cross-ref to raw that would be helpful in QAQC, laugh testing
+# copying this into pre-analysis QAQC section 
 left_join(
   creel$interview, 
   creel$catch, 
   by = "interview_id") |> 
-  filter(species %in% c("Coho", "Pink")) |> 
+  filter(species %in% c(params$species)) |> 
   group_by(event_date, section, species, fin_mark, fate) |> 
   summarise(across(fish_count, sum), .groups = "drop") |> 
   ggplot(aes(event_date, fish_count, fill = fate, color = fate)) + 
   geom_col(position = "dodge") + 
   facet_wrap(~section+species, ncol = 2) #, scales = "free_y"
 
+
+
 ```
 
-# older 
 
+## effort by day, section, angler type
+
+```{r res_e_by_strata}
+# #could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+# tidybayes::spread_draws(stan_fit, C[s][d,g] | s)
+
+#the E & C array dims are E[section, day, gear]?
+#summary(stan_fit, pars = c("E"))$summary |> 
+results$E <- summary(stan_fit, pars = c("E"))$summary |> 
+  as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
+  mutate(
+    indices = str_sub(stan_out, 3, 20) |> str_remove("\\]")
+  ) |> 
+  separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
+  mutate(
+    day_ind = as.integer(day_ind),
+    angler_type_ind = as.integer(angler_type_ind)
+  ) |> 
+  #need "section names" in LUT if going to display more than section number
+  left_join(
+    distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
+    by = "section"
+  ) |> 
+  left_join(
+    distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
+    by = "angler_type_ind"
+  ) |> 
+  left_join(
+    d_days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
+    by = "day_ind"
+  )
+
+# write effort summary to file 
+write_csv(results$E, paste(filepath_modeloutput, paste("Summary_Effort", paste(params$species, params$fin_mark, params$fate, sep = "_"), paste0("Run_", params$model_number), ".csv", sep="_"), sep="/"))
+
+
+results$E |> 
+  ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
+  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
+  geom_line() + geom_point() +
+  scale_x_date() +
+  facet_wrap(~section_name + angler_type, ncol = 2)
+```
+
+
+
+## CPUE by day, section, angler type
+
+```{r res_cpue_by_strata}
+# #could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+# tidybayes::spread_draws(stan_fit, C[s][d,g] | s)
+
+#the E & C array dims are E[section, day, gear]?
+#summary(stan_fit, pars = c("E"))$summary |> 
+results$CPUE <- summary(stan_fit, pars = c("lambda_C_S"))$summary |> 
+  as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
+  mutate(
+    indices = str_sub(stan_out, 12, 20) |> str_remove("\\]")
+  ) |> 
+  separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
+  mutate(
+    day_ind = as.integer(day_ind),
+    angler_type_ind = as.integer(angler_type_ind)
+  ) |> 
+  #need "section names" in LUT if going to display more than section number
+  left_join(
+    distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
+    by = "section"
+  ) |> 
+  left_join(
+    distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
+    by = "angler_type_ind"
+  ) |> 
+  left_join(
+    d_days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
+    by = "day_ind"
+  )
+
+# write effort summary to file 
+write_csv(results$CPUE, paste(filepath_modeloutput, paste("Summary_CPUE", paste(params$species, params$fin_mark, params$fate, sep = "_"), paste0("Run_", params$model_number), ".csv", sep="_"), sep="/"))
+
+results$CPUE |> 
+  ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
+  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
+  geom_line() + geom_point() +
+  scale_x_date() +
+  facet_wrap(~section_name + angler_type, ncol = 2)
+```
+
+
+# density plots of total catch and effort from SkagitAnalysis.Rmd
+```{r, include=TRUE, fig.align="center", fig.cap=c("Figure 5. Season total catch (fish) and effort (angler hours). The middle dashed line shows the posterior median or 'best' estimate. Outer dashed lines show 95 percent credible intervals."),echo=FALSE,warning = FALSE}
+season_results<-data.frame(res$C_sum,res$E_sum)%>%
+  mutate(iter=row_number())%>%
+  rename(`Season Total Catch`=res.C_sum,`Season Total Effort`=res.E_sum)%>%
+  pivot_longer(names_to = "Parameter",values_to="value",cols=c(`Season Total Catch`,`Season Total Effort`))
+
+#elimiminate very very extreme quantiles to pretty up plots
+lims<-season_results%>%group_by(Parameter)%>%summarise(value = quantile(value, c(0, 0.99)), q = c(0,0.99))%>%pivot_wider(names_from = q,values_from=value)
+
+season_results_trunc=season_results%>%left_join(lims,by="Parameter")%>%filter(value>as.numeric(`0`) & value < as.numeric(`0.99`))
+
+ggplot(season_results_trunc,aes(x=value,fill=Parameter))+
+  scale_fill_manual(values=c("orange", "blue")) +
+  facet_wrap(~Parameter,ncol=1,  scales = 'free')+
+  theme_bw()+
+  geom_density()+
+  ylab(NULL)+
+  geom_vline(season_results%>%group_by(Parameter)%>%summarise(value = quantile(value, c(0.025, 0.5, 0.975)), q = c(0.025, 0.5, 0.975)),mapping=aes(xintercept=value,group=Parameter),linetype="dashed")+
+  theme(legend.title = element_blank())
+
+```
+
+
+# older 
 ```{r}
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # This code generates summaries files regarding the inputs and outputs for a new model run 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # Model warnings #KB note: this doesn't appear to be working (not sure why)
 #     if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
-#     writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutputs, "/info_Model_warnings_", Sys.Date(), ".txt"))
+#     writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutput, "/info_Model_warnings_", Sys.Date(), ".txt"))
 
 # R session Info
-  writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutputs, "/info_sessionInfo_", Sys.Date(), ".txt"))
-    
-# Model summary
-  mod.sum.elements<-
-      c("Model Name"                   , as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
-      , "Model File"                   , model.file.name
-      , "Model Period"                 , model_period
-      , "Date Begin"                   , as.character(Date_Begin)
-      , "Date End"                     , as.character(Date_End)
-      , "Catch Group"                  , catch.group.of.interest
+#   writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutput, "/info_sessionInfo_", Sys.Date(), ".txt"))
+#     
+# # Model summary
+  model_summary_elements<-
+      c("Model Name"                   , as.character(params$model_name)
+      , "Model Number"                 , params$model_number
+      , "Model Period"                 , params$model_period
+      , "Date Begin"                   , as.character(params$date_start)
+      , "Date End"                     , as.character(params$date_end)
+      , "Catch Group"                  , paste(params$species, params$fin_mark, params$fate, sep = "_") #
       , ""                             , c("")
-      , "Chains"                       , n_chain
-      , "Iterations"                   , n_iter
-      , "Warmup"                       , n_warmup
-      , "Thin Rate"                    , n_thin
-      , "Adapt_Delta"                  , adapt_delta
-      , "Max Tree Depth"               , max_treedepth
-      , "Cores"                        , n_cores
+      , "Chains"                       , n_chain #
+      , "Iterations"                   , n_iter #
+      , "Warmup"                       , n_warmup #
+      , "Thin Rate"                    , n_thin #
+      , "Adapt_Delta"                  , adapt_delta #
+      , "Max Tree Depth"               , max_treedepth #
+      , "Cores"                        , n_cores #
       , ""                             , c("")
-      , "value_cauchyDF_sigma_eps_C"   , value_cauchyDF_sigma_eps_C
-      , "value_cauchyDF_sigma_eps_E"   , value_cauchyDF_sigma_eps_E
-      , "value_cauchyDF_sigma_r_E"     , value_cauchyDF_sigma_r_E
-      , "value_cauchyDF_sigma_r_C"     , value_cauchyDF_sigma_r_C
-      , "value_normal_sigma_omega_C_0" , value_normal_sigma_omega_C_0 
-      , "value_normal_sigma_omega_E_0" , value_normal_sigma_omega_E_0
-      , "value_lognormal_sigma_b"      , value_lognormal_sigma_b
-      , "value_normal_sigma_B1"        , value_normal_sigma_B1
-      , "value_normal_mu_mu_C"         , round(value_normal_mu_mu_C, 3)
-      , "value_normal_sigma_mu_C"      , round(value_normal_sigma_mu_C, 3) 
-      , "value_normal_mu_mu_E"         , round(value_normal_mu_mu_E, 3) 
-      , "value_normal_sigma_mu_E"      , round(value_normal_sigma_mu_E, 3)
-      , "value_betashape_phi_E_scaled" , value_betashape_phi_E_scaled 
-      , "value_betashape_phi_C_scaled" , value_betashape_phi_C_scaled 
+      , "value_cauchyDF_sigma_eps_C"   , stan_data$value_cauchyDF_sigma_eps_C
+      , "value_cauchyDF_sigma_eps_E"   , stan_data$value_cauchyDF_sigma_eps_E
+      , "value_cauchyDF_sigma_r_E"     , stan_data$value_cauchyDF_sigma_r_E
+      , "value_cauchyDF_sigma_r_C"     , stan_data$value_cauchyDF_sigma_r_C
+      , "value_normal_sigma_omega_C_0" , stan_data$value_normal_sigma_omega_C_0
+      , "value_normal_sigma_omega_E_0" , stan_data$value_normal_sigma_omega_E_0
+      , "value_lognormal_sigma_b"      , stan_data$value_lognormal_sigma_b
+      , "value_normal_sigma_B1"        , stan_data$value_normal_sigma_B1
+      , "value_normal_mu_mu_C"         , round(stan_data$value_normal_mu_mu_C, 3)
+      , "value_normal_sigma_mu_C"      , round(stan_data$value_normal_sigma_mu_C, 3)
+      , "value_normal_mu_mu_E"         , round(stan_data$value_normal_mu_mu_E, 3)
+      , "value_normal_sigma_mu_E"      , round(stan_data$value_normal_sigma_mu_E, 3)
+      , "value_betashape_phi_E_scaled" , stan_data$value_betashape_phi_E_scaled
+      , "value_betashape_phi_C_scaled" , stan_data$value_betashape_phi_C_scaled
   )
-  mod.sum<-setNames(as.data.frame(matrix(mod.sum.elements, nrow=length(mod.sum.elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
-  writeLines(capture.output(mod.sum), paste0(filepath_modeloutputs, "/info_Model_setup_", Sys.Date(), ".txt"))
-
+  model_summary <-setNames(as.data.frame(matrix(model_summary_elements, nrow=length(model_summary_elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
+  # writeLines(capture.output(mod.sum), paste0(filepath_modeloutput, "/info_Model_setup_", Sys.Date(), ".txt"))
+write_delim(model_summary, paste0(filepath_modeloutput, "/info_Model_setup_", Sys.Date(), ".txt"))
 # Model run-time
-  run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
-  mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
-  writeLines(capture.output(mod_run.time), paste0(filepath_modeloutputs, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
-
-# Save a file of the summary model results
-  s.stan<-summary(res_Stan)
-  write.csv(s.stan$summary, paste0(filepath_modeloutputs, "/results_res_Stan_summary_", Sys.Date(), ".csv"))
   
-# Save "res_stan" object as .rds file   
-  saveRDS(res_Stan, file=paste0(filepath_modeloutputs, "/results_res_Stan.rds"))
-
-# Calculate loo-IC
-  loo_IC<-loo(res$log_lik) # see: https://rdrr.io/cran/loo/man/loo.html and https://cran.r-project.org/web/packages/loo/loo.pdf 
-  writeLines(capture.output(loo_IC), paste0(filepath_modeloutputs, "/results_model_looIC_", Sys.Date(), ".txt"))  
-
-```
-
-```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
-### Summarize and Save Results
-#Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
-#=============================================
-#convergence diagnostics
-  launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
-  if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)} 
-
-# generate plots and tables of creel estimates 
-  source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates.R")) 
-    
-# KB note: update so table/plots of results are shown in PDF document
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This file summarizes creel model estimates by creating summary plots and tables
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-#--------------------------------------------------------------------------------------------------------------------- -
-# SUMMARIZE SEASON TOTAL EFFORT AND CATCH                                                                ----
-#--------------------------------------------------------------------------------------------------------------------- - 
-  #calculate season total effort
-    #Total_season_catch<-c(setNames(mean(res$C_sum), "Mean"), quantile(res$C_sum,c(0.025,0.25,0.5,0.75,0.975)), setNames(sd(res$C_sum)/mean(res$C_sum), "CV"))
-    Total_season_catch<-c(setNames(round(mean(c(apply(res$C_sum, c(1), sum))),0), "Mean"), round(quantile(apply(res$C_sum, c(1), sum),c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(c(apply(res$C_sum, c(1), sum)))/mean(c(apply(res$C_sum, c(1), sum))),3), "CV"))
+print(elasped_time_by_chain<-get_elapsed_time(stan_fit))
+model_runtime_minutes <- max(elasped_time_by_chain[,2])/60+max(elasped_time_by_chain[,1])/60
   
-  #calculate season total catch
-    Total_season_effort<-c(setNames(round(mean(res$E_sum),0), "Mean"), round(quantile(res$E_sum,c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(res$E_sum)/mean(res$E_sum),3), "CV"))
-    
-  #Export .csv of total catch and effort
-    catch.effort.totals<-rbind(Total_season_catch, Total_season_effort)
-    write.csv(catch.effort.totals, paste(filepath_modelestimates, paste("Summary_Total_Catch_and_Effort", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = T)
-
-#--------------------------------------------------------------------------------------------------------------------- -
-# SUMMARIZE TOTAL EFFORT DATA - by date, section, and gear-type (all Skagit models estimate effort by section and gear)                                                                                 ----
-#--------------------------------------------------------------------------------------------------------------------- -   
-  #Extract effort data and name dimensions (so that they are meaningful)
-      effort.results<-res$E; dim(effort.results)
-      dimnames(effort.results)<-list(seq(1:nrow(effort.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
-      # effort.results[1:2, , 1:2,]
-      # E.mean<-setNames(as.data.frame(matrix(matrix(apply(effort.results,c(2:4),mean),nrow=dim(effort.results)[2]*dim(effort.results)[3],byrow=T),nrow=dim(effort.results)[3]))
-      #                 , CJ(dimnames(effort.results)[[2]], dimnames(effort.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
-  
-  #create data frame to fill with summarized effort data
-      Effort.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-    
-  #loop through array and summarize by day, section, and gear type 
-      for(period in 1:dim(effort.results)[3]){
-          sub.period<-effort.results[1:nrow(effort.results), 1:dim(effort.results)[2], period, 1:dim(effort.results)[4]]
-          sub.period[1:5,,]
-          
-          for(gear in 1:dim(sub.period)[2]){
-            gear.xwalk
-            sub.gear<-sub.period[1:nrow(effort.results), 1:dim(sub.period)[2], gear]
-            sub.gear[1:5, ]
-            
-            sub.Effort.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-            
-            for(section in 1:dim(sub.period)[2]){
-              sub.section<-sub.gear[, section]
-              section.xwalk
-              
-              sub.Effort.summary[section, "Day"]<-as.numeric(period)
-              sub.Effort.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
-              sub.Effort.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
-              sub.Effort.summary[section, "Mean"]<-mean(sub.section)
-              sub.Effort.summary[section, "Median"]<-quantile(sub.section, 0.5)
-              sub.Effort.summary[section, "l95"]<-quantile(sub.section, 0.025)
-              sub.Effort.summary[section, "u95"]<-quantile(sub.section, 0.975)
-            }
-           Effort.summary<-rbind(Effort.summary, sub.Effort.summary) 
-          }
-      }
-      all.Dates$Day<-as.numeric(as.character(all.Dates$Day)) #make sure "all.Dates$Day" is a numeric variable 
-      
-  #Join "Effort.summary" with "all.Dates" date and daytype information   
-     Effort.summary<-left_join(Effort.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
-
-  # write "Effort.summary" to a .csv file   
-      write.csv(Effort.summary, paste(filepath_modelestimates, paste("Summary_Effort (total hours per Period) by Section and Gear", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
-
-#--------------------------------------------------------------------------------------------------------------------- -
-# SUMMARIZE CATCH AND CPUE DATA                                                                                 ----
-#--------------------------------------------------------------------------------------------------------------------- -   
-  #=============================================================================================================== =
-  # CATCH SUMMARY
-  #=============================================================================================================== =
-    #Extract catch data and name dimensions (so that they are meaningful)
-        catch.results<-res$C; dim(catch.results)
-        dimnames(catch.results)<-list(seq(1:nrow(catch.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
-        # C.mean<-setNames(as.data.frame(matrix(matrix(apply(catch.results,c(2:4),mean),nrow=dim(catch.results)[2]*dim(catch.results)[3],byrow=T),nrow=dim(catch.results)[3]))
-        #             , CJ(dimnames(catch.results)[[2]], dimnames(catch.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
-    
-    #create data frame to fill with summarized catch data
-        Catch.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-      
-    #loop through array and summarize by day, gear type, and section
-        for(period in 1:dim(catch.results)[3]){
-            sub.period<-catch.results[1:nrow(catch.results), 1:dim(catch.results)[2], period, 1:dim(catch.results)[4]]
-            sub.period[1:5,,]
-            
-            for(gear in 1:dim(sub.period)[2]){
-              
-              gear.xwalk
-              sub.gear<-sub.period[1:nrow(catch.results), 1:dim(sub.period)[2], gear]
-              sub.gear[1:5, ]
-              
-              sub.Catch.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-              
-              for(section in 1:dim(sub.period)[2]){
-                sub.section<-sub.gear[, section]
-                section.xwalk
-                
-                sub.Catch.summary[section, "Day"]<-as.numeric(period)
-                sub.Catch.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
-                sub.Catch.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
-                sub.Catch.summary[section, "Mean"]<-mean(sub.section)
-                sub.Catch.summary[section, "Median"]<-quantile(sub.section, 0.5)
-                sub.Catch.summary[section, "l95"]<-quantile(sub.section, 0.025)
-                sub.Catch.summary[section, "u95"]<-quantile(sub.section, 0.975)
-              }
-             Catch.summary<-rbind(Catch.summary, sub.Catch.summary) 
-            }
-        }
-        
-    # Join "Catch.summary" with "all.Dates" date and daytype information   
-       Catch.summary<-left_join(Catch.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
-       
-    # write "Catch.summary" to a .csv file   
-       write.csv(Catch.summary, paste(filepath_modelestimates, paste("Summary_Catch (total fish per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
-       
-  #=============================================================================================================== =
-  # CPUE SUMMARY
-  #=============================================================================================================== =
-    #Extract catch data and name dimensions (so that they are meaningful)
-        cpue.results<-res$lambda_C_S; dim(cpue.results)
-        dimnames(cpue.results)<-list(seq(1:nrow(cpue.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
-        # C.mean<-setNames(as.data.frame(matrix(matrix(apply(cpue.results,c(2:4),mean),nrow=dim(cpue.results)[2]*dim(cpue.results)[3],byrow=T),nrow=dim(cpue.results)[3]))
-        #             , CJ(dimnames(cpue.results)[[2]], dimnames(cpue.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
-    
-    #create data frame to fill with summarized catch data
-        CPUE.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-      
-    #loop through array and summarize by day, gear type, and section
-        for(period in 1:dim(cpue.results)[3]){
-            sub.period<-cpue.results[1:nrow(cpue.results), 1:dim(cpue.results)[2], period, 1:dim(cpue.results)[4]]
-            sub.period[1:5,,]
-            
-            for(gear in 1:dim(sub.period)[2]){
-              
-              gear.xwalk
-              sub.gear<-sub.period[1:nrow(cpue.results), 1:dim(sub.period)[2], gear]
-              sub.gear[1:5, ]
-              
-              sub.CPUE.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
-              
-              for(section in 1:dim(sub.period)[2]){
-                sub.section<-sub.gear[, section]
-                section.xwalk
-                
-                sub.CPUE.summary[section, "Day"]<-as.numeric(period)
-                sub.CPUE.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
-                sub.CPUE.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
-                sub.CPUE.summary[section, "Mean"]<-round(mean(sub.section),3)
-                sub.CPUE.summary[section, "Median"]<-round(quantile(sub.section, 0.5),3)
-                sub.CPUE.summary[section, "l95"]<-round(quantile(sub.section, 0.025),3)
-                sub.CPUE.summary[section, "u95"]<-round(quantile(sub.section, 0.975),3)
-              }
-             CPUE.summary<-rbind(CPUE.summary, sub.CPUE.summary) 
-            }
-        }
-        
-    # Join "CPUE.summary" with "all.Dates" date and daytype information   
-       CPUE.summary<-left_join(CPUE.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day") 
-       
-    # write "CPUE.summary" to a .csv file   
-       write.csv(CPUE.summary, paste(filepath_modelestimates, paste("Summary_CPUE (fish per hr per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)   
-```
-
-```{r}
-
-# GENERATE PLOTS OF EFFORT AND CATCH SUMMARIES                                                                      ----
-#--------------------------------------------------------------------------------------------------------------------- -        
-      
-  #plot timeseries and total effort and catch
-    plot.width<-8.5
-    plot.height<-11
-    
-  #Set up plotting arguments
-    eff.pch=21
-    eff.cex=2
-    gear.cols<-c(colorRampPalette(brewer.pal(max(3,as.numeric(length(unique(Effort.summary$Gear)))),"Blues"))(length(unique(Effort.summary$Gear))))
-    section.cols<-c(colorRampPalette(brewer.pal(max(3,as.numeric(length(unique(Effort.summary$Section)))),"Greens"))(length(unique(Effort.summary$Section))))
-
-  #Self-made jitter sequence for x-axis
-    jitter.right<-seq(0,1,0.25)
-    temp.jitter<-c()
-    for(value in 1:length(jitter.right)){
-      temp.jitter<-c(temp.jitter, c(jitter.right[value], jitter.right[value]*-1))
-    }
-    jitter.seq<-as.numeric(unique(temp.jitter))
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
-#START OF PDF FUNCTION!!!!! 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
-  pdf(paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/"), width=plot.width, height=plot.height)
-  mpg_axis<-0
+  run_time<-c("Approx. Run Time", round(model_runtime_minutes,2))
+  mod_run_time<-setNames(as.data.frame(matrix(run_time, nrow=length(run_time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
+  writeLines(capture.output(mod_run_time), paste0(filepath_modeloutput, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
 
 ```
-
-total seasonal catch and total seasonal effort
-
-```{r}
-# Plot #1 - PDF of total seasonal catch and total seasonal effort
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-      # set par arguments  
-        #windows(width=8.5, height=11)
-        par(mfcol=c(2,1), family='sans',  xaxs="i", yaxs="i", cex.axis=1, cex=1, mgp=c(2, 0.75, mpg_axis), mar=c(3,3,1,1), oma=c(4,3,1.5,1)) 
-    
-      #total seasonal catch    
-        plot(density(apply(res$C_sum, c(1), sum)), col="blue", xlab="Total Catch (fish)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
-        #abline(v=mean(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2, col="red") #add abline for mean
-        abline(v=median(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2,  col="red") #add abline for median
-        abline(v=quantile(apply(res$C_sum, c(1), sum), 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(apply(res$C_sum, c(1), sum), 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
-        legend("topright", c( "median", "95%CI"), lty=2, col=c("red", "black"), bty="n", lwd=2)
-      
-      #total seasonal effort  
-        plot(density(res$E_sum),col="blue",xlab="Total Effort (hrs)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
-        #abline(v=mean(res$E_sum),lwd=2, lty=2, col="red") #add abline for mean
-        abline(v=quantile(res$E_sum, 0.5),lwd=2, lty=2,  col="red") #add abline for median
-        abline(v=quantile(res$E_sum, 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(res$E_sum, 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
-        
-
-```
-
-Total Daily Effort (hrs) by Section and Gear Type
-
-```{r}
-# Plot #2 - Plot Total Daily Effort (hrs) by Section and Gear Type
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-      # windows(height=11, width=8.5)
-        
-      # set par arguments    
-          par(mfcol=c(length(unique(Effort.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
-      
-      # Loop through "Effort.summary" and plot
-          for(section in 1:length(unique(Effort.summary$Section))){
-              sub.section<-Effort.summary[Effort.summary$Section == unique(Effort.summary$Section)[section],]
-              
-              plot(NA, bty="n", ylim=c(-10, round_any(max(Effort.summary$u95, na.rm=T),200,f=ceiling)), xlim=c(0, max(Effort.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(Effort.summary$Section)[section], sep=""))
-              
-              for(day in 1:length(unique(sub.section$Day))){
-                  sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-                  if(sub.day$DayType[1]==2){
-                      abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
-              }}
-                  for(gear in 1:length(unique(sub.section$Gear))){
-                    sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
-                    x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
-                    
-                    arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
-                         , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
-                         , length=0.05, angle=90, code=3, lwd=2)
-                    points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
-        
-                  }
-              for(day in 1:length(unique(sub.section$Day))){
-                  sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-                  if(sub.day$Mean[1] == 0){
-                    x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
-                    lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
-              }
-              legend("topleft", legend = unique(Effort.summary$Section)[section], bty="n", bg="white", box.col = "white")  
-              }
-          }
-          legend("topright", legend = unique(Effort.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
-          title(xlab = "Day", ylab = "Total Daily Effort (hrs)", outer=T, line=1)
-
-```
-
-Total Daily Catch (fish) by Section and Gear Type
-
-```{r}
- # Plot #3 - Plot Total Daily Catch (fish) by Section and Gear Type
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-      #windows(height=11, width=8.5)
-      par(mfcol=c(length(unique(Catch.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
-  
-
-      for(section in 1:length(unique(Catch.summary$Section))){
-          sub.section<-Catch.summary[Catch.summary$Section == unique(Catch.summary$Section)[section],]
-          
-          plot(NA, bty="n", ylim=c(-1, round_any(max(Catch.summary$u95, na.rm=T),10,f=ceiling)), xlim=c(0, max(Catch.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(Catch.summary$Section)[section], sep=""))
-          
-          for(day in 1:length(unique(sub.section$Day))){
-              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-              if(sub.day$DayType[1]==2){
-                  abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
-          }}
-              for(gear in 1:length(unique(sub.section$Gear))){
-                sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
-                x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
-                
-                arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
-                     , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
-                     , length=0.05, angle=90, code=3, lwd=2)
-                points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
-    
-              }
-          for(day in 1:length(unique(sub.section$Day))){
-              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-              if(sub.day$Mean[1] == 0){
-                x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
-                lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
-          }
-          legend("topleft", legend = unique(Catch.summary$Section)[section], bty="n", bg="white", box.col = "white")  
-          }
-      }
-      legend("topright", legend = unique(Catch.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
-      title(xlab = "Day", ylab = "Total Daily Catch (fish)", outer=T, line=1)
-
-```
-
-Daily CPUE (fish/hr)
-
-```{r}
-  # Plot #4 - Plot  Daily CPUE (fish/hr)
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-      #windows(height=11, width=8.5)
-      par(mfcol=c(length(unique(CPUE.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
-  
-
-      for(section in 1:length(unique(CPUE.summary$Section))){
-          sub.section<-CPUE.summary[CPUE.summary$Section == unique(CPUE.summary$Section)[section],]
-          
-          plot(NA, bty="n", ylim=c(0, round_any(max(CPUE.summary$u95, na.rm=T),0.05,f=ceiling)), xlim=c(0, max(CPUE.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(CPUE.summary$Section)[section], sep=""))
-          
-          for(day in 1:length(unique(sub.section$Day))){
-              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-              if(sub.day$DayType[1]==2){
-                  abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
-          }}
-              for(gear in 1:length(unique(sub.section$Gear))){
-                sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
-                x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
-                
-                arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
-                     , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
-                     , length=0.05, angle=90, code=3, lwd=2)
-                points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
-    
-              }
-          for(day in 1:length(unique(sub.section$Day))){
-              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
-              if(sub.day$Mean[1] == 0){
-                x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
-                lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
-          }
-          legend("topleft", legend = unique(CPUE.summary$Section)[section], bty="n", bg="white", box.col = "white")  
-          }
-      }
-      legend("topright", legend = unique(CPUE.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
-      title(xlab = "Day", ylab = "Daily CPUE (fish/hr)", outer=T, line=1)
-
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-  # Plot #5 - Total catch and effort by day
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
-
-
-dev.off()
-
-```
-
