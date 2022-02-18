@@ -3,8 +3,8 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River"
-  date_start: "2021-09-03"   
-  date_end: "2021-10-31"
+  date_start: "2021-08-14"   
+  date_end: "2021-12-31"
   year_group: "2020-2021"
   sections: "lut_water_body_location_d14_skagit_fall_salmon.csv"
   species: "Chinook"
