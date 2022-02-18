@@ -3,15 +3,16 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River"
-  date_start: "2021-08-14"   
-  date_end: "2021-12-31"
+  date_start: "2021-09-03"   
+  date_end: "2021-10-31"
   year_group: "2020-2021"
   sections: "lut_water_body_location_d14_skagit_fall_salmon.csv"
-  species: "Pink"
+  species: "Chinook"
   fin_mark: "UM"
-  fate: "Kept"
+  fate: "Released"
   model_name: "BSS_04_corr"
   model_number: 4
+  model_period: 
 output:
   html_document:
     fig_caption: yes
@@ -294,7 +295,7 @@ ggplot(aes(x = event_date, y = count_quantity)) +
   scale_fill_manual(values=c("orange", "blue")) +
   theme_bw() +
   facet_wrap(.~ section)
-  
+
 
 # Assess data completeness by looking for deviations from the expected count of distinct effort count locations per section per day. Note - days can look complete if "no count" has been entered for a site, so this is just one view into potential data completeness issues 
 data_eval$location_check <- creel$effort |>
@@ -362,7 +363,8 @@ left_join(
 
 # effort count location that was left out of counts for large chunk of season
 data_eval$remove_location <- bind_rows(
-  tibble(location = "Skagit City Access (SF Skagit, N. end of Fir Island)"))
+  tibble(location = "Skagit City Access (SF Skagit, N. end of Fir Island)"),
+  tibble(location = "Rasar State Park"))
 
 # mistakes in data collection led to instances of incomplete effort counts, this chunk provides the user an option to censor those data by filtering them out of the final dataset 
 # count_id is a paste of event_date, section, count_sequence 
@@ -478,14 +480,14 @@ d_days <- tibble(
 # #and because may move to params file path to closures csv or similar
 d_days <- rows_upsert(d_days,
     bind_rows(
-            tibble(section = "3,4", closure_begin = "2021-08-19", closure_end = "2021-08-31"), # salmon opens on 9/1 for sections 3,4
+      tibble(section = "3,4", closure_begin = "2021-08-19", closure_end = "2021-08-31"), # salmon opens on 9/1 for sections 3,4
       tibble(section = "3", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
       tibble(section = "3", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
       tibble(section = "3", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
       tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
       tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
       tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20") # treaty fishery closure
       tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
       tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
     ) |>
@@ -831,7 +833,7 @@ creel_models <- lut$lut_creel_models
 n_chain <- 2  
 n_cores <- 4    
 
-n_iter <- 100 # DA uses 200 for quick see if it breaks fit; TB and DA suggest that 1,000 should be sufficient, maybe more for final end of season estimate 
+n_iter <- 200 # DA uses 200 for quick see if it breaks fit; TB and DA suggest that 1,000 should be sufficient, maybe more for final end of season estimate 
 n_warmup <- n_iter/2
 n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
 adapt_delta <-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
@@ -928,12 +930,16 @@ results <- list()
 ## total cach and effort summary 
 ```{r res_summaries}
 results$e_sum_c_sum <- summary(stan_fit, pars = c("E_sum", "C_sum"))$summary |> 
-  as.data.frame() |> rownames_to_column("Estimate") |> as_tibble()
+  as.data.frame() |> rownames_to_column("Estimate") |> as_tibble() |> 
+  mutate(CV = sd / mean)
 
 results$e_sum_c_sum |> 
-  select(Estimate, mean, `2.5%`:`97.5%`) |> 
+  select(Estimate, mean, `2.5%`:`97.5%`,CV) |> 
   gt() |> 
   fmt_number(-Estimate, decimals = 0)
+
+# write effort summary to file 
+write_csv(results$e_sum_c_sum, paste(filepath_modeloutput, paste("Summary_Total_Catch_Effort", paste(params$species, params$fin_mark, params$fate, sep = "_"), paste0("Run_", params$model_number), ".csv", sep="_"), sep="/"))
 
 ```
 
