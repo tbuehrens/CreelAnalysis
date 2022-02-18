@@ -487,7 +487,7 @@ d_days <- rows_upsert(d_days,
       tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
       tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
       tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20") # treaty fishery closure
+      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
       tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
       tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
     ) |>
