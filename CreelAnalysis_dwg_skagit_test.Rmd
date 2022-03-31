@@ -8,6 +8,7 @@ params:
   year_group: "2020-2021"
   sections: "lut_water_body_location_d14_skagit_fall_salmon_PE.csv"
   species: "Chinook"
+  life_stage: "Adult"
   fin_mark: "UM"
   fate: "Released"
   model_name: "BSS_04_corr"
@@ -622,8 +623,8 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
         str_detect(species, params$species |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
         str_detect(fin_mark, params$fin_mark |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
         str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
-        # ,
-        # str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        ,
+        str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
         # str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
       ) |> 
     group_by(interview_id) |> 
@@ -842,7 +843,7 @@ creel_models <- lut$lut_creel_models
 
 # Specific Stan model arguments
 n_chain <- 2  
-n_cores <- 4    
+n_cores <- 2    
 
 n_iter <- 200 # DA uses 200 for quick see if it breaks fit; TB and DA suggest that 1,000 should be sufficient, maybe more for final end of season estimate 
 n_warmup <- n_iter/2
