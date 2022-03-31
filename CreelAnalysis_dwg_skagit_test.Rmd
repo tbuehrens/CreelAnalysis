@@ -3,16 +3,15 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River"
-  date_start: "2021-05-31"   
-  date_end: "2022-07-15"
+  date_start: "2021-09-01"   
+  date_end: "2022-11-30"
   year_group: "2020-2021"
-  sections: "lut_water_body_location_d14_skagit_spring_Chinook_upper.csv"
+  sections: "lut_water_body_location_d14_skagit_fall_salmon_PE.csv"
   species: "Chinook"
   fin_mark: "UM"
   fate: "Released"
   model_name: "BSS_04_corr"
   model_number: 4
-  model_period: 
 output:
   html_document:
     fig_caption: yes
@@ -53,7 +52,7 @@ lut <- map(
     river_loc = "input_files/lut_River.Locations_2019-01-07.csv",
     creel_models = "input_files/lut_Creel_Models_2021-01-20.csv",
     sections = file.path("input_files", params$sections),
-    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Spring_Chinook_Upper.csv"
+    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Fall_Salmon_2021_PE.csv"
       #"input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" 
   ),
   ~readr::read_csv(file.path(.x))
@@ -373,9 +372,9 @@ left_join(
 # Skagit issues which may or may not occur elsewhere include missing locations from drive around index effort counts and a location that was supposed to be monitored, but wasn't, for over half of the season (Skagit City Access). Would be good see data issues from other creels to think about what's general vs. project specific. 
 
 # effort count location that was left out of counts for large chunk of season
-data_eval$remove_location <- bind_rows(
-  tibble(location = "Skagit City Access (SF Skagit, N. end of Fir Island)"),
-  tibble(location = "Rasar State Park"))
+# data_eval$remove_location <- bind_rows(
+#   tibble(location = "Skagit City Access (SF Skagit, N. end of Fir Island)"),
+#   tibble(location = "Rasar State Park"))
 
 # mistakes in data collection led to instances of incomplete effort counts, this chunk provides the user an option to censor those data by filtering them out of the final dataset 
 # count_id is a paste of event_date, section, count_sequence 
@@ -387,19 +386,19 @@ creel$effort <- creel$effort |>
 
 # declare individual count_sequences which contain missing counts and should be filtered from final dataset
 
-data_eval$remove_count <- bind_rows(
-    tibble(count_id = "2021-08-19_2_1"),
-    tibble(count_id = "2021-08-20_1_3"),
-    tibble(count_id = "2021-09-17_3_4"),
-    tibble(count_id = "2021-09-19_3_2"),
-    tibble(count_id = "2021-09-23_4_1"),
-    tibble(count_id = "2021-09-23_3_1"),
-    tibble(count_id = "2021-09-23_1_3"),
-    tibble(count_id = "2021-09-26_2_3"),
-    tibble(count_id = "2021-09-26_3_2"),
-    tibble(count_id = "2021-10-21_4_3"),
-    tibble(count_id = "2021-10-31_4_1")
-    )
+# data_eval$remove_count <- bind_rows(
+#     tibble(count_id = "2021-08-19_2_1"),
+#     tibble(count_id = "2021-08-20_1_3"),
+#     tibble(count_id = "2021-09-17_3_4"),
+#     tibble(count_id = "2021-09-19_3_2"),
+#     tibble(count_id = "2021-09-23_4_1"),
+#     tibble(count_id = "2021-09-23_3_1"),
+#     tibble(count_id = "2021-09-23_1_3"),
+#     tibble(count_id = "2021-09-26_2_3"),
+#     tibble(count_id = "2021-09-26_3_2"),
+#     tibble(count_id = "2021-10-21_4_3"),
+#     tibble(count_id = "2021-10-31_4_1")
+#     )
 
 # n rows in effort data pre filter 
 data_eval$counts_pre_filter <- nrow(creel$effort)
@@ -491,16 +490,16 @@ d_days <- tibble(
 # #and because may move to params file path to closures csv or similar
 d_days <- rows_upsert(d_days,
     bind_rows(
-      tibble(section = "1", closure_begin = "2021-05-31", closure_end = "2021-05-31") # salmon opens on 9/1 for sections 3,4
-      # tibble(section = "3", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
-      # tibble(section = "3", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
-      # tibble(section = "3", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
-      # tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
-      # tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
-      # tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
-      # tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
-      # tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
-      # tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18")) # river out due to flows
+      # tibble(section = "3", closure_begin = "2021-08-14", closure_end = "2021-08-31"),
+      tibble(section = "2", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
+      tibble(section = "2", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
+      tibble(section = "2", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
+      tibble(section = "1,2,3", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows
+      tibble(section = "2", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
+      tibble(section = "2", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
+      tibble(section = "2", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
+      tibble(section = "1,2,3", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
+      tibble(section = "1,2,3", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
     )
     |>
       rowwise() |>
