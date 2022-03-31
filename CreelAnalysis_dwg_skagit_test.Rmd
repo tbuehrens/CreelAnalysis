@@ -3,11 +3,12 @@ title: CreelAnalysis from DWG
 params:
   proj_name: "District 14"
   water_body: "Skagit River"
-  date_start: "2021-08-14"   
-  date_end: "2021-12-31"
+  date_start: "2021-05-01"   
+  date_end: "2021-07-15"
   year_group: "2020-2021"
-  sections: "lut_water_body_location_d14_skagit_fall_salmon.csv"
+  sections: "lut_water_body_location_d14_skagit_spring_Chinook_upper.csv"
   species: "Chinook"
+  life_stage: "Adult"
   fin_mark: "UM"
   fate: "Released"
   model_name: "BSS_04_corr"
@@ -53,7 +54,7 @@ lut <- map(
     river_loc = "input_files/lut_River.Locations_2019-01-07.csv",
     creel_models = "input_files/lut_Creel_Models_2021-01-20.csv",
     sections = file.path("input_files", params$sections),
-    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Fall_Salmon_2021.csv"
+    census_expansion = "input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Spring_Chinook_Upper.csv"
       #"input_files/lut_Proportional_Expansions_for_Tie_In_Sections_Skagit_Steelhead_2021_Example.csv" 
   ),
   ~readr::read_csv(file.path(.x))
@@ -480,16 +481,17 @@ d_days <- tibble(
 # #and because may move to params file path to closures csv or similar
 d_days <- rows_upsert(d_days,
     bind_rows(
-      tibble(section = "3,4", closure_begin = "2021-08-19", closure_end = "2021-08-31"), # salmon opens on 9/1 for sections 3,4
-      tibble(section = "3", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
-      tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
-      tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
-      tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
-      tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
-      tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
+      tibble(section = "1", closure_begin = "2021-05-31", closure_end = "2021-05-31"),
+      # tibble(section = "3,4", closure_begin = "2021-08-19", closure_end = "2021-08-31"), # salmon opens on 9/1 for sections 3,4
+      # tibble(section = "3", closure_begin = "2021-09-01", closure_end = "2021-09-01"), # treaty fishery closure
+      # tibble(section = "3", closure_begin = "2021-09-07", closure_end = "2021-09-09"), # treaty fishery closure
+      # tibble(section = "3", closure_begin = "2021-09-14", closure_end = "2021-09-16"), # treaty fishery closure
+      # tibble(section = "1,2,3,4", closure_begin = "2021-09-18", closure_end = "2021-09-18"), # river out due to flows 
+      # tibble(section = "3", closure_begin = "2021-10-05", closure_end = "2021-10-06"), # treaty fishery closure
+      # tibble(section = "3", closure_begin = "2021-10-12", closure_end = "2021-10-13"), # treaty fishery closure
+      # tibble(section = "3", closure_begin = "2021-10-19", closure_end = "2021-10-20"), # treaty fishery closure
+      # tibble(section = "1,2,3,4", closure_begin = "2021-11-13", closure_end = "2021-11-14"), # river out due to flows
+      # tibble(section = "1,2,3,4", closure_begin = "2021-11-17", closure_end = "2021-11-18") # river out due to flows
     ) |>
       rowwise() |>
       mutate(closure_date = paste(seq.Date(as.Date(closure_begin), as.Date(closure_end), by = "day"), collapse = ",")) |>
@@ -610,9 +612,8 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
       filter(
         str_detect(species, params$species |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
         str_detect(fin_mark, params$fin_mark |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
-        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
-        # ,
-        # str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
         # str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
       ) |> 
     group_by(interview_id) |> 
