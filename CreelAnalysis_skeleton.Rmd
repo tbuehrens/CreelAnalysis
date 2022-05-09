@@ -117,11 +117,6 @@ analysis_args <- list(
 ```
 
 ```{r get_creel_demo_object}
-***REMOVED***
-***REMOVED***
-
-#presumably want to break this out differently at some point, but need to talk to Danny
-***REMOVED***
 
 #example single pull
 (creel_data <- get_creel(
@@ -130,8 +125,6 @@ analysis_args <- list(
   date_end = analysis_args$date_end,
   proj_name = analysis_args$proj_name
   ))
-
-DBI::dbDisconnect(con_creel)
 
 ```
 
