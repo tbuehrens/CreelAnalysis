@@ -500,26 +500,6 @@ stan_data <- list(
 
 )
 
-#capture.output(stan_dat, file = "results/stan_dat_2021-12-22.txt")
-
-```
-
-# fit
-
-```{r quick_fit}
-#creel_models <- lut$lut_creel_models
-
-# Specific Stan model arguments
-n_chain <- 4  
-n_cores <- 4    
-
-n_iter <- 200 
-n_warmup <- n_iter/2
-n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
-adapt_delta <-0.8 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
-max_treedepth <- 10 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
-init = "0"
-  
 #Last minute data fixes
 #Number of vehicles for a group can't be greater than number of anglers in the group
 #DA: why is this happening?
@@ -538,23 +518,58 @@ if(model_period=="day"){
 }
 
 # # proportion tie-in expansion
-# # p_TI<-matrix(rep(1, stan_dat$G * stan_dat$S), nrow=stan_dat$G, ncol=stan_dat$S)
-# # stan_dat$p_TI<-p_TI
+p_TI<-matrix(rep(1, stan_data$G * stan_data$S), nrow=stan_data$G, ncol=stan_data$S)
+stan_data$p_TI<-p_TI
 
 
-stan_fit <- stan(
-  file = "models/BSS_creel_model_02_2021-01-22.stan",
-  data = stan_data,
-  chains = n_chain,
-  cores = n_cores,
-  iter = n_iter,
-  warmup = n_warmup,
-  thin = n_thin, init = init, include = T,
-  control = list(
-    adapt_delta = adapt_delta,
-    max_treedepth = max_treedepth
-    )
-)
+results_name<-paste(params$analysis_name,params$species,params$fin_mark,params$fate,sep="_")
+SubDir <-"results"
+if (!file.exists(SubDir)){
+  dir.create(file.path(SubDir))
+}
+
+
+write_rds(stan_data, file.path("results",paste0(results_name,"_STAN_DATA.rds")))
+
+```
+
+# fit
+
+```{r quick_fit}
+#creel_models <- lut$lut_creel_models
+
+# Specific Stan model arguments
+n_chain <- 4  
+n_cores <- 4    
+
+n_iter <- 2000
+n_warmup <- n_iter/2
+n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+adapt_delta <-0.95 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+max_treedepth <- 12 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+init = "0"
+  
+
+if(!file.exists(file.path("results",paste0(results_name,".rds")))){
+  stan_fit <- stan(
+    file = "models/BSS_creel_model_02_2021-01-22.stan",
+    data = stan_data,
+    chains = n_chain,
+    cores = n_cores,
+    iter = n_iter,
+    warmup = n_warmup,
+    thin = n_thin, init = init, include = T,
+    control = list(
+      adapt_delta = adapt_delta,
+      max_treedepth = max_treedepth
+      )
+  )
+  write_rds(stan_fit,file.path("results",paste0(results_name,".rds")))
+}else{
+  stan_fit<-read_rds(file.path("results",paste0(results_name,".rds")))
+}
+
+write.csv(summary(stan_fit)$summary,file.path("results",paste0(results_name,".csv")))
 ```
 
 # diagnostics
@@ -572,6 +587,7 @@ results <- list()
 ```
 
 ```{r res_summaries}
+print(results_name)
 results$e_sum_c_sum <- summary(stan_fit, pars = c("E_sum", "C_sum"))$summary |> 
   as.data.frame() |> rownames_to_column("Estimate") |> as_tibble()
 
@@ -605,42 +621,42 @@ Catch/effort by day, section, angler type
 
 #the E & C array dims are E[section, day, gear]?
 #summary(stan_fit, pars = c("E"))$summary |> 
-results$C <- summary(stan_fit, pars = c("C"))$summary |> 
-  as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
-  mutate(
-    indices = str_sub(stan_out, 3, 20) |> str_remove("\\]")
-  ) |> 
-  separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
-  mutate(
-    day_ind = as.integer(day_ind),
-    angler_type_ind = as.integer(angler_type_ind)
-  ) |> 
-  #need "section names" in LUT if going to display more than section number
-  left_join(
-    distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
-    by = "section"
-  ) |> 
-  left_join(
-    distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
-    by = "angler_type_ind"
-  ) |> 
-  left_join(
-    creel$days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
-    by = "day_ind"
-  )
-
-results$C |> 
-  ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
-  geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
-  geom_line() + geom_point() +
-  scale_x_date() +
-  facet_wrap(~section_name + angler_type, ncol = 2)
-  
-#unclear how sensible/meaningful this is...but we can do it!
-results$C |> 
-  group_by(section_name, angler_type, mon, DayType) |> 
-  summarise(across(`2.5%`:`97.5%`, sum), .groups = "drop") |> 
-  arrange(desc(`50%`))
+# results$C <- summary(stan_fit, pars = c("C"))$summary |> 
+#   as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
+#   mutate(
+#     indices = str_sub(stan_out, 3, 20) |> str_remove("\\]")
+#   ) |> 
+#   separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
+#   mutate(
+#     day_ind = as.integer(day_ind),
+#     angler_type_ind = as.integer(angler_type_ind)
+#   ) |> 
+#   #need "section names" in LUT if going to display more than section number
+#   left_join(
+#     distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
+#     by = "section"
+#   ) |> 
+#   left_join(
+#     distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
+#     by = "angler_type_ind"
+#   ) |> 
+#   left_join(
+#     creel$days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
+#     by = "day_ind"
+#   )
+# 
+# results$C |> 
+#   ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
+#   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
+#   geom_line() + geom_point() +
+#   scale_x_date() +
+#   facet_wrap(~section_name + angler_type, ncol = 2)
+#   
+# #unclear how sensible/meaningful this is...but we can do it!
+# results$C |> 
+#   group_by(section_name, angler_type, mon, DayType) |> 
+#   summarise(across(`2.5%`:`97.5%`, sum), .groups = "drop") |> 
+#   arrange(desc(`50%`))
 
 #the sort of cross-ref to raw that would be helpful in QAQC, laugh testing
 # left_join(

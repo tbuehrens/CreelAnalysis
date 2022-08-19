@@ -1,0 +1,1110 @@
+---
+title: CreelAnalysis from DWG
+params:
+  analysis_name: "District 13_Skykomish River_summer_chin_2022_v2"
+  year_group: "2022-2023"
+  species: "Chinook"
+  fin_mark: "UNK"
+  fate: "Kept"
+  model_number: 2
+output:
+  html_document:
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    code_folding: hide
+---
+
+# setup 
+
+```{r setup, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, fig.width = 10, fig.height = 8)
+
+library("tidyverse")
+library("patchwork")
+library("gt")
+library("rstan")
+rstan_options(auto_write = TRUE)
+
+theme_set(theme_light())
+
+#base endpoints
+dwg_base <- list(
+  event = "https://data.wa.gov/resource/ui95-axtn.csv",
+  effort = "https://data.wa.gov/resource/h9a6-g38s.csv",
+  interview = "https://data.wa.gov/resource/rpax-ahqm.csv",
+  catch = "https://data.wa.gov/resource/6y4e-8ftk.csv",
+  gear = "https://data.wa.gov/resource/d2ks-afhz.csv" #currently unused?
+)
+
+input_analysis <- as_tibble(
+  str_split_fixed(params$analysis_name, pattern = "_", n = 6),
+  .name_repair = ~c("proj_name", "water_body", "season", "species", "year", "misc")
+)
+
+lu_input <- list() #focal river_lonlat, sections, census_exp and closures
+
+lu_input$dates_holidays_2015_2030 <- read_lines("input_files/dates_holidays_2015_2030.txt") |>
+  as.Date(format="%Y-%m-%d")
+
+#!!Lon/lat only used in day-length calc?
+#!!anywhere/anywhy that distinct() would be a problem?
+#!!i.e., anyone realistically using this to run ests on widely spaced rivers?
+lu_input$river_lonlat <- readr::read_csv("input_files/river_locations_master.csv") |> 
+  dplyr::filter(River %in% input_analysis$water_body) |> 
+  dplyr::distinct(River, .keep_all = T)
+
+#!!note the current fetch drops/excludes effort and interview rows
+#!!if no section assigned from section LU
+lu_input$sections <- readr::read_csv(paste0("input_files/", params$analysis_name, "_sections.csv")) |> 
+ dplyr::select(water_body_desc, location = location_code, section)
+
+lu_input$census_exp <- readr::read_csv(paste0("input_files/", params$analysis_name, "_tiexp.csv")) |>  
+  dplyr::mutate(cen_exp_meth = params$census_expansion)
+
+lu_input$closures <- readr::read_csv(paste0("input_files/", params$analysis_name, "_closures.csv")) |> 
+  tidyr::drop_na(event_date)
+
+
+creel <- list() #data queried from DWG as list of tibbles
+
+```
+
+# Fetch data
+
+```{r dwg_fetch, echo=FALSE}
+creel$event <- paste0(
+  dwg_base$event,
+  "?$where=project_name in('", input_analysis$proj_name, "')",
+  " AND water_body in('", paste0(input_analysis$water_body, collapse = "','"), "')", 
+  " AND event_date between '", first(lu_input$closures$event_date),
+  "T00:00:00' and '", last(lu_input$closures$event_date),
+  "T00:00:00'&$limit=100000"
+) |>
+  utils::URLencode() |>
+  readr::read_csv(show_col_types = F) |>
+  dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator)
+
+##directly passing the desired section-locations works (with a double single quote)
+#   " AND location in('", 
+#   paste(str_replace_all(lu_input$sections$location, "'","''"), collapse = "','"),
+##but the section field is still needed and so the join is also still needed... 
+creel$effort <- paste0(
+  dwg_base$effort,
+  "?$where=creel_event_id in('",
+  paste(creel$event$creel_event_id, collapse = "','"),
+  "')&$limit=100000"
+  ) |>
+  utils::URLencode() |>
+  readr::read_csv(show_col_types = F) |>
+  dplyr::filter(!is.na(count_type)) |>
+  dplyr::select(-created_datetime, -modified_datetime) |>
+  dplyr::inner_join(lu_input$sections, by = c("location"))
+  
+#view has no field "location" corresponding to lu_input$sections
+#must be created from interview_location or fishing_location
+#so cannot pass directly to DWG API
+creel$interview <- paste0(
+  dwg_base$interview,
+  "?$where=creel_event_id in('",
+  paste(creel$event$creel_event_id, collapse = "','"),
+  "')&$limit=100000"
+  ) |>
+  utils::URLencode() |>
+  readr::read_csv(show_col_types = F) |>
+  dplyr::select(
+    -created_datetime, -modified_datetime,
+    -state_residence, -zip_code) |>
+  dplyr::mutate(
+    location = if_else(is.na(interview_location), as.character(fishing_location), as.character(interview_location))
+  ) |>
+  dplyr::inner_join(lu_input$sections, by = c("location"))
+
+#this needs to be filtered by the date-section applicable interviews or otherwise contains catch across entire project!
+creel$catch <- paste0(
+  dwg_base$catch,
+  "?$where=creel_event_id in('",
+  paste(creel$event$creel_event_id, collapse = "','"),"')",
+  " AND interview_id in('", 
+  paste(creel$interview$interview_id, collapse = "','"),
+  "')&$limit=100000"
+  ) |> 
+  utils::URLencode() |>
+  readr::read_csv(show_col_types = F) |>
+  dplyr::select(interview_id, catch_id, species, run, life_stage, fin_mark, fate, fish_count) |> 
+  dplyr::mutate(
+    catch_group = paste(species, life_stage, fin_mark, fate, sep = "_") # fish catch groups to estimate catch of 
+  )
+
+creel$days <- tibble::tibble(
+  event_date = lu_input$closures$event_date,
+  Day = weekdays(event_date),
+  DayType = if_else(
+    Day %in% params$days_wkend | Day %in% lu_input$dates_holidays_2015_2030,
+    "Weekend", "Weekday"),
+  DayType_num = if_else(str_detect(DayType, "end"),1,0),
+  DayL = suncalc::getSunlightTimes(
+    date = event_date,
+    tz = "America/Los_Angeles",
+    lat = lu_input$river_lonlat$Lat,
+    lon = lu_input$river_lonlat$Long,
+    keep=c("sunrise", "sunset")
+  ) |>
+    mutate(DayL = as.numeric((sunset + 3600) - (sunrise - 3600))) |>
+    pluck("DayL"),
+  Week = as.numeric(format(event_date, "%V")),
+  Month = as.numeric(format(event_date, "%m"))
+  # ,
+  # ModelPeriod = params$model_period,
+  # time_strata = case_when(
+  #   ModelPeriod == "Week" ~ Week,
+  #   ModelPeriod == "Month" ~ Month,
+  #   ModelPeriod == "Duration" ~ double(1)
+  #   )
+) |>
+  tibble::rowid_to_column(var = "day_index") |>
+  dplyr::left_join(lu_input$closures, by = "event_date")
+
+# # excluding specified closures, total number of days by section, weekday/end, and time strata for which to generate estimates
+# creel$days_total <- creel$days |>
+#   pivot_longer(
+#     cols = starts_with("open_section"), 
+#     names_to = "section", 
+#     values_to = "is_open") |>
+#   filter(is_open) |> 
+#   mutate(section = as.numeric(gsub("^.*_", "", section))) |>
+#   count(time_strata, DayType, section, name = "N_days")
+
+  
+```
+
+# prepare data for model fitting
+
+```{r init_stan_data_prelim}
+#declare an intermediary list
+stan_data_prelim <- list(
+  effort_census = creel$effort |> filter(tie_in_indicator == 1),
+  effort_index = creel$effort |> filter(tie_in_indicator == 0),
+  interview = creel$interview
+)
+
+```
+
+## effort
+
+### effort census
+
+Aggregate census (tie in) effort counts, associating to closest-in-time index count. 
+
+```{r stan_data_prelim_effort_census}
+#to the initial effort_census, with all count_sequence == 1,
+#add/overwrite the count_sequence val with that from closest temporal match from inline/anonymous paired counts object 
+
+stan_data_prelim$effort_census <- stan_data_prelim$effort_census |> 
+  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_type, count_quantity) |> 
+  left_join(
+    left_join(
+      stan_data_prelim$effort_census |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      stan_data_prelim$effort_index |> distinct(event_date, section, location, tie_in_indicator, effort_start_time, count_sequence),
+      by = c("event_date", "section"),
+      suffix = c("_cen", "_ind")
+      ) |> 
+      group_by(event_date, section, location_cen) |> 
+      slice_min(abs(effort_start_time_cen - effort_start_time_ind), n = 1) |> 
+      ungroup() |> 
+      #count(event_date, section, location_cen, count_sequence_cen, count_sequence_ind)
+      distinct(event_date, section, location = location_cen, count_sequence = count_sequence_ind)
+    ,
+    by = c("event_date", "section", "location")
+  ) |> 
+  left_join(creel$days, by = "event_date") |>
+  mutate(
+    #angler_type = word(count_type, 1),
+    angler_type = case_when(
+      word(count_type, 1) %in% c("Bank","Shore") ~ "bank",
+      word(count_type, 1) %in% c("Boat") ~ "boat"
+    ),
+    angler_type_ind = as.integer(factor(angler_type))
+  ) |>
+  #exclude any count_type strings we didn't whitelist into an angler_type
+  #e.g., "Boats" which are not a thing we use because reasons
+  filter(!is.na(angler_type)) |> 
+  group_by(event_date, day_index, section, count_sequence, angler_type, angler_type_ind) |>
+  summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
+  arrange(event_date, section, count_sequence) 
+
+```
+
+### effort index
+
+Aggregate index counts of vehicles, trailers, anglers, and boats.
+
+```{r stan_data_prelim_effort_index}
+
+##DA added filter(!is.na(count_quantity)) to address above comments...
+## need to think about whether !is.na(no_count_reason) should be interpolated or inferred or zeroed or...
+## for example no_count_reason == "Conditions", what to do with count_quantity == NA
+## Skagit winter gamefish example also shows valid realworld situation
+## section 1 has 'Vehicle Only' counts but not 'Trailers Only' due to low angler effort
+## so excluding section 1 is legit, but needs to be clearly indicated...
+
+stan_data_prelim$effort_index <- stan_data_prelim$effort_index |> 
+  filter(
+    #!is.na(count_quantity)
+    is.na(no_count_reason),
+    !is.na(count_type)
+    ) |> 
+  select(event_date, water_body, water_body_desc, location, section, tie_in_indicator, count_sequence, count_type, count_quantity) |>
+  left_join(creel$days, by = "event_date") |> 
+  group_by(section, event_date, day_index, Week, count_sequence, count_type) |> 
+  summarise(count_quantity = sum(count_quantity), .groups = "drop") |> 
+  pivot_wider(names_from = count_type, values_from = count_quantity) |> 
+  arrange(event_date, section, count_sequence)
+```
+
+## interview
+
+Only "index" for interview, by definition. Combines the angler fields with the catch fields (from the subset of interviews in which catches were reported and recorded).
+
+```{r stan_data_prelim_interview}
+stan_data_prelim$interview <- stan_data_prelim$interview |> 
+  left_join(creel$days, by = "event_date") |> #summary()
+  mutate(
+    across(c(vehicle_count, trailer_count), ~replace_na(., 0)),
+    trip_status = replace_na(trip_status, "Unknown"),
+    #angler_type = if_else(boat_used == "No", "Shore", "Boat"),
+    angler_type = case_when(
+      is.na(fish_from_boat) ~ "bank",
+      fish_from_boat == "Bank" ~ "bank",
+      fish_from_boat == "Boat" ~ "boat"
+      ),
+    angler_type_ind = as.integer(factor(angler_type)),
+    fishing_end_time = if_else(is.na(fishing_end_time), interview_time, fishing_end_time),
+    angler_hours = round(as.numeric(fishing_end_time - fishing_start_time) / 3600, 5),
+    angler_hours_total = angler_count * angler_hours
+  ) |> 
+  left_join(
+    creel$catch |> 
+      filter(
+        str_detect(species, params$species |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fin_mark, params$fin_mark |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
+        # ,
+        # str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        # str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+      ) |> 
+    group_by(interview_id) |> 
+    summarise(fish_count = sum(fish_count), .groups = "drop")
+    ,
+    by = "interview_id"
+  ) |> 
+  select(section, event_date, day_index, Week, interview_id, interview_time, contains("angler"), contains("count")) |> 
+  mutate(across(fish_count, ~replace_na(., 0))) |> 
+  filter(angler_hours > 0) |>  
+  arrange(event_date)
+
+```
+
+### Daily interview summaries
+
+```{r stan_data_prelim_interview_daily_totals}
+#total hours creel and total catch sample a per day/angler type/section to compare with effort
+stan_data_prelim$interview_daily_totals <- stan_data_prelim$interview |>
+  group_by(event_date, day_index, section, angler_type, angler_type_ind) |>
+  summarise(
+    angler_hours_total_dailysum = sum(angler_hours_total),
+    catch_dailysum = sum(fish_count), .groups = "drop"
+  ) |> 
+#not sure whether this should stay?
+  filter(angler_hours_total_dailysum > 0)
+
+```
+
+### NOT RUN Exclude interviews with NA vehicle and trailer counts
+
+This would form the basis for IntA below if there were cause in the data...? For now, leaving undeclared and simply defining IntA as == IntC, pending further revision...
+
+```{r placeholder_IntA}
+#stan_data_prelim$interview_with_trailer_vehicle_count <-
+
+# stan_data_prelim$interview_no_zero_counts <- stan_data_prelim$interview |>
+# 	#filter(across(c(vehicle_count, trailer_count), ~ !is.na(.)))
+#   filter(vehicle_count > 0)# | trailer_count > 0 | angler_count > 0)
+
+```
+
+## declare stan_data
+
+```{r stan_data}
+stan_data <- list(
+  
+  # Day attributes
+  # int; number of fishing days; KB: pull from "master_date" DF
+  D = nrow(creel$days),
+  # int; final number of unique gear/angler types 
+  G = as.integer(length(unique(stan_data_prelim$interview$angler_type))),
+	# int; final number of river sections 
+  S = as.integer(length(unique(stan_data_prelim$effort_index$section))),
+	# int; max number of angler effort counts within a sample day KB: max(z$effort$count_sequence)
+	H = max(stan_data_prelim$effort_index$count_sequence),
+  # int; number of days/periods KB: right now, model is set up to running as daily (P_n = D) or weekly (P_n = effectively D/7)
+##NEED TO UPDATE? input param and if_else?
+	P_n = nrow(creel$days),
+  #or for weekly? length(unique(creel$days$Week))
+	# vec; index denoting daytype (day-type is offset in model)
+  w = creel$days$DayType_num,
+	# int; index denoting fishing day/period      KB: calculate as 1:P_n (not sure why this isn't a vector)
+	period = 1:nrow(creel$days), 
+	# vec; daylength (model offset; assumption)
+	L = creel$days$DayL,
+	# mat; index denoting fishery status                          KB: user defined (1=open, 0 = closed; by period/date and section; 0 defined as 1E-6 for model)
+	O = creel$days |> 
+	  select(contains("section_")) |>
+    mutate(across(everything(), ~if_else(., 1, 0.00001))) |> 
+	  as.matrix(),
+
+  # Vehicle index effort counts 
+  # int; total number of individual vehicle index effort counts 
+	V_n = nrow(stan_data_prelim$effort_index),
+  # int; observed # of vehicles 
+	V_I = stan_data_prelim$effort_index$`Vehicle Only`,
+	# int; index for day/period 
+	day_V = stan_data_prelim$effort_index$day_index,
+  gear_V = as.integer(rep(1, nrow(stan_data_prelim$effort_index))),
+	# int; index for section    
+  section_V = stan_data_prelim$effort_index$section,
+	# int; index for count_num  
+	countnum_V = stan_data_prelim$effort_index$count_sequence,
+	
+	# Trailer index effort counts
+  # int; total number of boat trailer index effort counts 
+	T_n = nrow(stan_data_prelim$effort_index),
+	# int; observed # of boat trailers 
+	T_I = stan_data_prelim$effort_index$`Trailers Only`,
+  # int; index for day/period
+## INTENTIONALLY LEFT "WRONG" TO MARK LATER REVISION IN ABOVE WRANGLING
+## TO ALLOW RAGGED VEHICLE/TRAILER VECTORS 
+	day_T = stan_data_prelim$effort_index$day_index, #day_V,
+  gear_T = as.integer(rep(2, nrow(stan_data_prelim$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
+  # int; index for section
+	section_T = stan_data_prelim$effort_index$section,
+  # int; index for count_num  
+	countnum_T = stan_data_prelim$effort_index$count_sequence,
+
+  # Angler index effort counts
+	# int; total number of angler index effort counts
+	# Need to circle back on how to deal with this when applicable, set all values to 0 as a placeholder, matching example standat_2021-05-28.txt
+	A_n = 0,
+	# int; observed # of anglers
+	A_I = numeric(0), #EB placeholder
+	# int; index for day/period
+	day_A = numeric(0),
+	# int; index denoting "gear/angler type"  
+	gear_A = numeric(0), #EB placeholder 
+	# int; index for section 
+	section_A = numeric(0),
+	# int; index for count_num
+	countnum_A = numeric(0),
+
+  
+  # Census (tie-in) effort counts   
+	# int; total number of angler tie-in effort counts
+	E_n = nrow(stan_data_prelim$effort_census),
+  # int; index denoting day/period
+	day_E = stan_data_prelim$effort_census$day_index,
+  # int; index denoting "gear/angler type"  
+  gear_E = stan_data_prelim$effort_census$angler_type_ind, #if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
+  # int; index for section
+  section_E = stan_data_prelim$effort_census$section,
+	# EB count_sequence here needs to match that of the closest effort_index count (if my understanding is correct)
+  # int; index for count_num
+  countnum_E = stan_data_prelim$effort_census$count_sequence, 
+  # int; observed # of anglers
+  E_s = stan_data_prelim$effort_census$count_quantity,
+
+	# Proportion tie-in expansion mat; proportion of section covered by tie in counts KB: user defined (see "Proportional_Expansions_for_Tie_In_Sections_Kalama_Example"; need to format)
+
+	p_TI = lu_input$census_exp |> 
+    select(gear_num, angler_type, section, p_TI) |> 
+    pivot_wider(names_from = section, values_from = p_TI) |> 
+    select(-gear_num, -angler_type) |> 
+    as.matrix(),
+
+	# interview data - CPUE 
+	# int; total number of angler interviews with c & h data 
+	IntC = nrow(stan_data_prelim$interview),
+	# int; index denoting day/period   
+	day_IntC = stan_data_prelim$interview$day_index,
+	# int; index denoting "gear/angler type" 
+	gear_IntC = stan_data_prelim$interview$angler_type_ind, #if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
+	# int; index for section
+	section_IntC = stan_data_prelim$interview$section, 
+	# int; total catch
+	c = stan_data_prelim$interview$fish_count,
+	# vec; total hours fished
+  # EB Does Total_Hours refer to fishing time (angler hours) multiplied by the total number of anglers in an                    interviewed party (group_angler_hours)? 
+	h = stan_data_prelim$interview$angler_hours_total,
+
+	# interview data - Total Effort & Catch Creeled
+	# int; total interviews by sub-groups	
+	IntCreel = nrow(stan_data_prelim$interview_daily_totals),
+	# int; index denoting day/period     
+	day_Creel = stan_data_prelim$interview_daily_totals$day_index,
+	# int; index denoting "gear/angler type"  
+	gear_Creel = stan_data_prelim$interview_daily_totals$angler_type_ind, #if_else(stan_data_prelim$interview_daily_totals$angler_type == "Boat", 2, 1),
+	# int; index for section 
+	section_Creel = stan_data_prelim$interview_daily_totals$section,
+  # int; total catch  
+	C_Creel = stan_data_prelim$interview_daily_totals$catch_dailysum,	  
+  # vec; total hours fished 
+	E_Creel = stan_data_prelim$interview_daily_totals$angler_hours_total_dailysum,
+	  
+	# interview data - angler expansion 
+	
+	# int; total number of angler interviews where V_A, T_A, A_A were collected 
+	IntA = nrow(stan_data_prelim$interview),
+	# int; index denoting day/period
+	day_IntA = stan_data_prelim$interview$day_index,
+	# int; index denoting gear/angler  
+	gear_IntA = stan_data_prelim$interview$angler_type_ind, #if_else(stan_data_prelim$interview$angler_type == "Boat", 2, 1),
+	# int; index denoting day/period
+	section_IntA = stan_data_prelim$interview$section, 
+	# int; total number of vehicles an angler group brought
+	V_A = stan_data_prelim$interview$vehicle_count,
+	# int; total number of trailers an angler group brought
+	T_A = stan_data_prelim$interview$trailer_count, 
+	# int; total number of anglers in the groups interviewed
+  A_A = stan_data_prelim$interview$angler_count,
+
+  #priors
+  #hyperhyper scale (degrees of freedom) parameters
+  value_cauchyDF_sigma_eps_C = 0.5, #for the hyperprior distribution sigma_eps_C; default = 1  
+  value_cauchyDF_sigma_eps_E = 0.5, #for the hyperprior distribution sigma_eps_E; default = 1  
+  value_cauchyDF_sigma_r_E = 0.5,   #for the hyperprior distribution sigma_r_E; default = 1  
+  value_cauchyDF_sigma_r_C = 0.5,   #for the hyperprior distribution sigma_r_C; default = 1 
+  value_cauchyDF_sigma_mu_C = 0.5,  #the hyperhyper SD parameter in the hyperprior distribution sigma_mu_C
+  value_cauchyDF_sigma_mu_E = 0.5,   #the hyperhyper SD parameter in the hyperprior distribution sigma_mu_E
+  
+  value_normal_sigma_omega_C_0 = 1, #the SD hyperparameter in the prior distribution omega_C_0; normal sd (log-space); default = 1   
+  value_normal_sigma_omega_E_0 = 3, #the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
+  value_lognormal_sigma_b = 1,      #the SD hyperparameter in the prior distribution b; default = 1  
+  value_normal_sigma_B1 = 5,        #the SD hyperparameter in the prior distribution B1; default = 5  
+  value_normal_mu_mu_C = log(0.02), #the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_sigma_mu_C = 1.5,    #the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
+  value_normal_mu_mu_E = log(5),    #the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
+  value_normal_sigma_mu_E = 2,      #the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
+  value_betashape_phi_E_scaled = 1, #the rate (alpha) and shape (beta) hyperparameters in phi_E_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2) 
+  value_betashape_phi_C_scaled = 1 #the rate (alpha) and shape (beta) hyperparameters in phi_C_scaled; default = 1 (i.e., beta(1,1) which is uniform), alternative beta(2,2)
+
+)
+
+#Last minute data fixes
+#Number of vehicles for a group can't be greater than number of anglers in the group
+#DA: why is this happening?
+stan_data$V_A[stan_data$V_A > stan_data$A_A] <- stan_data$A_A[stan_data$V_A > stan_data$A_A] 
+  
+# Create two new "stan_dat" variables depending on specified time (strata) period (e.g., day vs. week) 
+model_period <- "day"# Specify time period to stratify data by - day vs. week 
+if(model_period=="day"){
+  stan_data$P_n<-nrow(creel$days) # For now: enter "D" for day or length(unique(week)) for week
+  stan_data$period<-c(1:nrow(creel$days)) #week          # For now: enter "1:D" for day or "week" for week
+}else{
+  if(model_period=="week"){
+    stan_data$P_n<-length(unique(creel$days$Week)) 
+    stan_data$period<-creel$days$Week
+  }
+}
+
+# # proportion tie-in expansion
+p_TI<-matrix(rep(1, stan_data$G * stan_data$S), nrow=stan_data$G, ncol=stan_data$S)
+stan_data$p_TI<-p_TI
+
+
+results_name<-paste(params$analysis_name,params$species,params$fin_mark,params$fate,sep="_")
+SubDir <-"results"
+if (!file.exists(SubDir)){
+  dir.create(file.path(SubDir))
+}
+
+
+write_rds(stan_data, file.path("results",paste0(results_name,"_STAN_DATA.rds")))
+
+```
+
+# fit
+
+```{r quick_fit}
+#creel_models <- lut$lut_creel_models
+
+# Specific Stan model arguments
+n_chain <- 4  
+n_cores <- 4    
+
+n_iter <- 2000
+n_warmup <- n_iter/2
+n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
+adapt_delta <-0.95 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
+max_treedepth <- 12 # set the max tree depth; default is 8; NOTE: this sets the max depth of tree used by NUTS during each iteration; warnings about hitting the maximum treedepth is an efficiency concern
+init = "0"
+  
+
+if(!file.exists(file.path("results",paste0(results_name,".rds")))){
+  stan_fit <- stan(
+    file = "models/BSS_creel_model_02_2021-01-22.stan",
+    data = stan_data,
+    chains = n_chain,
+    cores = n_cores,
+    iter = n_iter,
+    warmup = n_warmup,
+    thin = n_thin, init = init, include = T,
+    control = list(
+      adapt_delta = adapt_delta,
+      max_treedepth = max_treedepth
+      )
+  )
+  write_rds(stan_fit,file.path("results",paste0(results_name,".rds")))
+}else{
+  stan_fit<-read_rds(file.path("results",paste0(results_name,".rds")))
+}
+
+write.csv(summary(stan_fit)$summary,file.path("results",paste0(results_name,".csv")))
+```
+
+# diagnostics
+
+Add more...
+
+```{r}
+stan_fit |> get_sampler_params(inc_warmup = FALSE) |> map_dbl(~.x[, "divergent__"] |> sum()) |> sum()
+```
+
+# results
+
+```{r}
+results <- list()
+```
+
+```{r res_summaries}
+print(results_name)
+results$e_sum_c_sum <- summary(stan_fit, pars = c("E_sum", "C_sum"))$summary |> 
+  as.data.frame() |> rownames_to_column("Estimate") |> as_tibble()
+
+results$e_sum_c_sum |> 
+  select(Estimate, `2.5%`:`97.5%`) |> 
+  gt() |> 
+  fmt_number(-Estimate, decimals = 0)
+
+```
+
+Posterior plots of summary estimates
+
+```{r}
+#various other diplay options: ggdist::stat_cdfinterval(), ggdist::stat_slab(), ggdist::stat_pointinterval()
+
+tidybayes::spread_draws(stan_fit, C_sum) |> 
+  ggplot(aes(C_sum)) +
+  ggdist::stat_halfeye()
+
+tidybayes::spread_draws(stan_fit, E_sum) |> 
+  ggplot(aes(E_sum)) +
+  ggdist::stat_halfeye()
+
+```
+
+Catch/effort by day, section, angler type
+
+```{r res_c_by_strata}
+# #could use ggdist::geom/stat_lineribbon() if keeping full fit objects?
+# tidybayes::spread_draws(stan_fit, C[s][d,g] | s)
+
+#the E & C array dims are E[section, day, gear]?
+#summary(stan_fit, pars = c("E"))$summary |> 
+# results$C <- summary(stan_fit, pars = c("C"))$summary |> 
+#   as.data.frame() |> rownames_to_column("stan_out") |> tibble() |>
+#   mutate(
+#     indices = str_sub(stan_out, 3, 20) |> str_remove("\\]")
+#   ) |> 
+#   separate(col = indices, into = c("section", "day_ind", "angler_type_ind")) |> 
+#   mutate(
+#     day_ind = as.integer(day_ind),
+#     angler_type_ind = as.integer(angler_type_ind)
+#   ) |> 
+#   #need "section names" in LUT if going to display more than section number
+#   left_join(
+#     distinct(lut$sections, section, section_name) |> mutate(section = as.character(section)),
+#     by = "section"
+#   ) |> 
+#   left_join(
+#     distinct(stan_data_prelim$interview, angler_type_ind, angler_type),
+#     by = "angler_type_ind"
+#   ) |> 
+#   left_join(
+#     creel$days |> select(day_ind = day_index, event_date:DayType, Week) |> mutate(m = lubridate::month(event_date), mon = month.abb[m]),
+#     by = "day_ind"
+#   )
+# 
+# results$C |> 
+#   ggplot(aes(x = event_date, y = `50%`, fill = angler_type, color = angler_type)) +
+#   geom_ribbon(aes(ymin = `2.5%`, ymax = `97.5%`), alpha = 0.5) +
+#   geom_line() + geom_point() +
+#   scale_x_date() +
+#   facet_wrap(~section_name + angler_type, ncol = 2)
+#   
+# #unclear how sensible/meaningful this is...but we can do it!
+# results$C |> 
+#   group_by(section_name, angler_type, mon, DayType) |> 
+#   summarise(across(`2.5%`:`97.5%`, sum), .groups = "drop") |> 
+#   arrange(desc(`50%`))
+
+#the sort of cross-ref to raw that would be helpful in QAQC, laugh testing
+# left_join(
+#   creel$interview, 
+#   creel$catch, 
+#   by = "interview_id") |> 
+#   filter(species %in% c("Coho", "Pink")) |> 
+#   group_by(event_date, section, species, fin_mark, fate) |> 
+#   summarise(across(fish_count, sum), .groups = "drop") |> 
+#   ggplot(aes(event_date, fish_count, fill = fate, color = fate)) + 
+#   geom_col(position = "dodge") + 
+#   facet_wrap(~section+species, ncol = 2) #, scales = "free_y"
+
+```
+
+# older 
+
+```{r}
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # This code generates summaries files regarding the inputs and outputs for a new model run
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # # Model warnings #KB note: this doesn't appear to be working (not sure why)
+# #     if(length(model_warnings)>0){saved_model_warning<-model_warnings}else{saved_model_warning<-c("there were no model warnings")}
+# #     writeLines(capture.output(saved_model_warning), paste0(filepath_modeloutputs, "/info_Model_warnings_", Sys.Date(), ".txt"))
+# 
+# # R session Info
+#   writeLines(capture.output(sessionInfo()), paste0(filepath_modeloutputs, "/info_sessionInfo_", Sys.Date(), ".txt"))
+# 
+# # Model summary
+#   mod.sum.elements<-
+#       c("Model Name"                   , as.character(creel_models$Model_Name[creel_models$Model_number == model_number])
+#       , "Model File"                   , model.file.name
+#       , "Model Period"                 , model_period
+#       , "Date Begin"                   , as.character(Date_Begin)
+#       , "Date End"                     , as.character(Date_End)
+#       , "Catch Group"                  , catch.group.of.interest
+#       , ""                             , c("")
+#       , "Chains"                       , n_chain
+#       , "Iterations"                   , n_iter
+#       , "Warmup"                       , n_warmup
+#       , "Thin Rate"                    , n_thin
+#       , "Adapt_Delta"                  , adapt_delta
+#       , "Max Tree Depth"               , max_treedepth
+#       , "Cores"                        , n_cores
+#       , ""                             , c("")
+#       , "value_cauchyDF_sigma_eps_C"   , value_cauchyDF_sigma_eps_C
+#       , "value_cauchyDF_sigma_eps_E"   , value_cauchyDF_sigma_eps_E
+#       , "value_cauchyDF_sigma_r_E"     , value_cauchyDF_sigma_r_E
+#       , "value_cauchyDF_sigma_r_C"     , value_cauchyDF_sigma_r_C
+#       , "value_normal_sigma_omega_C_0" , value_normal_sigma_omega_C_0
+#       , "value_normal_sigma_omega_E_0" , value_normal_sigma_omega_E_0
+#       , "value_lognormal_sigma_b"      , value_lognormal_sigma_b
+#       , "value_normal_sigma_B1"        , value_normal_sigma_B1
+#       , "value_normal_mu_mu_C"         , round(value_normal_mu_mu_C, 3)
+#       , "value_normal_sigma_mu_C"      , round(value_normal_sigma_mu_C, 3)
+#       , "value_normal_mu_mu_E"         , round(value_normal_mu_mu_E, 3)
+#       , "value_normal_sigma_mu_E"      , round(value_normal_sigma_mu_E, 3)
+#       , "value_betashape_phi_E_scaled" , value_betashape_phi_E_scaled
+#       , "value_betashape_phi_C_scaled" , value_betashape_phi_C_scaled
+#   )
+#   mod.sum<-setNames(as.data.frame(matrix(mod.sum.elements, nrow=length(mod.sum.elements)/2, ncol=2, byrow=TRUE)), c("Argument", "Sim_Input"))
+#   writeLines(capture.output(mod.sum), paste0(filepath_modeloutputs, "/info_Model_setup_", Sys.Date(), ".txt"))
+# 
+# # Model run-time
+#   run.time<-c("Approx. Run Time", round(approx.model.runtime.minutes,2))
+#   mod_run.time<-setNames(as.data.frame(matrix(run.time, nrow=length(run.time)/2, ncol=2, byrow=TRUE)), c("Argument", "Time_minutes"))
+#   writeLines(capture.output(mod_run.time), paste0(filepath_modeloutputs, "/info_Model_Run_Time_", Sys.Date(), ".txt"))
+# 
+# # Save a file of the summary model results
+#   s.stan<-summary(res_Stan)
+#   write.csv(s.stan$summary, paste0(filepath_modeloutputs, "/results_res_Stan_summary_", Sys.Date(), ".csv"))
+# 
+# # Save "res_stan" object as .rds file
+#   saveRDS(res_Stan, file=paste0(filepath_modeloutputs, "/results_res_Stan.rds"))
+# 
+# # Calculate loo-IC
+#   loo_IC<-loo(res$log_lik) # see: https://rdrr.io/cran/loo/man/loo.html and https://cran.r-project.org/web/packages/loo/loo.pdf
+#   writeLines(capture.output(loo_IC), paste0(filepath_modeloutputs, "/results_model_looIC_", Sys.Date(), ".txt"))
+
+```
+
+```{r summarize_results,message=FALSE, warning=FALSE,results = "hide",echo=FALSE}
+# ### Summarize and Save Results
+# #Here we will summarize and save results of the in-season analysis of creel data to estimate CPUE, effort, and catch using the chunk of code with this heading in the RMD file.
+# #=============================================
+# #convergence diagnostics
+#   launch_diagnostics<-c("No") #Enter "Yes" to launch ShinyShin diagnostics
+#   if(launch_diagnostics=="Yes"){launch_shinystan(output$res_stan)}
+# 
+# # generate plots and tables of creel estimates
+#   source(file.path(wd_source_files,"Generate_Summaries_of_Creel_Estimates.R"))
+# 
+# # KB note: update so table/plots of results are shown in PDF document
+# 
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# # This file summarizes creel model estimates by creating summary plots and tables
+# #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# 
+# #--------------------------------------------------------------------------------------------------------------------- -
+# # SUMMARIZE SEASON TOTAL EFFORT AND CATCH                                                                ----
+# #--------------------------------------------------------------------------------------------------------------------- -
+#   #calculate season total effort
+#     #Total_season_catch<-c(setNames(mean(res$C_sum), "Mean"), quantile(res$C_sum,c(0.025,0.25,0.5,0.75,0.975)), setNames(sd(res$C_sum)/mean(res$C_sum), "CV"))
+#     Total_season_catch<-c(setNames(round(mean(c(apply(res$C_sum, c(1), sum))),0), "Mean"), round(quantile(apply(res$C_sum, c(1), sum),c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(c(apply(res$C_sum, c(1), sum)))/mean(c(apply(res$C_sum, c(1), sum))),3), "CV"))
+# 
+#   #calculate season total catch
+#     Total_season_effort<-c(setNames(round(mean(res$E_sum),0), "Mean"), round(quantile(res$E_sum,c(0.025,0.25,0.5,0.75,0.975)),0), setNames(round(sd(res$E_sum)/mean(res$E_sum),3), "CV"))
+# 
+#   #Export .csv of total catch and effort
+#     catch.effort.totals<-rbind(Total_season_catch, Total_season_effort)
+#     write.csv(catch.effort.totals, paste(filepath_modelestimates, paste("Summary_Total_Catch_and_Effort", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = T)
+# 
+# #--------------------------------------------------------------------------------------------------------------------- -
+# # SUMMARIZE TOTAL EFFORT DATA - by date, section, and gear-type (all Skagit models estimate effort by section and gear)                                                                                 ----
+# #--------------------------------------------------------------------------------------------------------------------- -
+#   #Extract effort data and name dimensions (so that they are meaningful)
+#       effort.results<-res$E; dim(effort.results)
+#       dimnames(effort.results)<-list(seq(1:nrow(effort.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
+#       # effort.results[1:2, , 1:2,]
+#       # E.mean<-setNames(as.data.frame(matrix(matrix(apply(effort.results,c(2:4),mean),nrow=dim(effort.results)[2]*dim(effort.results)[3],byrow=T),nrow=dim(effort.results)[3]))
+#       #                 , CJ(dimnames(effort.results)[[2]], dimnames(effort.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
+# 
+#   #create data frame to fill with summarized effort data
+#       Effort.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#   #loop through array and summarize by day, section, and gear type
+#       for(period in 1:dim(effort.results)[3]){
+#           sub.period<-effort.results[1:nrow(effort.results), 1:dim(effort.results)[2], period, 1:dim(effort.results)[4]]
+#           sub.period[1:5,,]
+# 
+#           for(gear in 1:dim(sub.period)[2]){
+#             gear.xwalk
+#             sub.gear<-sub.period[1:nrow(effort.results), 1:dim(sub.period)[2], gear]
+#             sub.gear[1:5, ]
+# 
+#             sub.Effort.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#             for(section in 1:dim(sub.period)[2]){
+#               sub.section<-sub.gear[, section]
+#               section.xwalk
+# 
+#               sub.Effort.summary[section, "Day"]<-as.numeric(period)
+#               sub.Effort.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
+#               sub.Effort.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
+#               sub.Effort.summary[section, "Mean"]<-mean(sub.section)
+#               sub.Effort.summary[section, "Median"]<-quantile(sub.section, 0.5)
+#               sub.Effort.summary[section, "l95"]<-quantile(sub.section, 0.025)
+#               sub.Effort.summary[section, "u95"]<-quantile(sub.section, 0.975)
+#             }
+#            Effort.summary<-rbind(Effort.summary, sub.Effort.summary)
+#           }
+#       }
+#       all.Dates$Day<-as.numeric(as.character(all.Dates$Day)) #make sure "all.Dates$Day" is a numeric variable
+# 
+#   #Join "Effort.summary" with "all.Dates" date and daytype information
+#      Effort.summary<-left_join(Effort.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day")
+# 
+#   # write "Effort.summary" to a .csv file
+#       write.csv(Effort.summary, paste(filepath_modelestimates, paste("Summary_Effort (total hours per Period) by Section and Gear", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
+# 
+# #--------------------------------------------------------------------------------------------------------------------- -
+# # SUMMARIZE CATCH AND CPUE DATA                                                                                 ----
+# #--------------------------------------------------------------------------------------------------------------------- -
+#   #=============================================================================================================== =
+#   # CATCH SUMMARY
+#   #=============================================================================================================== =
+#     #Extract catch data and name dimensions (so that they are meaningful)
+#         catch.results<-res$C; dim(catch.results)
+#         dimnames(catch.results)<-list(seq(1:nrow(catch.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
+#         # C.mean<-setNames(as.data.frame(matrix(matrix(apply(catch.results,c(2:4),mean),nrow=dim(catch.results)[2]*dim(catch.results)[3],byrow=T),nrow=dim(catch.results)[3]))
+#         #             , CJ(dimnames(catch.results)[[2]], dimnames(catch.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
+# 
+#     #create data frame to fill with summarized catch data
+#         Catch.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#     #loop through array and summarize by day, gear type, and section
+#         for(period in 1:dim(catch.results)[3]){
+#             sub.period<-catch.results[1:nrow(catch.results), 1:dim(catch.results)[2], period, 1:dim(catch.results)[4]]
+#             sub.period[1:5,,]
+# 
+#             for(gear in 1:dim(sub.period)[2]){
+# 
+#               gear.xwalk
+#               sub.gear<-sub.period[1:nrow(catch.results), 1:dim(sub.period)[2], gear]
+#               sub.gear[1:5, ]
+# 
+#               sub.Catch.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#               for(section in 1:dim(sub.period)[2]){
+#                 sub.section<-sub.gear[, section]
+#                 section.xwalk
+# 
+#                 sub.Catch.summary[section, "Day"]<-as.numeric(period)
+#                 sub.Catch.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
+#                 sub.Catch.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
+#                 sub.Catch.summary[section, "Mean"]<-mean(sub.section)
+#                 sub.Catch.summary[section, "Median"]<-quantile(sub.section, 0.5)
+#                 sub.Catch.summary[section, "l95"]<-quantile(sub.section, 0.025)
+#                 sub.Catch.summary[section, "u95"]<-quantile(sub.section, 0.975)
+#               }
+#              Catch.summary<-rbind(Catch.summary, sub.Catch.summary)
+#             }
+#         }
+# 
+#     # Join "Catch.summary" with "all.Dates" date and daytype information
+#        Catch.summary<-left_join(Catch.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day")
+# 
+#     # write "Catch.summary" to a .csv file
+#        write.csv(Catch.summary, paste(filepath_modelestimates, paste("Summary_Catch (total fish per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
+# 
+#   #=============================================================================================================== =
+#   # CPUE SUMMARY
+#   #=============================================================================================================== =
+#     #Extract catch data and name dimensions (so that they are meaningful)
+#         cpue.results<-res$lambda_C_S; dim(cpue.results)
+#         dimnames(cpue.results)<-list(seq(1:nrow(cpue.results)), section.xwalk$Section_Name, paste("day",seq(1:standat$D), sep="_"), gear.xwalk$Gear_Name )
+#         # C.mean<-setNames(as.data.frame(matrix(matrix(apply(cpue.results,c(2:4),mean),nrow=dim(cpue.results)[2]*dim(cpue.results)[3],byrow=T),nrow=dim(cpue.results)[3]))
+#         #             , CJ(dimnames(cpue.results)[[2]], dimnames(cpue.results)[[4]], sorted = FALSE)[, paste(V1, V2, sep =" - ")])
+# 
+#     #create data frame to fill with summarized catch data
+#         CPUE.summary<-setNames(as.data.frame(matrix(NA, nrow=0, ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#     #loop through array and summarize by day, gear type, and section
+#         for(period in 1:dim(cpue.results)[3]){
+#             sub.period<-cpue.results[1:nrow(cpue.results), 1:dim(cpue.results)[2], period, 1:dim(cpue.results)[4]]
+#             sub.period[1:5,,]
+# 
+#             for(gear in 1:dim(sub.period)[2]){
+# 
+#               gear.xwalk
+#               sub.gear<-sub.period[1:nrow(cpue.results), 1:dim(sub.period)[2], gear]
+#               sub.gear[1:5, ]
+# 
+#               sub.CPUE.summary<-setNames(as.data.frame(matrix(NA, nrow=dim(sub.period)[2], ncol=7)), c("Day", "Section", "Gear", "Mean", "Median", "l95", "u95"))
+# 
+#               for(section in 1:dim(sub.period)[2]){
+#                 sub.section<-sub.gear[, section]
+#                 section.xwalk
+# 
+#                 sub.CPUE.summary[section, "Day"]<-as.numeric(period)
+#                 sub.CPUE.summary[section, "Section"]<-as.character(section.xwalk$Section_Name[section.xwalk$Section_Num == section])
+#                 sub.CPUE.summary[section, "Gear"]<-as.character(gear.xwalk$Gear_Name[gear.xwalk$Gear_Num == gear])
+#                 sub.CPUE.summary[section, "Mean"]<-round(mean(sub.section),3)
+#                 sub.CPUE.summary[section, "Median"]<-round(quantile(sub.section, 0.5),3)
+#                 sub.CPUE.summary[section, "l95"]<-round(quantile(sub.section, 0.025),3)
+#                 sub.CPUE.summary[section, "u95"]<-round(quantile(sub.section, 0.975),3)
+#               }
+#              CPUE.summary<-rbind(CPUE.summary, sub.CPUE.summary)
+#             }
+#         }
+# 
+#     # Join "CPUE.summary" with "all.Dates" date and daytype information
+#        CPUE.summary<-left_join(CPUE.summary, all.Dates[, c("Day", "Date", "DayType")], by="Day")
+# 
+#     # write "CPUE.summary" to a .csv file
+#        write.csv(CPUE.summary, paste(filepath_modelestimates, paste("Summary_CPUE (fish per hr per Period) by Gear and Section", catch.group.of.interest, paste0("Run_", Model_Run), ".csv", sep="_"), sep="/"), row.names = F)
+```
+
+```{r}
+
+# # GENERATE PLOTS OF EFFORT AND CATCH SUMMARIES                                                                      ----
+# #--------------------------------------------------------------------------------------------------------------------- -        
+#       
+#   #plot timeseries and total effort and catch
+#     plot.width<-8.5
+#     plot.height<-11
+#     
+#   #Set up plotting arguments
+#     eff.pch=21
+#     eff.cex=2
+#     gear.cols<-c(colorRampPalette(brewer.pal(max(3,as.numeric(length(unique(Effort.summary$Gear)))),"Blues"))(length(unique(Effort.summary$Gear))))
+#     section.cols<-c(colorRampPalette(brewer.pal(max(3,as.numeric(length(unique(Effort.summary$Section)))),"Greens"))(length(unique(Effort.summary$Section))))
+# 
+#   #Self-made jitter sequence for x-axis
+#     jitter.right<-seq(0,1,0.25)
+#     temp.jitter<-c()
+#     for(value in 1:length(jitter.right)){
+#       temp.jitter<-c(temp.jitter, c(jitter.right[value], jitter.right[value]*-1))
+#     }
+#     jitter.seq<-as.numeric(unique(temp.jitter))
+# 
+# #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
+# #START OF PDF FUNCTION!!!!! 
+# #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    
+#   pdf(paste(filepath_modelestimates, paste("BSS creel model summary plots", catch.group.of.interest, paste0("Run_", Model_Run),".pdf", sep="_"), sep="/"), width=plot.width, height=plot.height)
+#   mpg_axis<-0
+
+```
+
+total seasonal catch and total seasonal effort
+
+```{r}
+# # Plot #1 - PDF of total seasonal catch and total seasonal effort
+#   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+#       # set par arguments  
+#         #windows(width=8.5, height=11)
+#         par(mfcol=c(2,1), family='sans',  xaxs="i", yaxs="i", cex.axis=1, cex=1, mgp=c(2, 0.75, mpg_axis), mar=c(3,3,1,1), oma=c(4,3,1.5,1)) 
+#     
+#       #total seasonal catch    
+#         plot(density(apply(res$C_sum, c(1), sum)), col="blue", xlab="Total Catch (fish)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
+#         #abline(v=mean(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2, col="red") #add abline for mean
+#         abline(v=median(c(apply(res$C_sum, c(1), sum))),lwd=2, lty=2,  col="red") #add abline for median
+#         abline(v=quantile(apply(res$C_sum, c(1), sum), 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(apply(res$C_sum, c(1), sum), 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
+#         legend("topright", c( "median", "95%CI"), lty=2, col=c("red", "black"), bty="n", lwd=2)
+#       
+#       #total seasonal effort  
+#         plot(density(res$E_sum),col="blue",xlab="Total Effort (hrs)", ylab="Probability Density", main="", bty="n", xaxs="i",yaxs="i")
+#         #abline(v=mean(res$E_sum),lwd=2, lty=2, col="red") #add abline for mean
+#         abline(v=quantile(res$E_sum, 0.5),lwd=2, lty=2,  col="red") #add abline for median
+#         abline(v=quantile(res$E_sum, 0.025),lwd=2, lty=2,  col="black"); abline(v=quantile(res$E_sum, 0.975),lwd=2, lty=2,  col="black")  #add ablines for 95%
+
+```
+
+Total Daily Effort (hrs) by Section and Gear Type
+
+```{r}
+# # Plot #2 - Plot Total Daily Effort (hrs) by Section and Gear Type
+#   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+#       # windows(height=11, width=8.5)
+#         
+#       # set par arguments    
+#           par(mfcol=c(length(unique(Effort.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
+#       
+#       # Loop through "Effort.summary" and plot
+#           for(section in 1:length(unique(Effort.summary$Section))){
+#               sub.section<-Effort.summary[Effort.summary$Section == unique(Effort.summary$Section)[section],]
+#               
+#               plot(NA, bty="n", ylim=c(-10, round_any(max(Effort.summary$u95, na.rm=T),200,f=ceiling)), xlim=c(0, max(Effort.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(Effort.summary$Section)[section], sep=""))
+#               
+#               for(day in 1:length(unique(sub.section$Day))){
+#                   sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+#                   if(sub.day$DayType[1]==2){
+#                       abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
+#               }}
+#                   for(gear in 1:length(unique(sub.section$Gear))){
+#                     sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
+#                     x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
+#                     
+#                     arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
+#                          , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
+#                          , length=0.05, angle=90, code=3, lwd=2)
+#                     points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
+#         
+#                   }
+#               for(day in 1:length(unique(sub.section$Day))){
+#                   sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+#                   if(sub.day$Mean[1] == 0){
+#                     x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
+#                     lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
+#               }
+#               legend("topleft", legend = unique(Effort.summary$Section)[section], bty="n", bg="white", box.col = "white")  
+#               }
+#           }
+#           legend("topright", legend = unique(Effort.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
+#           title(xlab = "Day", ylab = "Total Daily Effort (hrs)", outer=T, line=1)
+
+```
+
+Total Daily Catch (fish) by Section and Gear Type
+
+```{r}
+ # # Plot #3 - Plot Total Daily Catch (fish) by Section and Gear Type
+ #  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+ #      #windows(height=11, width=8.5)
+ #      par(mfcol=c(length(unique(Catch.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
+ #  
+ # 
+ #      for(section in 1:length(unique(Catch.summary$Section))){
+ #          sub.section<-Catch.summary[Catch.summary$Section == unique(Catch.summary$Section)[section],]
+ #          
+ #          plot(NA, bty="n", ylim=c(-1, round_any(max(Catch.summary$u95, na.rm=T),10,f=ceiling)), xlim=c(0, max(Catch.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(Catch.summary$Section)[section], sep=""))
+ #          
+ #          for(day in 1:length(unique(sub.section$Day))){
+ #              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+ #              if(sub.day$DayType[1]==2){
+ #                  abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
+ #          }}
+ #              for(gear in 1:length(unique(sub.section$Gear))){
+ #                sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
+ #                x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
+ #                
+ #                arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
+ #                     , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
+ #                     , length=0.05, angle=90, code=3, lwd=2)
+ #                points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
+ #    
+ #              }
+ #          for(day in 1:length(unique(sub.section$Day))){
+ #              sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+ #              if(sub.day$Mean[1] == 0){
+ #                x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
+ #                lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
+ #          }
+ #          legend("topleft", legend = unique(Catch.summary$Section)[section], bty="n", bg="white", box.col = "white")  
+ #          }
+ #      }
+ #      legend("topright", legend = unique(Catch.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
+ #      title(xlab = "Day", ylab = "Total Daily Catch (fish)", outer=T, line=1)
+
+```
+
+Daily CPUE (fish/hr)
+
+```{r}
+#   # Plot #4 - Plot  Daily CPUE (fish/hr)
+#   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+#       #windows(height=11, width=8.5)
+#       par(mfcol=c(length(unique(CPUE.summary$Section)),1), family='sans', xaxs="i", yaxs="i",cex.axis=1, cex=1, mgp=c(2,0.75, mpg_axis),mar=c(2,2,1,1), oma=c(3,3,1.5,1)) 
+#   
+# 
+#       for(section in 1:length(unique(CPUE.summary$Section))){
+#           sub.section<-CPUE.summary[CPUE.summary$Section == unique(CPUE.summary$Section)[section],]
+#           
+#           plot(NA, bty="n", ylim=c(0, round_any(max(CPUE.summary$u95, na.rm=T),0.05,f=ceiling)), xlim=c(0, max(CPUE.summary$Day, na.rm=T)+1)) #, main=paste("Section - ", unique(CPUE.summary$Section)[section], sep=""))
+#           
+#           for(day in 1:length(unique(sub.section$Day))){
+#               sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+#               if(sub.day$DayType[1]==2){
+#                   abline(v=unique(sub.section$Day)[day], col="gray", lty=2, lwd=2)
+#           }}
+#               for(gear in 1:length(unique(sub.section$Gear))){
+#                 sub.gear<-sub.section[sub.section$Gear == unique(sub.section$Gear)[gear],]
+#                 x.axis<-as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]
+#                 
+#                 arrows(x0=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y0=as.numeric(sub.gear$l95)
+#                      , x1=(as.numeric(as.character(sub.gear$Day))+jitter.seq[gear]), y1=as.numeric(sub.gear$u95)
+#                      , length=0.05, angle=90, code=3, lwd=2)
+#                 points(sub.gear$Median ~ x.axis, bg=gear.cols[gear], pch=eff.pch, cex=eff.cex, col="black")
+#     
+#               }
+#           for(day in 1:length(unique(sub.section$Day))){
+#               sub.day<-sub.section[sub.section$Day == unique(sub.section$Day)[day],]
+#               if(sub.day$Mean[1] == 0){
+#                 x.line<-sub.day$Day+jitter.seq[1:length(unique(sub.section$Gear))]
+#                 lines(x=c(min(x.line), max(x.line)), y=c(0,0), col='gray', lend=2, lwd=30)
+#           }
+#           legend("topleft", legend = unique(CPUE.summary$Section)[section], bty="n", bg="white", box.col = "white")  
+#           }
+#       }
+#       legend("topright", legend = unique(CPUE.summary$Gear), bty="n", cex=1, pch=eff.pch, col="black", pt.bg = gear.cols, pt.cex=eff.cex)
+#       title(xlab = "Day", ylab = "Daily CPUE (fish/hr)", outer=T, line=1)
+# 
+#   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+#   # Plot #5 - Total catch and effort by day
+#   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ~
+# 
+# 
+# dev.off()
+
+```
+
