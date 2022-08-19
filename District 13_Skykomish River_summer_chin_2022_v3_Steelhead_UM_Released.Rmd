@@ -1,9 +1,9 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  analysis_name: "District 13_Skykomish River_summer_chin_2022_v2"
+  analysis_name: "District 13_Skykomish River_summer_chin_2022_v3"
   year_group: "2022-2023"
-  species: "Chinook"
+  species: "Steelhead"
   fin_mark: "UM"
   fate: "Released"
   model_number: 2
