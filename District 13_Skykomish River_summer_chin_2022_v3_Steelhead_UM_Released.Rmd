@@ -6,6 +6,8 @@ params:
   species: "Steelhead"
   fin_mark: "UM"
   fate: "Released"
+  life_stage: "Adult"
+  run: list(NULL)
   model_number: 2
 output:
   html_document:
@@ -290,10 +292,9 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
       filter(
         str_detect(species, params$species |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
         str_detect(fin_mark, params$fin_mark |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
-        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|"))
-        # ,
-        # str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
-        # str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(fate, params$fate |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(life_stage, params$life_stage |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
+        str_detect(run, params$run |> str_squish() |> str_replace("[:space:]", "") |> str_replace(",|\\|", "|")),
       ) |> 
     group_by(interview_id) |> 
     summarise(fish_count = sum(fish_count), .groups = "drop")
