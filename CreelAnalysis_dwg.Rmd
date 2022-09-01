@@ -1,0 +1,173 @@
+---
+title: CreelAnalysis from DWG
+params:
+  location: "Skykomish River"
+  date_start: "2021-08-09"   
+  date_end: "2021-09-04"
+  proj_name: "District 13"  
+output:
+  html_document:
+    fig_caption: yes
+    theme: cerulean
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    code_folding: hide
+---
+
+# setup 
+
+```{r setup, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(message = FALSE)
+
+#library(DBI); library(odbc); library(dbplyr)
+library(tidyverse)
+
+#base endpoints
+dwg <- list(
+  event = "https://data.wa.gov/resource/ui95-axtn.csv",
+  effort = "https://data.wa.gov/resource/h9a6-g38s.csv",
+  interview = "https://data.wa.gov/resource/rpax-ahqm.csv",
+  catch = "https://data.wa.gov/resource/6y4e-8ftk.csv",
+  gear = "https://data.wa.gov/resource/d2ks-afhz.csv"
+)
+
+u <- list()
+
+```
+
+# get data
+
+The data used are from the `r params$proj_name` project on the `r params$location` between `r params$date_start` and `r params$date_end`.
+
+Further development may include interactive control parameter specification via the GUI: [https://bookdown.org/yihui/rmarkdown/params-knit.html#the-interactive-user-interface]
+
+There is also the option to step through multiple pre-defined control parameters:
+[https://bookdown.org/yihui/rmarkdown-cookbook/parameterized-reports.html]
+
+First, get the creel events of interest.
+
+```{r get_event}
+#build the url string, grab the data
+#could move to using RSocrata (https://github.com/Chicago/RSocrata) 
+#if the "build a url string" approach becomes cumbersome enough to warrant introducing another dependency.
+
+u$event <- URLencode(
+  paste0(dwg$event,
+         "?water_body=", params$location,
+         "&project_name=", params$proj_name,
+         "&$where=event_date between '", params$date_start,
+         "T12:00:00' and '", params$date_end, "T12:00:00'"
+  )
+)
+
+event <- read_csv(u$event) |> 
+  dplyr::select(creel_event_id, water_body, event_date, tie_in_indicator)
+
+```
+
+Then, get the associated effort and interview data.
+
+**NOTE NOT CURRENTLY ENSURING 'DISTINCT' ON _id FIELDS!!!**
+
+```{r get_effort}
+u$effort <- URLencode(
+  paste0(dwg$effort,
+         "?$where=creel_event_id in('",
+         paste(event$creel_event_id, collapse = "','"),
+         "')&$limit=100000"
+  )
+)
+
+effort <- read_csv(u$effort) |> 
+  dplyr::select(creel_event_id, location, count_sequence, start_time = effort_start_time, end_time = effort_end_time, count_type, count_quantity)
+```
+
+```{r get_interview}
+u$interview <- URLencode(
+  paste0(dwg$interview,
+         "?$where=creel_event_id in('",
+         paste(event$creel_event_id, collapse = "','"),
+         "')&$limit=100000"
+  )
+)
+
+interview <- read_csv(u$interview) |> 
+  dplyr::select(creel_event_id, interview_id, interview_number,	angler_type, 
+                interview_location, angler_count,	total_group_count, trip_status,
+                fishing_start_time,	fishing_end_time,	interview_time, 
+                boat_used, boat_type,	fish_from_boat,	vehicle_count, trailer_count)
+
+```
+
+And finally, the catch data associated with the interviews.
+
+```{r get_catch}
+u$catch <- URLencode(
+  paste0(dwg$catch,
+         "?$where=creel_event_id in('",
+         paste(event$creel_event_id, collapse = "','"),
+         "')&$limit=100000"
+         # "?$where=interview_id in('",
+         # paste(interview$interview_id[1:2], collapse = "','"),
+         # "')"
+  )
+)
+
+catch <- read_csv(u$catch) |> 
+  dplyr::select(creel_event_id, interview_id, catch_id,
+                species, run, life_stage, fin_mark, fate, fish_count)
+
+```
+
+We could include some amount of pre-analysis QAQC...
+
+```{r, eval=FALSE}
+distinct(event, creel_event_id) 
+
+#effort$creel_event_id matches event$creel_event_id
+distinct(effort, creel_event_id)
+setdiff(event$creel_event_id, effort$creel_event_id)
+setdiff(effort$creel_event_id, event$creel_event_id)
+
+#but interview$creel_event_id is nested subset of event$creel_event_id
+distinct(interview, creel_event_id)
+setdiff(event$creel_event_id, interview$creel_event_id)
+setdiff(interview$creel_event_id, event$creel_event_id)
+
+#and catch$creel_event_id is nested subset of interview$creel_event_id
+setdiff(interview$creel_event_id, catch$creel_event_id)
+setdiff(catch$creel_event_id, interview$creel_event_id)
+
+#so catch$creel_event_id is even smaller subset of event$creel_event_id
+distinct(catch, creel_event_id)
+setdiff(event$creel_event_id, catch$creel_event_id)
+setdiff(catch$creel_event_id, event$creel_event_id)
+
+#similarly catch$interview_id is a nested subset of interview$interview_id
+setdiff(interview$interview_id, catch$interview_id)
+setdiff(catch$interview_id, interview$interview_id)
+
+#event |> head() |> gt::gt()
+
+```
+
+And/or visualization
+
+```{r}
+catch |> 
+  # group_by(species, run, life_stage, fin_mark, fate) |> 
+  # summarise(across(fish_count, list(sum = sum)), .groups = "drop") |> 
+  # unite("type", species:fate) |> 
+  group_by(species, fin_mark, fate) |> 
+  summarise(across(fish_count, list(sum = sum)), .groups = "drop") |> 
+  ggplot(aes(fin_mark, fish_count_sum, fill = fate)) + geom_col() +  facet_wrap(~species)
+  
+```
+
+
+# wrangle for `stan()`
+
+# fit
+
+# results
