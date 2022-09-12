@@ -73,6 +73,7 @@ lu_input$closures <- readr::read_csv(paste0("input_files/", params$analysis_name
 
 creel <- list() #data queried from DWG as list of tibbles
 
+
 ```
 
 # Fetch data
@@ -130,16 +131,17 @@ creel$catch <- paste0(
   dwg_base$catch,
   "?$where=creel_event_id in('",
   paste(creel$event$creel_event_id, collapse = "','"),"')",
-  " AND interview_id in('", 
+  " AND interview_id in('",
   paste(creel$interview$interview_id, collapse = "','"),
   "')&$limit=100000"
-  ) |> 
+  ) |>
   utils::URLencode() |>
   readr::read_csv(show_col_types = F) |>
-  dplyr::select(interview_id, catch_id, species, run, life_stage, fin_mark, fate, fish_count) |> 
+  dplyr::select(interview_id, catch_id, species, life_stage, fate, fish_count) |>
   dplyr::mutate(
-    catch_group = paste(species, life_stage, fin_mark, run, fate, sep = "_") # fish catch groups to estimate catch of 
+    catch_group = paste(species, life_stage, fate, sep = "_") # fish catch groups to estimate catch of
   )
+
 
 creel$days <- tibble::tibble(
   event_date = lu_input$closures$event_date,
@@ -306,6 +308,7 @@ stan_data_prelim$interview <- stan_data_prelim$interview |>
 
 
 
+
 stan_data_prelim$interview <- left_join(
   stan_data_prelim$interview 
   # |> 
@@ -321,8 +324,10 @@ stan_data_prelim$interview <- left_join(
 ) |> 
   pivot_longer(cols = -c(creel_event_id:angler_hours_total), names_to = "catch_group", values_to = "fish_count") |> 
   mutate(fish_count = replace_na(fish_count, 0)) |>
-  filter(catch_group == paste(params$species, params$life_stage, params$fin_mark, params$fate, sep = "_")) |> 
+  filter(catch_group == paste(params$species, params$life_stage, params$fate, sep = "_")) |> 
 
+                     
+                
 # |> 
 #   left_join(
 #     creel$catch |> 
