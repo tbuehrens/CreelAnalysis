@@ -5,7 +5,7 @@ params:
   days_wkend: !r c('Saturday', 'Sunday')
   year_group: "2022-2023"
   species: "Chinook"
-  fin_mark: "UM"
+  fin_mark: list(NULL)
   fate: "Released"
   life_stage: "Adult"
   run: list(NULL)
@@ -138,7 +138,7 @@ creel$catch <- paste0(
   readr::read_csv(show_col_types = F) |>
   dplyr::select(interview_id, catch_id, species, run, life_stage, fin_mark, fate, fish_count) |> 
   dplyr::mutate(
-    catch_group = paste(species, life_stage, fin_mark, fate, sep = "_") # fish catch groups to estimate catch of 
+    catch_group = paste(species, life_stage, fin_mark, run, fate, sep = "_") # fish catch groups to estimate catch of 
   )
 
 creel$days <- tibble::tibble(
