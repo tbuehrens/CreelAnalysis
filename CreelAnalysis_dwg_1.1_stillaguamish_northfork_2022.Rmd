@@ -1,12 +1,12 @@
 ---
 title: CreelAnalysis from DWG
 params:
-  analysis_name: "District 14_Skagit River,Cascade River_fall_salmon_2021"
+  analysis_name: "District 13_Stillaguamish River - North Fork_salmon and gamefish_2022-23"
   days_wkend: !r c('Saturday', 'Sunday')
   year_group: "2022-2023"
-  species: "Coho"
-  fin_mark: list(NULL)
-  fate: "Kept"
+  species: "Chinook"
+  fin_mark: "UM"
+  fate: "Released"
   life_stage: "Adult"
   run: list(NULL)
   model_number: 2
@@ -137,9 +137,9 @@ creel$catch <- paste0(
   ) |>
   utils::URLencode() |>
   readr::read_csv(show_col_types = F) |>
-  dplyr::select(interview_id, catch_id, species, life_stage, fate, fish_count) |>
+  dplyr::select(interview_id, catch_id, species, life_stage, fin_mark, fate, fish_count) |>
   dplyr::mutate(
-    catch_group = paste(species, life_stage, fate, sep = "_") # fish catch groups to estimate catch of
+    catch_group = paste(species, life_stage, fin_mark, fate, sep = "_") # fish catch groups to estimate catch of
   )
 
 
@@ -238,7 +238,8 @@ stan_data_prelim$effort_census <- stan_data_prelim$effort_census |>
   filter(!is.na(angler_type)) |> 
   group_by(event_date, day_index, section, count_sequence, angler_type, angler_type_ind) |>
   summarize(count_quantity = sum(count_quantity), .groups = "drop") |> 
-  arrange(event_date, section, count_sequence) 
+  arrange(event_date, section, count_sequence) |> 
+  drop_na(count_sequence)
 
 ```
 
@@ -324,7 +325,7 @@ stan_data_prelim$interview <- left_join(
 ) |> 
   pivot_longer(cols = -c(creel_event_id:angler_hours_total), names_to = "catch_group", values_to = "fish_count") |> 
   mutate(fish_count = replace_na(fish_count, 0)) |>
-  filter(catch_group == paste(params$species, params$life_stage, params$fate, sep = "_")) |> 
+  filter(catch_group == paste(params$species, params$life_stage, params$fin_mark, params$fate, sep = "_")) |> 
 
                      
                 
@@ -535,7 +536,7 @@ stan_data <- list(
   value_normal_sigma_omega_E_0 = 3, #the SD hyperparameter in the prior distribution omega_E_0; normal sd (log-space);; default = 3  
   value_lognormal_sigma_b = 1,      #the SD hyperparameter in the prior distribution b; default = 1  
   value_normal_sigma_B1 = 5,        #the SD hyperparameter in the prior distribution B1; default = 5  
-  value_normal_mu_mu_C = log(0.02), #the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
+  value_normal_mu_mu_C = log(sum(stan_data_prelim$interview$fish_count)/sum(stan_data_prelim$interview$angler_hours_total)), #the mean hyperparameter in the prior distribution mu_C; median (log-space); default = 0.02 (was originally  0.05) 
   value_normal_sigma_mu_C = 1.5,    #the SD hyperparameter in the prior distribution mu_C; normal sd (log-space); default = 1.5 (was originally 5)
   value_normal_mu_mu_E = log(5),    #the mean hyperparameter in the prior distribution mu_E; median effort (log-space); default = 15 
   value_normal_sigma_mu_E = 2,      #the SD hyperparameter in the prior distribution mu_E; normal sd (log-space); default = 2 (was originally 5) 
@@ -583,10 +584,10 @@ write_rds(stan_data, file.path("results",paste0(results_name,"_STAN_DATA.rds")))
 #creel_models <- lut$lut_creel_models
 
 # Specific Stan model arguments
-n_chain <- 4  
-n_cores <- 4    
+n_chain <- 2  
+n_cores <- 2    
 
-n_iter <- 2000
+n_iter <- 200
 n_warmup <- n_iter/2
 n_thin <- 1  # set the thinning rate (aka, the period for saving samples). The default is 1, which is usually the recommended value.
 adapt_delta <-0.95 #0.999  # set adapt delta, which is the target average proposal acceptance probability during Stan's adaptation period. Value between 0 and 1. The default is 0.8. Increasing it will force stan to take smaller steps (and thus run time will be longer). 
