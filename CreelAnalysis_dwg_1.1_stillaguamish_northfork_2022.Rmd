@@ -9,7 +9,7 @@ params:
   fate: "Released"
   life_stage: "Adult"
   run: list(NULL)
-  model_number: 2
+  model_number: 9
 output:
   html_document:
     fig_caption: yes
@@ -432,7 +432,7 @@ stan_data <- list(
 ## INTENTIONALLY LEFT "WRONG" TO MARK LATER REVISION IN ABOVE WRANGLING
 ## TO ALLOW RAGGED VEHICLE/TRAILER VECTORS 
 	day_T = stan_data_prelim$effort_index$day_index, #day_V,
-  gear_T = as.integer(rep(2, nrow(stan_data_prelim$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
+  gear_T = as.integer(rep(as.integer(length(unique(stan_data_prelim$interview$angler_type))), nrow(stan_data_prelim$effort_index))), #SAME - TEMP OPTION PENDING OTHER CHANGES
   # int; index for section
 	section_T = stan_data_prelim$effort_index$section,
   # int; index for count_num  
@@ -453,21 +453,21 @@ stan_data <- list(
 	# int; index for count_num
 	countnum_A = numeric(0),
 
-  
+
   # Census (tie-in) effort counts   
 	# int; total number of angler tie-in effort counts
-	E_n = nrow(stan_data_prelim$effort_census),
+	E_n = nrow(stan_data_prelim$effort_census%>%filter(angler_type=="bank")),
   # int; index denoting day/period
-	day_E = stan_data_prelim$effort_census$day_index,
+	day_E = stan_data_prelim$effort_census%>%filter(angler_type=="bank")%>%dplyr::select(day_index)%>%extract_numeric(),
   # int; index denoting "gear/angler type"  
-  gear_E = stan_data_prelim$effort_census$angler_type_ind, #if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
+  gear_E = stan_data_prelim$effort_census%>%filter(angler_type=="bank")%>%dplyr::select(angler_type_ind)%>%extract_numeric(), #if_else(stan_data_prelim$effort_census$angler_type == "Boat", 2, 1),
   # int; index for section
-  section_E = stan_data_prelim$effort_census$section,
+  section_E = stan_data_prelim$effort_census%>%filter(angler_type=="bank")%>%dplyr::select(section)%>%extract_numeric(),
 	# EB count_sequence here needs to match that of the closest effort_index count (if my understanding is correct)
   # int; index for count_num
-  countnum_E = stan_data_prelim$effort_census$count_sequence, 
+  countnum_E = stan_data_prelim$effort_census%>%filter(angler_type=="bank")%>%dplyr::select(count_sequence)%>%extract_numeric(), 
   # int; observed # of anglers
-  E_s = stan_data_prelim$effort_census$count_quantity,
+  E_s = stan_data_prelim$effort_census%>%filter(angler_type=="bank")%>%dplyr::select(count_quantity)%>%extract_numeric(),
 
 	# Proportion tie-in expansion mat; proportion of section covered by tie in counts KB: user defined (see "Proportional_Expansions_for_Tie_In_Sections_Kalama_Example"; need to format)
 
@@ -584,8 +584,8 @@ write_rds(stan_data, file.path("results",paste0(results_name,"_STAN_DATA.rds")))
 #creel_models <- lut$lut_creel_models
 
 # Specific Stan model arguments
-n_chain <- 2  
-n_cores <- 2    
+n_chain <- 4 
+n_cores <- 4    
 
 n_iter <- 200
 n_warmup <- n_iter/2
@@ -597,7 +597,7 @@ init = "0"
 
 if(!file.exists(file.path("results",paste0(results_name,".rds")))){
   stan_fit <- stan(
-    file = "models/BSS_creel_model_02_2021-01-22.stan",
+    file = "models/BSS_creel_model_09_2022-09-30_1G_1S.stan",
     data = stan_data,
     chains = n_chain,
     cores = n_cores,
